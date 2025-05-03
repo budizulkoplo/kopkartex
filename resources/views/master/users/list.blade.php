@@ -1,0 +1,203 @@
+<x-app-layout>
+    <x-slot name="pagetitle">Users</x-slot>
+    <div class="app-content-header"> <!--begin::Container-->
+        <div class="container-fluid"> <!--begin::Row-->
+            <div class="row">
+                <div class="col-sm-6">
+                    <h3 class="mb-0">User Management</h3>
+                </div>
+            </div> <!--end::Row-->
+        </div> <!--end::Container-->
+    </div>
+    @if (session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+    <div class="app-content"> <!--begin::Container-->
+        <div class="container-fluid"> <!--begin::Row-->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card card-info card-outline mb-4"> <!--begin::Header-->
+                        <div class="card-header pt-1 pb-1">
+                            <div class="card-title">
+                                <div class="row row-cols-auto">
+                                    <div class="col">
+                                        <div class="input-group input-group-sm"> 
+                                            <span class="input-group-text" id="basic-addon1">HasRole</span> 
+                                            <select class="form-select form-select-sm" id="frole">
+                                                <option value="all">ALL</option>
+                                                @foreach ($roles as $item)
+                                                <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-tools"> 
+                                <button type="button" class="btn btn-tool" id="addrole"> 
+                                    <i class="bi bi-file-earmark-plus"></i>
+                                </button> 
+                            </div>
+                        </div> <!--end::Header--> <!--begin::Body-->
+                        <div class="card-body">
+                            <table id="example" class="table table-sm table-striped" style="width: 100%; font-size: small;">
+                                <thead>
+                                    <tr>
+                                        <th>No.</th>
+                                        <th>NIK</th>
+                                        <th>Name</th>
+                                        <th>Roles</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ route('users.updatepassword') }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Reset Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="userid" id="tuserid" required>
+                    <div class="row">
+                        <div class="input-group mb-3">
+                        <span class="input-group-text" id="basic-addon1">New Password</span>
+                        <input type="password" name="new_password" id="tpassword" class="form-control" placeholder="" aria-label="Password" aria-describedby="basic-addon1">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="saverole">Save changes</button>
+                </div>
+            </form>
+        </div>
+        </div>
+    </div>
+    <x-slot name="csscustom">
+        <link rel="stylesheet" href="https://cdn.datatables.net/2.1.7/css/dataTables.bootstrap5.css">
+    </x-slot>
+    <x-slot name="jscustom">
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script src="https://cdn.datatables.net/2.1.7/js/dataTables.js"></script>
+        <script src="https://cdn.datatables.net/2.1.7/js/dataTables.bootstrap5.js"></script>
+        <script src="https://kit.fontawesome.com/07f649c76a.js" crossorigin="anonymous"></script>
+        <script>
+            var table = $('#example').DataTable({
+                ordering: false,"responsive": true,"processing": true,"serverSide": true,
+                "ajax": {
+                    "url": "{{ route('users.getdata') }}",
+                    "data":{loc : function() { return $('#floc').val()},role : function() { return $('#frole').val()},},
+                    "async": true,
+                    "type": "GET"
+                },
+                "columns": 
+                [
+                    { "data": "nomor_anggota","orderable": false },
+                    { "data": "nik","orderable": false},
+                    { "data": "name","orderable": false },
+                    { "data": null,"orderable": false},
+                    { "data": null,"orderable": false}
+                ],
+                "columnDefs": [
+                    { targets: [ 3 ],
+                        render: function (data, type, row, meta) {
+                            let rls='',roles =JSON.parse(row.allrole);
+                            @if (auth()->user()->hasRole('superadmin'))
+                            rls +=`<div class="form-check float-start pe-2">
+                            <input class="form-check-input chkrole" data-id="`+row.id+`" type="checkbox" name="chkrole[]" value="superadmin" `+(row.r1 == 'superadmin'? 'checked':'')+`>
+                            <label class="form-check-label" for="flexCheckDefault">Super Admin</label>
+                            </div>`
+                            @endif
+                            rls +=`<div class="form-check float-start pe-2">
+                            <input class="form-check-input chkrole" data-id="`+row.id+`" type="checkbox" name="chkrole[]" value="admin" `+(row.r2 == 'admin'? 'checked':'')+`>
+                            <label class="form-check-label" for="flexCheckDefault">Admin</label>
+                            </div>`
+                            rls +=`<div class="form-check float-start pe-2">
+                            <input class="form-check-input chkrole" data-id="`+row.id+`" type="checkbox" name="chkrole[]" value="pengurus" `+(row.r3 == 'pengurus'? 'checked':'')+`>
+                            <label class="form-check-label" for="flexCheckDefault">Pengurus</label>
+                            </div>`
+                            rls +=`<div class="form-check float-start pe-2">
+                            <input class="form-check-input chkrole" data-id="`+row.id+`" type="checkbox" name="chkrole[]" value="bendahara" `+(row.r4 == 'bendahara'? 'checked':'')+`>
+                            <label class="form-check-label" for="flexCheckDefault">Bendahara</label>
+                            </div>`
+                            rls +=`<div class="form-check float-start pe-2">
+                            <input class="form-check-input chkrole" data-id="`+row.id+`" type="checkbox" name="chkrole[]" value="anggota" `+(row.r5 == 'anggota'? 'checked':'')+`>
+                            <label class="form-check-label" for="flexCheckDefault">Anggota</label>
+                            </div>`
+                            
+                            return rls;
+                        } 
+                    },
+                    { targets: [ 4 ], className: 'dt-right',
+                        render: function (data, type, row, meta) {
+                            let str= `<span class="badge rounded-pill bg-warning" data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="$('#tuserid').val('`+row.id+`')"><i class="fa-solid fa-key"></i></span>
+                                    <span class="badge rounded-pill bg-danger"><i class="fa-solid fa-trash-can"></i></span>`
+                            // return `<div class="btn-group" role="group" aria-label="Small button group">
+                            //     <button type="button" class="btn btn-warning btn-sm"><i class="fa-solid fa-user-pen"></i></button>
+                            //     <button type="button" class="btn btn-danger btn-sm"><i class="fa-solid fa-trash-can"></i></button>
+                            //     </div>`;
+                            return str
+                        } 
+                    },
+                ],
+            });
+            table.on( 'draw', function () {
+                $('.chkrole').on('click',function(){
+                    //if ($(this).is(":checked")) {
+                        var selectedID = $(this).data('id');
+                        let checkedValues = $(this).parent().parent().find('.chkrole:checked').map(function() {
+                            return $(this).val();
+                        }).get();
+                        $.ajax({
+                            url: "{{ route('users.assignRole') }}",
+                            method:"GET",data: { iduser:selectedID,name:checkedValues },
+                            success: function(response) {
+                                table.ajax.reload();
+                            }
+                        });
+                    //}
+                });
+                // $('.chrole').on('change',function(){
+                //     if($(this).val() !=''){
+                //         var selectedID = $(this).data('id'); 
+                //         var selectedVal = $(this).val(); 
+                //         console.log(selectedID);
+                //         $.ajax({
+                //             url: "{{ route('users.assignRole') }}",
+                //             method:"GET",data: { iduser:selectedID,name : function() { return selectedVal}, },
+                //             success: function(response) {
+                //                 table.ajax.reload();
+                //             }
+                //         });
+                //     }
+                // });
+            });
+            $( document ).ready(function() {
+                $('#frole').on('change',function(){table.ajax.reload();})
+                $('#floc').on('change',function(){table.ajax.reload();})
+            });
+        </script>
+    </x-slot>
+</x-app-layout>
