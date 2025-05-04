@@ -29,7 +29,7 @@
                                 @endphp
                                 @foreach ($roles as $item)
                                     <li class="list-group-item {{ ($no==0?'active':'') }} d-flex justify-content-between align-items-start" style="cursor: pointer"><span class="rolename">{{ $item->name }}</span> 
-                                        @if ($item->name != 'SuperAdmin')
+                                        @if ($item->name != 'superadmin')
                                         <button class="btn badge bg-danger rounded-pill" onclick="delr(this,'{{ $item->name }}')"><i class="bi bi-trash"></i></button>
                                         @endif
                                     </li>
