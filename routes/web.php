@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\BarangController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UnitController;
@@ -38,6 +39,13 @@ Route::prefix('unit')->middleware(['auth', 'verified', 'role:superadmin|admin', 
     Route::post('/store', [UnitController::class, 'Store'])->name('unit.StorePost');
     Route::put('/store/{id}', [UnitController::class, 'Store'])->name('unit.StorePut');
     Route::get('/hapus/{id}', [UnitController::class, 'Hapus'])->name('unit.Hapus');
+});
+Route::prefix('barang')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/', [BarangController::class, 'index'])->name('barang.list');
+    Route::get('/getdata', [BarangController::class, 'getdata'])->name('barang.getdata');
+    Route::post('/store', [BarangController::class, 'Store'])->name('barang.store');
+    Route::get('/getcode', [BarangController::class, 'getCode'])->name('barang.getcode');
+    Route::delete('/hapus', [BarangController::class, 'Hapus'])->name('barang.hapus');
 });
 Route::get('/ss', function () {
     return view('dashboard');
