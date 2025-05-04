@@ -33,6 +33,17 @@ class UnitController extends Controller
             'isEdit'  => true
         ]);
     }
+    public function Hapus($id)
+    {
+        $id=Crypt::decryptString($id);
+        $unit = Unit::find($id);
+        $unit->delete();
+        if($unit){
+            return redirect()->route('unit.list')->with('success', " $unit->nama_unit Berhasil dihapus");
+        }else{
+            return redirect()->route('unit.list')->with('error', "Gagal");
+        }
+    }
     public function Store(Request $request,$id=null)
     {
         $validatedData = $request->validate([
