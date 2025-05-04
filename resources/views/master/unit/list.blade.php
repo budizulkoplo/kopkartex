@@ -49,8 +49,8 @@
                                             <td>{{ $item->nama_unit }}</td>
                                             <td>{{ $item->jenis }}</td>
                                             <td>
-                                                <a href="{{ route('unit.edit',['id' => Crypt::encryptString($item->id)]) }}"><i class="fa-solid fa-user-pen"></i></a>
-                                                {{-- <span class="badge rounded-pill bg-danger"><i class="fa-solid fa-trash-can"></i></span> --}}
+                                                <a href="{{ route('unit.edit',['id' => Crypt::encryptString($item->id)]) }}"><span class="badge bg-primary"><i class="bi bi-pencil-square"></span></i></a>
+                                                <a href="{{ route('unit.Hapus',['id' => Crypt::encryptString($item->id)]) }}" class="confirm-link"><span class="badge bg-danger"><i class="bi bi-trash3-fill"></i></span></a>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -96,45 +96,20 @@
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="https://cdn.datatables.net/2.3.0/js/dataTables.min.js" integrity="sha384-ehaRe3xJ0fffAlDr3p72vNw3wWV01C1/Z19X6s//i6hiF8hee+c+rabqObq8YlOk" crossorigin="anonymous"></script>
         <script src="https://cdn.datatables.net/2.3.0/js/dataTables.bootstrap5.min.js" integrity="sha384-G85lmdZCo2WkHaZ8U1ZceHekzKcg37sFrs4St2+u/r2UtfvSDQmQrkMsEx4Cgv/W" crossorigin="anonymous"></script>
-        <script src="https://kit.fontawesome.com/07f649c76a.js" crossorigin="anonymous"></script>
         <script>
             var table = $('#example').DataTable({
                 ordering: false,"responsive": true
             });
-            table.on( 'draw', function () {
-                $('.chkrole').on('click',function(){
-                    //if ($(this).is(":checked")) {
-                        var selectedID = $(this).data('id');
-                        let checkedValues = $(this).parent().parent().find('.chkrole:checked').map(function() {
-                            return $(this).val();
-                        }).get();
-                        $.ajax({
-                            url: "{{ route('users.assignRole') }}",
-                            method:"GET",data: { iduser:selectedID,name:checkedValues },
-                            success: function(response) {
-                                table.ajax.reload();
-                            }
-                        });
-                    //}
-                });
-                // $('.chrole').on('change',function(){
-                //     if($(this).val() !=''){
-                //         var selectedID = $(this).data('id'); 
-                //         var selectedVal = $(this).val(); 
-                //         console.log(selectedID);
-                //         $.ajax({
-                //             url: "{{ route('users.assignRole') }}",
-                //             method:"GET",data: { iduser:selectedID,name : function() { return selectedVal}, },
-                //             success: function(response) {
-                //                 table.ajax.reload();
-                //             }
-                //         });
-                //     }
-                // });
-            });
             $( document ).ready(function() {
-                $('#frole').on('change',function(){table.ajax.reload();})
-                $('#floc').on('change',function(){table.ajax.reload();})
+                $('.confirm-link').on('click', function(e) {
+                    e.preventDefault(); // Cegah link langsung dijalankan
+                    const url = $(this).attr('href');
+
+                    if (confirm('Apakah Anda yakin ingin melanjutkan?')) {
+                        window.location.href = url; // Lanjutkan ke link jika dikonfirmasi
+                    }
+                });
+
             });
         </script>
     </x-slot>

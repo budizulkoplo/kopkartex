@@ -37,6 +37,7 @@ Route::prefix('unit')->middleware(['auth', 'verified', 'role:superadmin|admin', 
     Route::get('/edit/{id}', [UnitController::class, 'EditForm'])->name('unit.edit');
     Route::post('/store', [UnitController::class, 'Store'])->name('unit.StorePost');
     Route::put('/store/{id}', [UnitController::class, 'Store'])->name('unit.StorePut');
+    Route::get('/hapus/{id}', [UnitController::class, 'Hapus'])->name('unit.Hapus');
 });
 Route::get('/ss', function () {
     return view('dashboard');
