@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
@@ -82,12 +83,46 @@ class UsersController extends Controller
         $permissions = $role->permissions;
         return response()->json($permissions);
     }
-    // public function authprofiles(){
-    //     $user = User::join('employees', 'employees.EmpID', '=', 'users.nik')
-    //     ->where('users.nik',auth()->user()->nik)
-    //     ->select('employees.*')->first();
-    //     return response()->json($user);
-    // }
+    public function Store(Request $request){
+        $validatedData = $request->validate([
+            'name' => 'required',
+            'email' => 'required',
+            'tanggal_masuk' => 'required',
+            'nik' => 'required',
+        ]);
+        if($validatedData){
+            if(!empty($request->fidusers)){
+                $id=Crypt::decryptString($request->fidusers);
+                $usr = User::find($id);
+            }else{
+                $usr = new User;
+                $usr->nomor_anggota = $this->genCode();
+                $usr->password = Hash::make('12345678');
+            }
+            $usr->name = $request->name;
+            $usr->email = $request->email;
+            $usr->tanggal_masuk = $request->tanggal_masuk;
+            $usr->nik = $request->nik;
+            $usr->jabatan = $request->jabatan;
+            $usr->save();
+            //$usr->assignRole($request->role);
+
+            if($usr){
+                return response()->json('success', 200);
+            }else{
+                return response()->json('gagal', 500);
+            }
+        }
+    }
+    function genCode(){
+        $total = User::withTrashed()->whereDate('created_at', date("Y-m-d"))->count();
+        $nomorUrut = $total + 1;
+        $newcode='KTX-'.date("ymd").str_pad($nomorUrut, 3, '0', STR_PAD_LEFT);
+        return $newcode;
+    }
+    public function getCode(){
+        return response()->json($this->genCode(), 200);
+    }
     public function getdata(Request $request){
         $user = User::leftJoin('model_has_roles as radmin', function ($join) {
             $join->on('radmin.model_id', '=', 'users.id')->where('radmin.role_id', '=', 1);

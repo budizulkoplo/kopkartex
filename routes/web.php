@@ -31,6 +31,8 @@ Route::prefix('users')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::get('/getdata', [UsersController::class, 'getdata'])->name('users.getdata');
     Route::get('/assignRole', [UsersController::class, 'kasihRole'])->name('users.assignRole');
     Route::post('/password/update', [UsersController::class, 'updatePassword'])->name('users.updatepassword');
+    Route::get('/getcode', [UsersController::class, 'getcode'])->name('users.getcode');
+    Route::post('/store', [UsersController::class, 'Store'])->name('users.store');
 });
 Route::prefix('unit')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [UnitController::class, 'index'])->name('unit.list');
