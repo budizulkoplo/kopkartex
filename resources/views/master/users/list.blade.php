@@ -44,20 +44,19 @@
                                 </div>
                             </div>
                             <div class="card-tools"> 
-                                <button type="button" class="btn btn-tool" id="addrole"> 
-                                    <i class="bi bi-file-earmark-plus"></i>
-                                </button> 
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModalForm" id="btnadd"><i class="bi bi-file-earmark-plus"></i></button>
                             </div>
                         </div> <!--end::Header--> <!--begin::Body-->
                         <div class="card-body">
-                            <table id="example" class="table table-sm table-striped" style="width: 100%; font-size: small;">
+                            <table id="tbusers" class="table table-sm table-striped" style="width: 100%; font-size: small;">
                                 <thead>
                                     <tr>
                                         <th>No.</th>
                                         <th>NIK</th>
                                         <th>Name</th>
+                                        <th>Email</th>
                                         <th>Roles</th>
-                                        <th></th>
+                                        <th></th><th></th><th></th><th></th><th></th><th></th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -95,6 +94,59 @@
         </div>
         </div>
     </div>
+    <div class="modal fade" id="exampleModalForm" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="frmusers" class="needs-validation" novalidate>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="fidusers" id="fidusers">
+                    <div class="row">
+                        <div class="col col-lg-6 mb-1">
+                            <label for="exampleFormControlInput1" class="form-label">No.Anggota</label>
+                            <input type="text" class="form-control form-control-sm" id="fnomor_anggota" name="nomor_anggota" disabled>
+                        </div>
+                        <div class="col col-lg-6 mb-1">
+                            <label for="exampleFormControlInput2" class="form-label">Nama</label>
+                            <input type="text" class="form-control form-control-sm" id="fname" name="name" required>
+                        </div>
+                        <div class="col col-lg-6 mb-1">
+                            <label for="exampleFormControlInput2" class="form-label">NIK</label>
+                            <input type="number" class="form-control form-control-sm" id="fnik" name="nik" required>
+                        </div>
+                        <div class="col col-lg-6 mb-1">
+                            <label for="exampleFormControlInput2" class="form-label">Email</label>
+                            <input type="email" class="form-control form-control-sm" id="femail" name="email" required>
+                        </div>
+                        <div class="col col-lg-6 mb-1">
+                            <label for="exampleFormControlInput2" class="form-label">Jabatan</label>
+                            <input type="text" class="form-control form-control-sm" id="fjabatan" name="jabatan" required>
+                        </div>
+                        <div class="col col-lg-6 mb-1">
+                            <label for="exampleFormControlInput2" class="form-label">Unit Kerja</label>
+                            <input type="text" class="form-control form-control-sm" id="funit_kerja" name="unit_kerja" required>
+                        </div>
+                        <div class="col col-lg-6 mb-1">
+                            <label for="exampleFormControlInput2" class="form-label">Tgl.Masuk</label>
+                            <input type="date" class="form-control form-control-sm" id="ftanggal_masuk" name="tanggal_masuk" required>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="1" id="flexCheckChecked" name="status" checked>
+                            <label class="form-check-label" for="flexCheckChecked">Active</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="saverole">Save changes</button>
+                </div>
+            </form>
+        </div>
+        </div>
+    </div>
     <x-slot name="csscustom">
         <link href="https://cdn.datatables.net/2.3.0/css/dataTables.bootstrap5.min.css" rel="stylesheet" integrity="sha384-xkQqWcEusZ1bIXoKJoItkNbJJ1LG5QwR5InghOwFLsCoEkGcNLYjE0O83wWruaK9" crossorigin="anonymous">
     </x-slot>
@@ -104,7 +156,8 @@
         <script src="https://cdn.datatables.net/2.3.0/js/dataTables.bootstrap5.min.js" integrity="sha384-G85lmdZCo2WkHaZ8U1ZceHekzKcg37sFrs4St2+u/r2UtfvSDQmQrkMsEx4Cgv/W" crossorigin="anonymous"></script>
         <script src="https://kit.fontawesome.com/07f649c76a.js" crossorigin="anonymous"></script>
         <script>
-            var table = $('#example').DataTable({
+            
+            var table = $('#tbusers').DataTable({
                 ordering: false,"responsive": true,"processing": true,"serverSide": true,
                 "ajax": {
                     "url": "{{ route('users.getdata') }}",
@@ -117,11 +170,17 @@
                     { "data": "nomor_anggota","orderable": false },
                     { "data": "nik","orderable": false},
                     { "data": "name","orderable": false },
+                    { "data": "email","orderable": false },
                     { "data": null,"orderable": false},
-                    { "data": null,"orderable": false}
+                    { "data": null,"orderable": false},
+                    { "data": "id","visible": false},
+                    { "data": "jabatan","visible": false},
+                    { "data": "unit_kerja","visible": false},
+                    { "data": "tanggal_masuk","visible": false},
+                    { "data": "status","visible": false},
                 ],
                 "columnDefs": [
-                    { targets: [ 3 ],
+                    { targets: [ 4 ],
                         render: function (data, type, row, meta) {
                             let rls='',roles =JSON.parse(row.allrole);
                             @if (auth()->user()->hasRole('superadmin'))
@@ -150,9 +209,12 @@
                             return rls;
                         } 
                     },
-                    { targets: [ 4 ], className: 'dt-right',
+                    { targets: [ 5 ], className: 'dt-right',
                         render: function (data, type, row, meta) {
-                            let str= `<span class="badge rounded-pill bg-warning" data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="$('#tuserid').val('`+row.id+`')"><i class="fa-solid fa-key"></i></span>
+                            let str= `
+                            <span class="badge rounded-pill bg-info formcell" data-bs-toggle="modal" data-bs-target="#exampleModalForm"><i class="bi bi-pencil-square"></i></span>
+                            <span class="badge rounded-pill bg-warning" data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="$('#tuserid').val('`+row.id+`')">
+                                <i class="bi bi-key"></i></span>
                                     <span class="badge rounded-pill bg-danger"><i class="fa-solid fa-trash-can"></i></span>`
                             // return `<div class="btn-group" role="group" aria-label="Small button group">
                             //     <button type="button" class="btn btn-warning btn-sm"><i class="fa-solid fa-user-pen"></i></button>
@@ -194,7 +256,73 @@
                 //     }
                 // });
             });
+            function clearfrm(){
+                $('#fidusers').val('');
+                $('input[name="nomor_anggota"]').val('');
+                $('input[name="name"]').val('');
+                $('input[name="nik"]').val('');
+                $('input[name="jabatan"]').val('');
+                $('input[name="unit_kerja"]').val('');
+                $('input[name="tanggal_masuk"]').val('');
+                $('input[name="email"]').val('');
+                $('#flexCheckChecked').prop('checked', true);
+            }
+            $('#frmusers').on('submit', function(e) {
+                e.preventDefault(); // prevent default form submission
+                const form = this;
+                const disabled = form.querySelectorAll(':disabled');
+
+                // Enable temporarily
+                disabled.forEach(el => el.disabled = false);
+                const formData = new FormData(this);
+                disabled.forEach(el => el.disabled = true);
+                $.ajax({
+                    url: "{{ route('users.store') }}",
+                    method: "POST",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    beforeSend: function() {
+                    },
+                    success: function(response) {
+                        table.ajax.reload();
+                        $('#exampleModalForm').modal('hide');
+                        clearfrm();
+                    },
+                    error: function(xhr, status) {
+                    if (status === 'abort') {
+
+                    } else {
+                        
+                    }
+                    }
+                });
+            });
             $( document ).ready(function() {
+                $('#btnadd').on('click',function(){
+                    clearfrm();
+                    $.ajax({
+                    url: "{{ route('users.getcode') }}",method: "GET",
+                    success: function(response) {
+                        $('input[name="nomor_anggota"]').val(response);
+                    }});
+                });
+                $('#tbusers tbody').on('click', '.formcell', function () {
+                    var row = table.row($(this).closest('tr')).data();
+                    $('#fidusers').val(row.id);
+                    $('input[name="nomor_anggota"]').val(row.kode_barang);
+                    $('input[name="name"]').val(row.name);
+                    $('input[name="nik"]').val(row.nik);
+                    $('input[name="jabatan"]').val(row.jabatan);
+                    $('input[name="unit_kerja"]').val(row.unit_kerja);
+                    $('input[name="tanggal_masuk"]').val(row.tanggal_masuk);
+                    $('input[name="email"]').val(row.email);
+                    if(row.status=1){
+                        $('#flexCheckChecked').prop('checked', true);
+                    }else{
+                        $('#flexCheckChecked').prop('checked', false);
+                    }   
+                });
                 $('#frole').on('change',function(){table.ajax.reload();})
                 $('#floc').on('change',function(){table.ajax.reload();})
             });
