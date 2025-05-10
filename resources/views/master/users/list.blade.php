@@ -52,11 +52,14 @@
                                 <thead>
                                     <tr>
                                         <th>No.</th>
+                                        <th>UserName</th>
                                         <th>NIK</th>
-                                        <th>Name</th>
+                                        <th>Nama</th>
                                         <th>Email</th>
+                                        <th>Unit</th>
+                                        <th>Status</th>
                                         <th>Roles</th>
-                                        <th></th><th></th><th></th><th></th><th></th><th></th>
+                                        <th></th><th></th><th></th><th></th><th></th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -97,7 +100,8 @@
     <div class="modal fade" id="exampleModalForm" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
         <div class="modal-dialog">
         <div class="modal-content">
-            <form id="frmusers" class="needs-validation" novalidate>
+            <form id="frmusers" class="needs-validation" novalidate enctype="multipart/form-data">
+                @csrf
                 <div class="modal-header">
                     <h5 class="modal-title" id="exampleModalLabel"></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -108,6 +112,10 @@
                         <div class="col col-lg-6 mb-1">
                             <label for="exampleFormControlInput1" class="form-label">No.Anggota</label>
                             <input type="text" class="form-control form-control-sm" id="fnomor_anggota" name="nomor_anggota" disabled>
+                        </div>
+                        <div class="col col-lg-6 mb-1">
+                            <label for="exampleFormControlInput2" class="form-label">UserName</label>
+                            <input type="text" class="form-control form-control-sm" id="fusername" name="username" disabled required>
                         </div>
                         <div class="col col-lg-6 mb-1">
                             <label for="exampleFormControlInput2" class="form-label">Nama</label>
@@ -126,8 +134,12 @@
                             <input type="text" class="form-control form-control-sm" id="fjabatan" name="jabatan" required>
                         </div>
                         <div class="col col-lg-6 mb-1">
-                            <label for="exampleFormControlInput2" class="form-label">Unit Kerja</label>
-                            <input type="text" class="form-control form-control-sm" id="funit_kerja" name="unit_kerja" required>
+                            <label for="exampleFormControlInput4" class="form-label">Unit Kerja</label>
+                            <select class="form-select form-select-sm" name="unit_kerja" id="funit_kerja">
+                                @foreach ($unit as $item)
+                                    <option value="{{ $item->id }}">{{ $item->nama_unit }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="col col-lg-6 mb-1">
                             <label for="exampleFormControlInput2" class="form-label">Tgl.Masuk</label>
@@ -168,19 +180,22 @@
                 "columns": 
                 [
                     { "data": "nomor_anggota","orderable": false },
+                    { "data": "username"},
                     { "data": "nik","orderable": false},
                     { "data": "name","orderable": false },
                     { "data": "email","orderable": false },
+                    { "data": "nama_unit"},
+                    { "data": "status"},
                     { "data": null,"orderable": false},
                     { "data": null,"orderable": false},
-                    { "data": "id","visible": false},
+                    { "data": "idusers","visible": false},
                     { "data": "jabatan","visible": false},
-                    { "data": "unit_kerja","visible": false},
                     { "data": "tanggal_masuk","visible": false},
-                    { "data": "status","visible": false},
+                    { "data": "username","visible": false},
+                    { "data": "unit_kerja","visible": false},
                 ],
                 "columnDefs": [
-                    { targets: [ 4 ],
+                    { targets: [ 7 ],
                         render: function (data, type, row, meta) {
                             let rls='',roles =JSON.parse(row.allrole);
                             @if (auth()->user()->hasRole('superadmin'))
@@ -209,7 +224,7 @@
                             return rls;
                         } 
                     },
-                    { targets: [ 5 ], className: 'dt-right',
+                    { targets: [ 8 ], className: 'dt-right',
                         render: function (data, type, row, meta) {
                             let str= `
                             <span class="badge rounded-pill bg-info formcell" data-bs-toggle="modal" data-bs-target="#exampleModalForm"><i class="bi bi-pencil-square"></i></span>
@@ -260,9 +275,11 @@
                 $('#fidusers').val('');
                 $('input[name="nomor_anggota"]').val('');
                 $('input[name="name"]').val('');
+                $('input[name="username"]').val('');
+                $('input[name="username"]').prop('disabled', false);
                 $('input[name="nik"]').val('');
                 $('input[name="jabatan"]').val('');
-                $('input[name="unit_kerja"]').val('');
+                $('select[name="unit_kerja"]').val('');
                 $('input[name="tanggal_masuk"]').val('');
                 $('input[name="email"]').val('');
                 $('#flexCheckChecked').prop('checked', true);
@@ -280,8 +297,9 @@
                     url: "{{ route('users.store') }}",
                     method: "POST",
                     data: formData,
-                    processData: false,
+                    headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')},
                     contentType: false,
+                    processData: false,
                     beforeSend: function() {
                     },
                     success: function(response) {
@@ -309,15 +327,18 @@
                 });
                 $('#tbusers tbody').on('click', '.formcell', function () {
                     var row = table.row($(this).closest('tr')).data();
-                    $('#fidusers').val(row.id);
-                    $('input[name="nomor_anggota"]').val(row.kode_barang);
+                    $('#fidusers').val(row.idusers);
+                    $('input[name="nomor_anggota"]').val(row.nomor_anggota);
                     $('input[name="name"]').val(row.name);
+                    $('input[name="username"]').val(row.username);
+                    $('input[name="username"]').prop('disabled', true);
                     $('input[name="nik"]').val(row.nik);
                     $('input[name="jabatan"]').val(row.jabatan);
-                    $('input[name="unit_kerja"]').val(row.unit_kerja);
+                    $('select[name="unit_kerja"]').val(row.unit_kerja);
                     $('input[name="tanggal_masuk"]').val(row.tanggal_masuk);
                     $('input[name="email"]').val(row.email);
-                    if(row.status=1){
+                    console.log(row.status)
+                    if(row.status=='aktif'){
                         $('#flexCheckChecked').prop('checked', true);
                     }else{
                         $('#flexCheckChecked').prop('checked', false);

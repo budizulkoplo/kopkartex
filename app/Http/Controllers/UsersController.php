@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
@@ -18,6 +20,7 @@ class UsersController extends Controller
         return view('master.users.list', [
             'roles' => Role::with('permissions')->get(),
             'allroles' => Role::all(),
+            'unit' => Unit::all(),
         ]);
     }
     public function updatePassword(Request $request)
@@ -90,20 +93,26 @@ class UsersController extends Controller
             'tanggal_masuk' => 'required',
             'nik' => 'required',
         ]);
+        
         if($validatedData){
+           
             if(!empty($request->fidusers)){
                 $id=Crypt::decryptString($request->fidusers);
                 $usr = User::find($id);
             }else{
                 $usr = new User;
                 $usr->nomor_anggota = $this->genCode();
+                $usr->username = $request->username;
                 $usr->password = Hash::make('12345678');
             }
+            
             $usr->name = $request->name;
             $usr->email = $request->email;
             $usr->tanggal_masuk = $request->tanggal_masuk;
             $usr->nik = $request->nik;
             $usr->jabatan = $request->jabatan;
+            $usr->unit_kerja = $request->unit_kerja;
+            $usr->status = $request->status ?'aktif':'nonaktif';
             $usr->save();
             //$usr->assignRole($request->role);
 
@@ -124,7 +133,8 @@ class UsersController extends Controller
         return response()->json($this->genCode(), 200);
     }
     public function getdata(Request $request){
-        $user = User::leftJoin('model_has_roles as radmin', function ($join) {
+        $user = User::join('unit','unit.id','users.unit_kerja')
+        ->leftJoin('model_has_roles as radmin', function ($join) {
             $join->on('radmin.model_id', '=', 'users.id')->where('radmin.role_id', '=', 1);
         })
         ->leftJoin('model_has_roles as rsuperadmin', function ($join) {
@@ -144,9 +154,12 @@ class UsersController extends Controller
         ->leftJoin('roles as r3','r3.id', 'rpengurus.role_id')
         ->leftJoin('roles as r4','r4.id', 'rbendahara.role_id')
         ->leftJoin('roles as r5','r5.id', 'ranggota.role_id')
-        ->select('users.*','r1.name as r1','r2.name as r2','r3.name as r3','r4.name as r4','r5.name as r5');
+        ->select('users.*','unit.nama_unit','r1.name as r1','r2.name as r2','r3.name as r3','r4.name as r4','r5.name as r5');
         return DataTables::of($user)
                 ->addIndexColumn()
+                ->addColumn('idusers', function($row) {
+                    return Crypt::encryptString($row->id);
+                })
                 ->filter(function ($query) use ($request) {
                     if($request->role != 'all'){
                         $query->where(function ($query) use ($request) {
