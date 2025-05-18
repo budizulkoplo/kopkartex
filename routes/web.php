@@ -3,7 +3,9 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\PenerimaanController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SimpananController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\UsersController;
@@ -21,6 +23,14 @@ Route::middleware('auth', 'global.app')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('simpanan')->group(function () {
+    Route::get('/', [PenerimaanController::class, 'index'])->name('penerimaan.form');
+    Route::get('/getbarang', [PenerimaanController::class, 'getBarang'])->name('penerimaan.getbarang');
+});
+Route::prefix('simpanan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('simpanan')->group(function () {
+    Route::get('/', [SimpananController::class, 'index'])->name('simpanan.list');
+    Route::get('/getdata', [SimpananController::class, 'getdata'])->name('simpanan.getdata');
 });
 Route::prefix('users')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('Users')->group(function () {
     Route::get('/list', [UsersController::class, 'index'])->name('users.list');
