@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Penerimaan extends Model
+class PenerimaanDtl extends Model
 {
     use HasFactory,SoftDeletes;
-    protected $table = 'penerimaan';
+    protected $table = 'penerimaan_detail';
     protected $primaryKey = 'id';
 }

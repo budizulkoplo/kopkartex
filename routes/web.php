@@ -27,6 +27,8 @@ Route::middleware('auth', 'global.app')->group(function () {
 Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('simpanan')->group(function () {
     Route::get('/', [PenerimaanController::class, 'index'])->name('penerimaan.form');
     Route::get('/getbarang', [PenerimaanController::class, 'getBarang'])->name('penerimaan.getbarang');
+    Route::get('/getbarangbycode', [PenerimaanController::class, 'getBarangByCode'])->name('penerimaan.getbarangbycode');
+    Route::post('/store', [PenerimaanController::class, 'store'])->name('penerimaan.store');
 });
 Route::prefix('simpanan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('simpanan')->group(function () {
     Route::get('/', [SimpananController::class, 'index'])->name('simpanan.list');

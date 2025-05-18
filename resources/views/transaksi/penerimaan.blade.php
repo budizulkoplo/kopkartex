@@ -11,13 +11,14 @@
     </div>
     <div class="app-content"> <!--begin::Container-->
         <div class="container"> <!--begin::Row-->
+            <form class="row g-3 needs-validation" novalidate id="frmterima">
             <div class="row">
                 <div class="col-md-4">
                     <div class="card card-success card-outline">
                         <div class="card-body p-1">
                             <div class="input-group input-group-sm mb-1"> 
                                 <span class="input-group-text">Date</span>
-                                <input type="text" class="form-control datepicker">
+                                <input type="text" class="form-control datepicker" name="date" required>
                                 <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
                             </div>
                             <div class="input-group input-group-sm mb-1"> 
@@ -32,11 +33,11 @@
                         <div class="card-body p-1">
                             <div class="input-group input-group-sm mb-1"> 
                                 <span class="input-group-text">Invoice</span>
-                                <input type="text" class="form-control">
+                                <input type="text" class="form-control" name="invoice" required>
                             </div>
                             <div class="input-group input-group-sm mb-1"> 
                                 <span class="input-group-text">Supplier</span>
-                                <input type="text" class="form-control">
+                                <input type="text" class="form-control" name="supplier" required>
                             </div>
                         </div>
                     </div>
@@ -61,7 +62,8 @@
                             <table id="tbterima" class="table table-sm table-striped" style="width: 100%; font-size: small;">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
+                                        <th>#</th>
+                                        <th>Kode</th>
                                         <th>Nama Barang</th>
                                         <th>Qty</th>
                                         <th></th>
@@ -77,13 +79,14 @@
                 <div class="col">
                     <div class="input-group"> 
                         <span class="input-group-text">Catatan</span> 
-                        <textarea class="form-control" aria-label="With textarea"></textarea> 
+                        <textarea class="form-control" aria-label="With textarea" name="note"></textarea> 
                     </div>
                 </div>
                 <div class="col">
-                    <button type="button" class="btn btn-warning"><i class="bi bi-arrow-clockwise"></i> Batal</button>
+                    <button type="button" class="btn btn-warning" onclick="clearform();"><i class="bi bi-arrow-clockwise"></i> Batal</button>
                     <button type="submit" class="btn btn-success"><i class="bi bi-floppy-fill"></i> Simpan</button></div>
             </div>
+            </form>
         </div>
     </div>
     <x-slot name="csscustom">
@@ -119,8 +122,35 @@
         <script src="{{ asset('plugins/BootstrapDatePicker/bootstrap-datepicker.min.js') }}"></script>
         <script src="{{ asset('plugins/typeahead.bundle.js') }}"></script>
         <script>
-            
-
+            function numbering(){
+                $('#tbterima tbody tr').each(function(index) {
+                    $(this).find('td:first').text(index + 1);
+                });
+            }
+            function addRow(datarow){
+                let str = '',boleh=true;
+                $('#tbterima tbody tr').each(function(index, element) {
+                    if(datarow.id == $(this).data('id'))
+                    {boleh=false;return false;}
+                });
+                if(boleh){
+                    str +=`<tr data-id="`+datarow.code+`"><td></td><td>`+datarow.code+`</td><td>`+datarow.text+`</td>
+                        <td>
+                            <input type="number" value="0" class="form-control form-control-sm w-auto" onfocus="this.select()" min="1" name="qty[]" required>
+                            <input type="hidden" name="id[]" value="`+datarow.id+`">
+                        </td>
+                        <td><span class="badge bg-danger dellist" onclick="$(this).parent().parent().remove();numbering();"><i class="bi bi-trash3-fill"></i></span></td></tr>`;
+                    $('#tbterima tbody').append(str);
+                }
+                numbering();
+                $('#barcode-search').typeahead('val', '');
+            }
+            function clearform(){
+                $('input[name="invoice"]').val('');
+                $('input[name="supplier"]').val('');
+                $('textarea[name="note"]').val('');
+                $('#tbterima tbody tr').remove();
+            }
             $(document).ready(function () {
                 // Set up the Bloodhound suggestion engine
                 var fruits = new Bloodhound({
@@ -140,7 +170,7 @@
                     },
                     {
                     name: 'fruits',
-                    display: 'text', // what to show in input box
+                    display: 'code', // what to show in input box
                     source: fruits,
                     templates: {
                         suggestion: function (data) {
@@ -149,14 +179,62 @@
                     }
                     }
                 ).bind('typeahead:select', function (ev, suggestion) {
-                    $('#barcode-id').val(suggestion.id); // save the ID in a hidden field
-                    console.log('Selected:', suggestion);
+                    $('#barcode-id').val(suggestion.code); // save the ID in a hidden field
+                    addRow(suggestion);
+                    
                 });
                 $('.datepicker').datepicker({
                     format: 'dd-mm-yyyy',
                     autoclose: true,
                     todayHighlight: true
                 }).datepicker('setDate', new Date());
+                $('#barcode-search').on('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        $.ajax({
+                            url: '{{ route('penerimaan.getbarangbycode') }}',
+                            method: 'GET',
+                            data: {
+                                kode: $(this).val(),
+                            },
+                            dataType: 'json',
+                            success: function(response) {
+                                addRow(response);
+                            },
+                            error: function(xhr, status, error) {
+                                Swal.fire({
+                                title: "Barang tidak ditemukan!",
+                                icon: "error",
+                                draggable: true
+                                });
+                            }
+                        });
+                    }
+                });
+                $('#frmterima').on('submit', function(e) {
+                    e.preventDefault(); // Prevent default form submit
+                    if (!this.checkValidity()) {
+                        e.stopPropagation();
+                    } else {
+                        $.ajax({
+                        type: 'POST',
+                        url: '{{ route('penerimaan.store') }}', // Your endpoint
+                        data: $(this).serialize(), // Serialize form data
+                        success: function(response) {
+                            Swal.fire({
+                            position: "top-end",
+                            icon: "success",
+                            title: "Your work has been saved",
+                            showConfirmButton: false,
+                            timer: 2500
+                            });
+                            clearform();
+                        },
+                        error: function(xhr) {
+                            alert('Something went wrong');
+                        }
+                        });
+                    }
+                });
             });
         </script>
     </x-slot>
