@@ -28,20 +28,30 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="card card-success card-outline mb-4">
                         <div class="card-body p-1">
                             <div class="input-group mb-3"> 
-                                <input type="text" class="form-control" placeholder="Unit 1"> 
+                                <select class="form-select" id="unit1" name="unit1" required>
+                                    <option value=""></option>
+                                    @foreach ($unit as $item)
+                                        <option value="{{ $item->id }}">{{ $item->nama_unit }}</option>
+                                    @endforeach
+                                </select>
                                 <span class="input-group-text"><i class="fa-solid fa-right-left"></i></span> 
-                                <input type="text" class="form-control" placeholder="Unit 2"> 
+                                <select class="form-select" id="unit2" name="unit2" required>
+                                    <option value=""></option>
+                                    @foreach ($unit as $item)
+                                        <option value="{{ $item->id }}">{{ $item->nama_unit }}</option>
+                                    @endforeach
+                                </select>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-4" id="scnbarcode" style="display: none">
                     <div class="input-group input-group-sm mb-1"> 
                         <span class="input-group-text">Barcode</span>
                         <input type="text" class="form-control typeahead" id="barcode-search">
@@ -58,6 +68,7 @@
                                         <th>#</th>
                                         <th>Kode</th>
                                         <th>Nama Barang</th>
+                                        <th>Stok</th>
                                         <th>Qty</th>
                                         <th></th>
                                     </tr>
@@ -77,7 +88,7 @@
                 </div>
                 <div class="col">
                     <button type="button" class="btn btn-warning" onclick="clearform();"><i class="bi bi-arrow-clockwise"></i> Batal</button>
-                    <button type="submit" class="btn btn-success"><i class="bi bi-floppy-fill"></i> Simpan</button></div>
+                    <button type="submit" class="btn btn-success" id="btnsimpan" style="display: none"><i class="bi bi-floppy-fill"></i> Simpan</button></div>
             </div>
             </form>
         </div>
@@ -115,6 +126,17 @@
         <script src="{{ asset('plugins/BootstrapDatePicker/bootstrap-datepicker.min.js') }}"></script>
         <script src="{{ asset('plugins/typeahead.bundle.js') }}"></script>
         <script>
+            function validasi(){
+                if($('#unit1').val() == '' || $('#unit2').val() == ''){
+                    $('#scnbarcode, #btnsimpan').hide();
+                }else{
+                    if(($('#unit1').val() == $('#unit2').val())){
+                        $('#scnbarcode, #btnsimpan').hide();
+                    }else{
+                        $('#scnbarcode, #btnsimpan').show();
+                    }
+                }
+            }
             function numbering(){
                 $('#tbterima tbody tr').each(function(index) {
                     $(this).find('td:first').text(index + 1);
@@ -127,10 +149,13 @@
                     {boleh=false;return false;}
                 });
                 if(boleh){
-                    str +=`<tr data-id="`+datarow.code+`"><td></td><td>`+datarow.code+`</td><td>`+datarow.text+`</td>
+                    str +=`<tr data-id="`+datarow.id+`" class="align-middle"><td></td><td>`+datarow.code+`</td><td>`+datarow.text+`</td>
                         <td>
-                            <input type="number" value="0" class="form-control form-control-sm w-auto" onfocus="this.select()" min="1" name="qty[]" required>
-                            <input type="hidden" name="id[]" value="`+datarow.id+`">
+                            <input type="number" readonly value="${datarow.stok}" class="form-control form-control-sm w-auto" min="1" name="stok[]">
+                        </td>
+                        <td>
+                            <input type="number" value="0" class="form-control form-control-sm w-auto" onfocus="this.select()" min="1" name="qty[]" max="${datarow.stok}" required>
+                            <input type="hidden" class="idbarang" name="id[]" value="`+datarow.id+`">
                         </td>
                         <td><span class="badge bg-danger dellist" onclick="$(this).parent().parent().remove();numbering();"><i class="bi bi-trash3-fill"></i></span></td></tr>`;
                     $('#tbterima tbody').append(str);
@@ -144,17 +169,30 @@
                 $('textarea[name="note"]').val('');
                 $('#tbterima tbody tr').remove();
             }
+            $(document).on('keydown', 'form', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    return false;
+                }
+            });
             $(document).ready(function () {
+                $('#unit1, #unit2').on('change',function(){
+                    validasi();
+                });
                 // Set up the Bloodhound suggestion engine
                 var fruits = new Bloodhound({
                     datumTokenizer: Bloodhound.tokenizers.obj.whitespace('text'),
                     queryTokenizer: Bloodhound.tokenizers.whitespace,
                     remote: {
-                    url: '{{ route('penerimaan.getbarang') }}?q=%QUERY',
+                    url: '{{ route('mutasi.getbarang') }}?q=%QUERY',
+                    replace: function (url, query) {
+                        let extraParam = $('#unit1').val();  // get extra data dynamically
+                        return `{{ route('mutasi.getbarang') }}?q=${encodeURIComponent(query)}&unit=${encodeURIComponent(extraParam)}`;
+                    },
                     wildcard: '%QUERY'
                     }
                 });
-
+                console.log(fruits)
                 $('#barcode-search').typeahead(
                     {
                     hint: true,
@@ -167,6 +205,7 @@
                     source: fruits,
                     templates: {
                         suggestion: function (data) {
+                            
                         return `<div>${data.text}</div>`;
                         }
                     }
@@ -184,10 +223,11 @@
                 $('#barcode-search').on('keydown', function(e) {
                     if (e.key === 'Enter') {
                         $.ajax({
-                            url: '{{ route('penerimaan.getbarangbycode') }}',
+                            url: '{{ route('mutasi.getbarangbycode') }}',
                             method: 'GET',
                             data: {
                                 kode: $(this).val(),
+                                unit: $('#unit1').val(),
                             },
                             dataType: 'json',
                             success: function(response) {
@@ -210,7 +250,7 @@
                     } else {
                         $.ajax({
                         type: 'POST',
-                        url: '{{ route('penerimaan.store') }}', // Your endpoint
+                        url: '{{ route('mutasi.store') }}', // Your endpoint
                         data: $(this).serialize(), // Serialize form data
                         success: function(response) {
                             Swal.fire({

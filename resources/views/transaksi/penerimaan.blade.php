@@ -134,7 +134,7 @@
                     {boleh=false;return false;}
                 });
                 if(boleh){
-                    str +=`<tr data-id="`+datarow.code+`"><td></td><td>`+datarow.code+`</td><td>`+datarow.text+`</td>
+                    str +=`<tr data-id="`+datarow.id+`" class="align-middle"><td></td><td>`+datarow.code+`</td><td>`+datarow.text+`</td>
                         <td>
                             <input type="number" value="0" class="form-control form-control-sm w-auto" onfocus="this.select()" min="1" name="qty[]" required>
                             <input type="hidden" name="id[]" value="`+datarow.id+`">

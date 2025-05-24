@@ -178,7 +178,12 @@
                     }
                 });
             });
-            
+            $(document).on('keydown', 'form', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    return false;
+                }
+            });
             $( document ).ready(function() {
                 $('#fkategori').on('change',function(){
                     table.ajax.reload();
