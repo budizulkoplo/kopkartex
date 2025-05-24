@@ -22,7 +22,7 @@
                     @endphp
                     @if ($lanjut >0)
                     <li class="nav-item"> 
-                        <a href="{{ $item->children?'#':route($item->link) }}" class="nav-link {{ request()->routeIs($item->link)?'active':'' }}"> 
+                        <a href="{{ $item->children?'#':(Route::has($item->link)?route($item->link):'') }}" class="nav-link {{ request()->routeIs($item->link)?'active':'' }}"> 
                             <i class="nav-icon {{ $item->icon }}"></i>
                             <p>{{ $item->name }} 
                                 @if ($item->children)
@@ -50,7 +50,7 @@
                                                     $p4=explode(';', $chl2->role);
                                                     $inarray2=array_intersect(auth()->user()->getRoleNames()->toArray(),$p4);
                                                 @endphp
-                                                @if($inarray2)
+                                                @if($inarray2 && Route::has($chl2->link))
                                                 <li class="nav-item">
                                                     <a href="{{ route($chl2->link) }}" class="nav-link {{ request()->routeIs($chl2->link)?'active':'' }}"> 
                                                     <i class="nav-icon {{ $chl2->icon }}"></i>
@@ -61,10 +61,12 @@
                                             @endforeach
                                         </ul> 
                                     @else
+                                    @if (Route::has($chl->link))
                                         <a href="{{ route($chl->link) }}" class="nav-link {{ request()->routeIs($chl->link)?'active':'' }}"> 
                                         <i class="nav-icon {{ $chl->icon }}"></i>
                                         <p>{{ $chl->name }}</p>
                                         </a>
+                                    @endif
                                     @endif
                                 </li>
                                 @endif

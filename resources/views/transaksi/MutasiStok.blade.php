@@ -1,10 +1,10 @@
 <x-app-layout>
-    <x-slot name="pagetitle">Penerimaan</x-slot>
+    <x-slot name="pagetitle">Mutasi Stok</x-slot>
     <div class="app-content-header"> <!--begin::Container-->
         <div class="container-fluid"> <!--begin::Row-->
             <div class="row mb-3">
                 <div class="col-sm-6">
-                    <h3 class="mb-0">Penerimaan</h3>
+                    <h3 class="mb-0">Mutasi Stok</h3>
                 </div>
             </div> <!--end::Row-->
         </div> <!--end::Container-->
@@ -31,31 +31,24 @@
                 <div class="col-md-4">
                     <div class="card card-success card-outline mb-4">
                         <div class="card-body p-1">
-                            <div class="input-group input-group-sm mb-1"> 
-                                <span class="input-group-text">Invoice</span>
-                                <input type="text" class="form-control" name="invoice" required>
-                            </div>
-                            <div class="input-group input-group-sm mb-1"> 
-                                <span class="input-group-text">Supplier</span>
-                                <input type="text" class="form-control" name="supplier" required>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card card-success card-outline mb-4">
-                        <div class="card-body p-1">
-                            <div class="input-group input-group-sm mb-1"> 
-                                <span class="input-group-text">Barcode</span>
-                                <input type="text" class="form-control typeahead" id="barcode-search">
-                                <input type="hidden" id="barcode-id">
-                                <span class="input-group-text bg-primary"><i class="bi bi-search text-white"></i></span>
+                            <div class="input-group mb-3"> 
+                                <input type="text" class="form-control" placeholder="Unit 1"> 
+                                <span class="input-group-text"><i class="fa-solid fa-right-left"></i></span> 
+                                <input type="text" class="form-control" placeholder="Unit 2"> 
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="row">
+                <div class="col-md-4">
+                    <div class="input-group input-group-sm mb-1"> 
+                        <span class="input-group-text">Barcode</span>
+                        <input type="text" class="form-control typeahead" id="barcode-search">
+                        <input type="hidden" id="barcode-id">
+                        <span class="input-group-text bg-primary"><i class="bi bi-search text-white"></i></span>
+                    </div>
+                </div>
                 <div class="col-md-12">
                     <div class="card card-primary card-outline mb-4">
                         <div class="card-body p-1">

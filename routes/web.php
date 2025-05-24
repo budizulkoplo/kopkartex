@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\MutasiStockController;
 use App\Http\Controllers\PenerimaanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SimpananController;
@@ -29,6 +30,12 @@ Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|ad
     Route::get('/getbarang', [PenerimaanController::class, 'getBarang'])->name('penerimaan.getbarang');
     Route::get('/getbarangbycode', [PenerimaanController::class, 'getBarangByCode'])->name('penerimaan.getbarangbycode');
     Route::post('/store', [PenerimaanController::class, 'store'])->name('penerimaan.store');
+});
+Route::prefix('mutasi')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/', [MutasiStockController::class, 'index'])->name('mutasi.list');
+    Route::get('/form', [MutasiStockController::class, 'FormMutasi'])->name('mutasi.form');
+    Route::get('/getdata', [MutasiStockController::class, 'GetData'])->name('mutasi.getdata');
+    //Route::post('/store', [PenerimaanController::class, 'store'])->name('penerimaan.store');
 });
 Route::prefix('simpanan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('simpanan')->group(function () {
     Route::get('/', [SimpananController::class, 'index'])->name('simpanan.list');
