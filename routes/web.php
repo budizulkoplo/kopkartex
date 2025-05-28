@@ -5,6 +5,7 @@ use App\Http\Controllers\BarangController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\MutasiStockController;
 use App\Http\Controllers\PenerimaanController;
+use App\Http\Controllers\PenjualanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SimpananController;
 use App\Http\Controllers\UnitController;
@@ -30,6 +31,12 @@ Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|ad
     Route::get('/getbarang', [PenerimaanController::class, 'getBarang'])->name('penerimaan.getbarang');
     Route::get('/getbarangbycode', [PenerimaanController::class, 'getBarangByCode'])->name('penerimaan.getbarangbycode');
     Route::post('/store', [PenerimaanController::class, 'store'])->name('penerimaan.store');
+});
+Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/', [PenjualanController::class, 'index'])->name('jual.form');
+    Route::get('/getbarang', [PenjualanController::class, 'getBarang'])->name('jual.getbarang');
+    Route::get('/getbarangbycode', [PenjualanController::class, 'getBarangByCode'])->name('jual.getbarangbycode');
+    // Route::post('/store', [PenerimaanController::class, 'store'])->name('penerimaan.store');
 });
 Route::prefix('mutasi')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [MutasiStockController::class, 'index'])->name('mutasi.list');
