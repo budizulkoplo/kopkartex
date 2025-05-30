@@ -46,6 +46,10 @@ class BarangController extends Controller
     public function getCode(){
         return response()->json($this->genCode(), 200);
     }
+    public function CekCode(Request $request){
+        $barang = Barang::where('kode_barang',$request->code)->count();
+        return response()->json($barang, 200);
+    }
     public function Store(Request $request){
         $validatedData = $request->validate([
             'nama_barang' => 'required'
@@ -55,10 +59,15 @@ class BarangController extends Controller
                 $id=Crypt::decryptString($request->idbarang);
                 $barang = Barang::find($id);
             }else{
+                $cnbarang = Barang::where('kode_barang',$request->kode_barang)->count();
+                if($cnbarang>0)
+                return response()->json('Kode sudah terpakai', 500);
+
                 $barang = new Barang;
-                $barang->kode_barang = $this->genCode();
+                $barang->kode_barang = $request->kode_barang;
             }
             $barang->nama_barang = $request->nama_barang;
+            $barang->harga_barang = $request->harga_barang;
             $barang->kategori = $request->kategori;
             $barang->satuan = $request->satuan;
             $barang->save();

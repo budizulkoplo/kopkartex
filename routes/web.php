@@ -77,6 +77,7 @@ Route::prefix('barang')->middleware(['auth', 'verified', 'role:superadmin|admin'
     Route::get('/getdata', [BarangController::class, 'getdata'])->name('barang.getdata');
     Route::post('/store', [BarangController::class, 'Store'])->name('barang.store');
     Route::get('/getcode', [BarangController::class, 'getCode'])->name('barang.getcode');
+    Route::get('/cekcode', [BarangController::class, 'CekCode'])->name('barang.cekcode');
     Route::delete('/hapus', [BarangController::class, 'Hapus'])->name('barang.hapus');
 });
 Route::get('/ss', function () {
