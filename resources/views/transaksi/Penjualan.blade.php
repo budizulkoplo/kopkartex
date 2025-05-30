@@ -39,12 +39,17 @@
                                 <span class="input-group-text">Barcode</span>
                                 <input type="text" class="form-control typeahead" id="barcode-search">
                                 <input type="hidden" id="barcode-id">
-                                <span class="input-group-text bg-primary"><i class="bi bi-search text-white"></i></span>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-body p-1">
+                            <p class="fs-6 text-end">Invoice <span class="fw-bold">INV0001822</span></p>
+                           <p class="fs-1 fw-bold text-end mb-0 topgrandtotal"></p>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="row">
@@ -57,6 +62,7 @@
                                         <th>#</th>
                                         <th>Kode</th>
                                         <th>Nama Barang</th>
+                                        <th>@Harga</th>
                                         <th>Stok</th>
                                         <th>Qty</th>
                                         <th></th>
@@ -77,16 +83,16 @@
                                 <div class="col-sm-7"> 
                                     <div class="input-group input-group-sm mb-1"> 
                                         <span class="input-group-text">Rp.</span>
-                                        <input type="number" class="form-control" value="" name="subtotal" id="subtotal" disabled>
+                                        <input type="number" class="form-control" value="0" name="subtotal" id="subtotal" disabled>
                                     </div>
                                 </div>
                             </div>
                             <div class="row"> 
-                                <label for="discount" class="col-sm-5 col-form-label">Discount</label>
+                                <label for="diskon" class="col-sm-5 col-form-label">Diskon</label>
                                 <div class="col-sm-7">
                                 <div class="input-group input-group-sm mb-1"> 
                                     <span class="input-group-text">Rp.</span>
-                                    <input type="number" class="form-control" value="" onfocus="this.select()" name="discount" id="discount">
+                                    <input type="number" class="form-control" value="0" onfocus="this.select()" onkeyup="kalkulasi()" onchange="" name="diskon" id="diskon">
                                 </div>
                                 </div>
                             </div>
@@ -95,7 +101,7 @@
                                 <div class="col-sm-7"> 
                                     <div class="input-group input-group-sm mb-1"> 
                                         <span class="input-group-text">Rp.</span>
-                                        <input type="number" class="form-control" value="" name="grandtotal" id="grandtotal" disabled>
+                                        <input type="number" class="form-control" value="0" name="grandtotal" id="grandtotal" disabled>
                                     </div>
                                 </div>
                             </div>
@@ -120,7 +126,7 @@
                                 <div class="col-sm-8">
                                 <div class="input-group input-group-sm mb-1"> 
                                     <span class="input-group-text">Rp.</span>
-                                    <input type="number" class="form-control" value="0" onfocus="this.select()" name="dibayar" id="dibayar" required>
+                                    <input type="number" class="form-control" value="0" onfocus="this.select()" name="dibayar" onkeyup="kalkulasi()" id="dibayar" required>
                                 </div>
                                 </div>
                             </div>
@@ -129,7 +135,7 @@
                                 <div class="col-sm-8"> 
                                     <div class="input-group input-group-sm mb-1"> 
                                         <span class="input-group-text">Rp.</span>
-                                        <input type="number" class="form-control" value="" name="kembali" id="kembali" disabled>
+                                        <input type="number" class="form-control" value="0" name="kembali" id="kembali" disabled>
                                     </div>
                                 </div>
                             </div>
@@ -152,6 +158,17 @@
         <link href="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
         <link rel="stylesheet" href="{{ asset('plugins/BootstrapDatePicker/bootstrap-datepicker.min.css') }}">
         <style>
+        /* Chrome, Safari, Edge, Opera */
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Firefox */
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
         /* Typeahead dropdown menu */
         .tt-menu {
         width: 100%;
@@ -190,10 +207,31 @@
         <script src="{{ asset('plugins/BootstrapDatePicker/bootstrap-datepicker.min.js') }}"></script>
         <script src="{{ asset('plugins/typeahead.bundle.js') }}"></script>
         <script>
+            function formatRupiahWithDecimal(angka) {
+                return new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR'
+                }).format(angka);
+            }
             function numbering(){
                 $('#tbterima tbody tr').each(function(index) {
                     $(this).find('td:first').text(index + 1);
                 });
+            }
+            function kalkulasi(){
+                let subtotal=0,grand=0;
+                $('#tbterima tbody tr').each(function(index, element) {
+                    var row = $(this);
+                    var barangqty = row.find('.barangqty').val();
+                    var hargabeli = row.find('.hargabeli').val();
+                    var hargajual = row.find('.hargajual').val();
+                    subtotal += (hargajual*barangqty);
+                });
+                $('#subtotal').val(subtotal);
+                $('#grandtotal').val(subtotal-$('#diskon').val());
+                $('.topgrandtotal').text(formatRupiahWithDecimal($('#grandtotal').val()));
+                $('#dibayar').prop('min',  $('#grandtotal').val());
+                $('#kembali').val($('#dibayar').val()-$('#grandtotal').val());
             }
             function addRow(datarow){
                 let str = '',boleh=true;
@@ -203,13 +241,16 @@
                 });
                 if(boleh){
                     str +=`<tr data-id="`+datarow.id+`" class="align-middle"><td></td><td>`+datarow.code+`</td><td>`+datarow.text+`</td>
-                        <td>`+datarow.stok+`<input type="hidden" name="stok[]" value="`+datarow.stok+`">
+                        <td>`+datarow.harga_jual+`
                         </td>
+                        <td>`+datarow.stok+`<input type="hidden" name="stok[]" value="`+datarow.stok+`"></td>
                         <td>
-                            <input type="number" value="0" class="form-control form-control-sm w-auto" onfocus="this.select()" min="1" max="`+datarow.stok+`" name="qty[]" required>
-                            <input type="hidden" name="id[]" value="`+datarow.id+`">
+                            <input type="number" value="0" class="form-control form-control-sm w-auto barangqty" onfocus="this.select()" min="1" max="`+datarow.stok+`" name="qty[]" onkeyup="kalkulasi()" required>
+                            <input type="hidden" name="id[]" class="idbarang" value="`+datarow.id+`">
+                            <input type="hidden" name="harga_beli[]" class="hargabeli" value="`+datarow.harga_beli+`">
+                            <input type="hidden" name="harga_jual[]" class="hargajual" value="`+datarow.harga_jual+`">
                         </td>
-                        <td><span class="badge btn bg-danger dellist" onclick="$(this).parent().parent().remove();numbering();"><i class="bi bi-trash3-fill"></i></span></td></tr>`;
+                        <td><span class="badge btn bg-danger dellist" onclick="$(this).parent().parent().remove();kalkulasi();numbering();"><i class="bi bi-trash3-fill"></i></span></td></tr>`;
                     $('#tbterima tbody').append(str);
                 }
                 numbering();
@@ -293,7 +334,7 @@
                     } else {
                         $.ajax({
                         type: 'POST',
-                        url: '{{ route('penerimaan.store') }}', // Your endpoint
+                        url: '', // Your endpoint
                         data: $(this).serialize(), // Serialize form data
                         success: function(response) {
                             Swal.fire({

@@ -56,7 +56,8 @@
                                         <th>Nama</th>
                                         <th>Kategori</th>
                                         <th>Satuan</th>
-                                        <th>Harga(Rp.)</th>
+                                        <th>HargaBeli</th>
+                                        <th>HargaJual</th>
                                         <th></th>
                                     </tr>
                                 </thead>
@@ -105,10 +106,17 @@
                             </select>
                         </div>
                         <div class="col col-lg-6 mb-1">
-                            <label for="harga_barang" class="col-sm-5 col-form-label">Harga Barang</label>
+                            <label for="harga_beli" class="col-sm-5 col-form-label">Harga Beli</label>
                             <div class="input-group input-group-sm mb-1"> 
                                 <span class="input-group-text">Rp.</span>
-                                <input type="number" class="form-control" onfocus="this.select()" value="" name="harga_barang" id="harga_barang">
+                                <input type="number" class="form-control" onfocus="this.select()" value="" name="harga_beli" id="harga_beli">
+                            </div>
+                        </div>
+                        <div class="col col-lg-6 mb-1">
+                            <label for="harga_jual" class="col-sm-5 col-form-label">Harga Jual</label>
+                            <div class="input-group input-group-sm mb-1"> 
+                                <span class="input-group-text">Rp.</span>
+                                <input type="number" class="form-control" onfocus="this.select()" value="" name="harga_jual" id="harga_jual">
                             </div>
                         </div>
                     </div>
@@ -142,7 +150,8 @@
                     { "data": "nama_barang","orderable": false},
                     { "data": "kategori","orderable": false},
                     { "data": "satuan","orderable": false},
-                    { "data": "harga_barang","orderable": false},
+                    { "data": "harga_beli","orderable": false},
+                    { "data": "harga_jual","orderable": false},
                     { "data": null,"orderable": false,
                         render: function (data, type, row, meta) {
                             let str= `<span class="badge rounded-pill bg-warning editcel" data-bs-toggle="modal" data-bs-target="#exampleModal"><i class="bi bi-pencil-square"></i></span>
@@ -170,7 +179,8 @@
                         table.ajax.reload();
                         $('#exampleModal').modal('hide');
                         $('#idbarang').val('');
-                        $('input[name="harga_barang"]').val(0);
+                        $('input[name="harga_beli"]').val(0);
+                        $('input[name="harga_jual"]').val(0);
                         $('input[name="kode_barang"]').val('');
                         $('input[name="kode_barang"]').prop('disabled', false);
                         $('input[name="nama_barang"]').val('');
@@ -219,7 +229,8 @@
                 });
                 $('#btnadd').on('click',function(){
                     $('#idbarang').val('');
-                    $('input[name="harga_barang"]').val(0);
+                    $('input[name="harga_beli"]').val(0);
+                    $('input[name="harga_jual"]').val(0);
                     $('input[name="kode_barang"]').val('');
                     $('input[name="kode_barang"]').prop('disabled', false);
                     $('input[name="nama_barang"]').val('');
@@ -235,7 +246,8 @@
                     var row = table.row($(this).closest('tr')).data();
                     console.log(row)
                     $('#idbarang').val(row.id);
-                    $('input[name="harga_barang"]').val(row.harga_barang);
+                    $('input[name="harga_beli"]').val(row.harga_beli);
+                    $('input[name="harga_jual"]').val(row.harga_jual);
                     $('input[name="kode_barang"]').val(row.kode_barang);
                     $('input[name="kode_barang"]').prop('disabled', true);
                     $('input[name="nama_barang"]').val(row.nama_barang);

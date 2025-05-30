@@ -22,14 +22,14 @@ class PenjualanController extends Controller
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
         ->where('stok_unit.unit_id',Auth::user()->unit_kerja)
         ->whereRaw("CONCAT(barang.kode_barang, barang.nama_barang) LIKE ?", ["%{$request->q}%"])
-        ->select('barang.id','barang.kode_barang as code','barang.nama_barang as text','stok_unit.stok')
+        ->select('barang.id','barang.kode_barang as code','barang.nama_barang as text','stok_unit.stok','barang.harga_beli','barang.harga_jual')
         ->get();
         return response()->json($barang);
     }
     public function getBarangByCode(Request $request){
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
         ->where("barang.kode_barang", "=",$request->kode)
-        ->select('barang.id','barang.kode_barang as code','barang.nama_barang as text','stok_unit.stok')
+        ->select('barang.id','barang.kode_barang as code','barang.nama_barang as text','stok_unit.stok','barang.harga_beli','barang.harga_jual')
         ->first();
         if($barang){
             return response()->json($barang);
