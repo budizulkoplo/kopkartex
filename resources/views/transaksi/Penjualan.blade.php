@@ -22,12 +22,9 @@
                                 <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
                             </div>
                             <div class="input-group input-group-sm mb-1"> 
-                                <span class="input-group-text">Kasir</span>
-                                <input type="text" class="form-control" value="{{ auth()->user()->name }}" name="kasir" disabled>
-                            </div>
-                            <div class="input-group input-group-sm mb-1"> 
-                                <span class="input-group-text">Customer</span>
-                                <input type="text" class="form-control" value="" name="customer">
+                                <span class="input-group-text" id="basic-addon2">Customer</span>
+                                <input type="text" class="form-control" placeholder="Customer/Anggota" aria-describedby="basic-addon2" id="customer" name="customer"> 
+                                <input type="hidden" id="idcustomer" name="idcustomer">
                             </div>
                         </div>
                     </div>
@@ -35,10 +32,17 @@
                 <div class="col-md-4">
                     <div class="card card-success card-outline mb-4">
                         <div class="card-body p-1">
-                            <div class="input-group input-group-sm mb-1"> 
-                                <span class="input-group-text">Barcode</span>
-                                <input type="text" class="form-control typeahead" id="barcode-search">
-                                <input type="hidden" id="barcode-id">
+                            <div class="row">
+                                <div class="input-group input-group-sm mb-1"> 
+                                    <span class="input-group-text">Kasir</span>
+                                    <input type="text" class="form-control" value="{{ auth()->user()->name }}" name="kasir" disabled>
+                                </div>
+                                <div class="input-group input-group-sm mb-1"> 
+                                    <span class="input-group-text">Barang</span>
+                                    <input type="text" class="form-control typeahead" id="barcode-search">
+                                    <span class="input-group-text"><i class="fa-solid fa-barcode"></i></span>
+                                    <input type="hidden" id="barcode-id">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -46,7 +50,7 @@
                 <div class="col-md-4">
                     <div class="card mb-4">
                         <div class="card-body p-1">
-                            <p class="fs-6 text-end">Invoice <span class="fw-bold">INV0001822</span></p>
+                            <p class="fs-6 text-end">Invoice <span class="fw-bold txtinv">{{ $invoice }}</span></p>
                            <p class="fs-1 fw-bold text-end mb-0 topgrandtotal"></p>
                         </div>
                     </div>
@@ -91,8 +95,8 @@
                                 <label for="diskon" class="col-sm-5 col-form-label">Diskon</label>
                                 <div class="col-sm-7">
                                 <div class="input-group input-group-sm mb-1"> 
-                                    <span class="input-group-text">Rp.</span>
                                     <input type="number" class="form-control" value="0" onfocus="this.select()" onkeyup="kalkulasi()" onchange="" name="diskon" id="diskon">
+                                    <span class="input-group-text">%</span>
                                 </div>
                                 </div>
                             </div>
@@ -145,7 +149,7 @@
                 <div class="col">
                     <div class="input-group mb-3"> 
                         <span class="input-group-text">Catatan</span> 
-                        <textarea class="form-control" aria-label="With textarea" name="note"></textarea> 
+                        <textarea class="form-control" aria-label="With textarea" name="note" id="note"></textarea> 
                     </div>
                     <button type="button" class="btn btn-warning" onclick="clearform();"><i class="bi bi-arrow-clockwise"></i> Batal</button>
                     <button type="submit" class="btn btn-success"><i class="bi bi-floppy-fill"></i> Simpan</button>
@@ -157,6 +161,7 @@
     <x-slot name="csscustom">
         <link href="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
         <link rel="stylesheet" href="{{ asset('plugins/BootstrapDatePicker/bootstrap-datepicker.min.css') }}">
+        <link type="text/css" rel="stylesheet" href="{{ asset('plugins/loader/waitMe.css') }}">
         <style>
         /* Chrome, Safari, Edge, Opera */
         input[type=number]::-webkit-outer-spin-button,
@@ -205,8 +210,15 @@
         <script src="{{ asset('plugins/DataTable/dataTables.min.js') }}"></script>
         <script src="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.js') }}"></script>
         <script src="{{ asset('plugins/BootstrapDatePicker/bootstrap-datepicker.min.js') }}"></script>
-        <script src="{{ asset('plugins/typeahead.bundle.js') }}"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-3-typeahead/4.0.2/bootstrap3-typeahead.min.js"></script>
+        <script src="{{ asset('plugins/loader/waitMe.js') }}"></script>
         <script>
+            function loader(onoff){
+                if(onoff)
+                $('.app-wrapper').waitMe({effect : 'bounce',text : '',bg : 'rgba(255,255,255,0.7)',color : '#000',waitTime : -1,textPos : 'vertical',});
+                else
+                $('.app-wrapper').waitMe('hide');
+            }
             function formatRupiahWithDecimal(angka) {
                 return new Intl.NumberFormat('id-ID', {
                     style: 'currency',
@@ -228,10 +240,18 @@
                     subtotal += (hargajual*barangqty);
                 });
                 $('#subtotal').val(subtotal);
-                $('#grandtotal').val(subtotal-$('#diskon').val());
+                $('#grandtotal').val(subtotal * (1 - ($('#diskon').val() / 100)));
                 $('.topgrandtotal').text(formatRupiahWithDecimal($('#grandtotal').val()));
                 $('#dibayar').prop('min',  $('#grandtotal').val());
                 $('#kembali').val($('#dibayar').val()-$('#grandtotal').val());
+            }
+            function invoice(){
+                $.ajax({
+                    url: '{{ route('jual.getinv') }}',method: 'GET',dataType: 'json',
+                    beforeSend: function(xhr) {loader(true);},
+                    success: function(response) {$('.txtinv').text(response);loader(false);},
+                    error: function(xhr, status, error) {loader(false);}
+                });
             }
             function addRow(datarow){
                 let str = '',boleh=true;
@@ -246,7 +266,7 @@
                         <td>`+datarow.stok+`<input type="hidden" name="stok[]" value="`+datarow.stok+`"></td>
                         <td>
                             <input type="number" value="0" class="form-control form-control-sm w-auto barangqty" onfocus="this.select()" min="1" max="`+datarow.stok+`" name="qty[]" onkeyup="kalkulasi()" required>
-                            <input type="hidden" name="id[]" class="idbarang" value="`+datarow.id+`">
+                            <input type="hidden" name="idbarang[]" class="idbarang" value="`+datarow.id+`">
                             <input type="hidden" name="harga_beli[]" class="hargabeli" value="`+datarow.harga_beli+`">
                             <input type="hidden" name="harga_jual[]" class="hargajual" value="`+datarow.harga_jual+`">
                         </td>
@@ -257,9 +277,17 @@
                 $('#barcode-search').typeahead('val', '');
             }
             function clearform(){
-                $('input[name="invoice"]').val('');
                 $('input[name="supplier"]').val('');
                 $('textarea[name="note"]').val('');
+                $('#idcustomer').val('');
+                $('#barcode-id').val('');
+                $('#customer').val('');
+                $('.topgrandtotal').text('Rp.0');
+                $('#subtotal').val(0);
+                $('#diskon').val(0);
+                $('#grandtotal').val(0);
+                $('#dibayar').val(0);
+                $('#kembali').val(0);
                 $('#tbterima tbody tr').remove();
             }
             $(document).ready(function () {
@@ -270,36 +298,79 @@
                     }
                 });
                 // Set up the Bloodhound suggestion engine
-                var fruits = new Bloodhound({
-                    datumTokenizer: Bloodhound.tokenizers.obj.whitespace('text'),
-                    queryTokenizer: Bloodhound.tokenizers.whitespace,
-                    remote: {
-                    url: '{{ route('jual.getbarang') }}?q=%QUERY',
-                    wildcard: '%QUERY'
-                    }
-                });
-
-                $('#barcode-search').typeahead(
-                    {
-                    hint: true,
-                    highlight: true,
-                    minLength: 1
+                // var fruits = new Bloodhound({
+                //     datumTokenizer: Bloodhound.tokenizers.obj.whitespace('text'),
+                //     queryTokenizer: Bloodhound.tokenizers.whitespace,
+                //     remote: {
+                //     url: '{{ route('jual.getanggota') }}?q=%QUERY',
+                //     wildcard: '%QUERY'
+                //     }
+                // });
+                let users = [];
+                let selectedFromList = false;
+                $('#customer').typeahead({
+                    source: function (query, process) {
+                        return $.ajax({
+                        url: '{{ route('jual.getanggota') }}',       // Your backend endpoint
+                        type: 'GET',
+                        data: { query: query },
+                        dataType: 'json',
+                        success: function (data) {
+                            users = data; // Save for lookup later
+                            return process(data.map(user => user.name));
+                        }
+                        });
                     },
-                    {
-                    name: 'fruits',
-                    display: 'code', // what to show in input box
-                    source: fruits,
-                    templates: {
-                        suggestion: function (data) {
-                        return `<div>${data.text}</div>`;
+                    afterSelect: function (name) {
+                        const selected = users.find(user => user.name === name);
+                        if (selected) {
+                        $('#idcustomer').val(selected.id);
+                        selectedFromList = true;
                         }
                     }
-                    }
-                ).bind('typeahead:select', function (ev, suggestion) {
-                    $('#barcode-id').val(suggestion.code); // save the ID in a hidden field
-                    addRow(suggestion);
-                    
                 });
+                $('#customer').on('input', function () {
+                    selectedFromList = false;
+                    $('#idcustomer').val('');
+                });
+                // $('#barcode-search').typeahead(
+                //     {
+                //     hint: true,
+                //     highlight: true,
+                //     minLength: 1
+                //     },
+                //     {
+                //     name: 'fruits',
+                //     display: 'code', // what to show in input box
+                //     source: fruits,
+                //     templates: {
+                //         suggestion: function (data) {
+                //         return `<div>${data.text}</div>`;
+                //         }
+                //     }
+                //     }
+                // ).bind('typeahead:select', function (ev, suggestion) {
+                //     $('#barcode-id').val(suggestion.code); // save the ID in a hidden field
+                //     $.ajax({
+                //             url: '{{ route('jual.getbarangbycode') }}',
+                //             method: 'GET',
+                //             data: {
+                //                 kode: suggestion.code,
+                //             },
+                //             dataType: 'json',
+                //             success: function(response) {
+                //                 addRow(response);
+                //             },
+                //             error: function(xhr, status, error) {
+                //                 Swal.fire({
+                //                 title: "Barang tidak ditemukan!",
+                //                 icon: "error",
+                //                 draggable: true
+                //                 });
+                //             }
+                //         });
+                    
+                // });
                 $('.datepicker').datepicker({
                     format: 'dd-mm-yyyy',
                     autoclose: true,
@@ -314,15 +385,22 @@
                                 kode: $(this).val(),
                             },
                             dataType: 'json',
+                            beforeSend: function(xhr) {loader(true);},
                             success: function(response) {
                                 addRow(response);
+                                loader(false);
+                                $('#barcode-search').val('');
                             },
                             error: function(xhr, status, error) {
                                 Swal.fire({
-                                title: "Barang tidak ditemukan!",
+                                position: "top-end",
                                 icon: "error",
-                                draggable: true
+                                title: "Barang tidak ditemukan!",
+                                showConfirmButton: false,
+                                timer: 1500
                                 });
+                                $('#barcode-search').val('');
+                                loader(false);
                             }
                         });
                     }
@@ -332,10 +410,21 @@
                     if (!this.checkValidity()) {
                         e.stopPropagation();
                     } else {
+                        var form = $(this)[0];
+                        var formData = new FormData(form);
+
+                        // Manually append disabled inputs
+                        $(form).find(':input:disabled').each(function() {
+                            formData.append(this.name, $(this).val());
+                        });
+
                         $.ajax({
                         type: 'POST',
-                        url: '', // Your endpoint
-                        data: $(this).serialize(), // Serialize form data
+                        url: '{{ route('jual.store') }}', // Your endpoint
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        beforeSend: function(xhr) {loader(true);},
                         success: function(response) {
                             Swal.fire({
                             position: "top-end",
@@ -345,9 +434,11 @@
                             timer: 2500
                             });
                             clearform();
+                            loader(false);
+                            invoice();
                         },
                         error: function(xhr) {
-                            alert('Something went wrong');
+                            alert('Something went wrong');loader(false);
                         }
                         });
                     }

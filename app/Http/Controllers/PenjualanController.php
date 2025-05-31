@@ -2,10 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Penjualan;
+use App\Models\PenjualanDetail;
 use App\Models\StokUnit;
 use App\Models\Unit;
+use App\Models\User;
+use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class PenjualanController extends Controller
@@ -14,9 +20,27 @@ class PenjualanController extends Controller
     {
         return view('transaksi.Penjualan', [
             // 'roles' => Role::with('permissions')->get(),
-            // 'allroles' => Role::all(),
+            'invoice' => $this->genCode(),
             'unit' => Unit::find(Auth::user()->unit_kerja),
         ]);
+    }
+    function genCode(){
+        $total = Penjualan::withTrashed()->whereDate('created_at', date("Y-m-d"))->count();
+        $nomorUrut = $total + 1;
+        $newcode='INV-'.date("ymd").str_pad($nomorUrut, 3, '0', STR_PAD_LEFT);
+        return $newcode;
+    }
+    public function getInvoice(){
+        return response()->json($this->genCode());
+    }
+    public function getAnggota(Request $request){
+        $query = $request->get('query');
+
+        $users = User::where('name', 'LIKE', "%{$query}%")
+                    ->select('id', 'name')
+                    ->get();
+
+        return response()->json($users);
     }
     public function getBarang(Request $request){
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
@@ -29,6 +53,7 @@ class PenjualanController extends Controller
     public function getBarangByCode(Request $request){
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
         ->where("barang.kode_barang", "=",$request->kode)
+        ->where("stok_unit.unit_id", "=",Auth::user()->unit_kerja)
         ->select('barang.id','barang.kode_barang as code','barang.nama_barang as text','stok_unit.stok','barang.harga_beli','barang.harga_jual')
         ->first();
         if($barang){
@@ -37,5 +62,40 @@ class PenjualanController extends Controller
             return response()->json('error',404);
         }
         
+    }
+    public function Store(Request $request){
+        DB::beginTransaction();
+        try {
+            $date = Carbon::parse($request->tanggal);
+            $penjualan = new Penjualan;
+            $penjualan->nomor_invoice = $this->genCode();
+            $penjualan->tanggal = $date->format('Y-m-d');
+            $penjualan->total = $request->grandtotal;
+            $penjualan->metode_bayar = $request->metodebayar;
+            $penjualan->unit_id = Auth::user()->unit_kerja;
+            $penjualan->customer = $request->customer;
+            $penjualan->anggota_id = $request->idcustomer;
+            $penjualan->diskon = $request->diskon;
+            $penjualan->note = $request->note;
+            $penjualan->created_user = Auth::user()->id;
+            $penjualan->save();
+            $no=0;
+            foreach ($request->idbarang as $item) {
+                $dtl = new PenjualanDetail;
+                $dtl->penjualan_id = $penjualan->id;
+                $dtl->barang_id = $item;
+                $dtl->qty = $request->qty[$no];
+                $dtl->harga = $request->harga_jual[$no];
+                $dtl->save();
+
+                StokUnit::where('unit_id',Auth::user()->unit_kerja)->where('barang_id',$item)->decrement('stok', $request->qty[$no]);
+                $no++;
+            }
+            DB::commit();
+            return response()->json(['message' => 'Order saved successfully.']);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Failed to save order', 'message' => $e->getMessage()], 500);
+        }
     }
 }

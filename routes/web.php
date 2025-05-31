@@ -35,8 +35,10 @@ Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|ad
 Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [PenjualanController::class, 'index'])->name('jual.form');
     Route::get('/getbarang', [PenjualanController::class, 'getBarang'])->name('jual.getbarang');
+    Route::get('/getanggota', [PenjualanController::class, 'getAnggota'])->name('jual.getanggota');
+    Route::get('/getinv', [PenjualanController::class, 'getInvoice'])->name('jual.getinv');
     Route::get('/getbarangbycode', [PenjualanController::class, 'getBarangByCode'])->name('jual.getbarangbycode');
-    // Route::post('/store', [PenerimaanController::class, 'store'])->name('penerimaan.store');
+    Route::post('/store', [PenjualanController::class, 'Store'])->name('jual.store');
 });
 Route::prefix('mutasi')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [MutasiStockController::class, 'index'])->name('mutasi.list');
