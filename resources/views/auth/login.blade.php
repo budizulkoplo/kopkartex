@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
     <title>LOGIN KOPKARTEX</title>
-    <!-- CSS files -->
+
+    <link rel="icon" type="image/png" href="{{ asset('logo.png') }}"/>
+
     <link href="{{ asset('tabler/dist/css/tabler.min.css') }}" rel="stylesheet"/>
     <link href="{{ asset('tabler/dist/css/tabler-flags.min.css') }}" rel="stylesheet"/>
     <link href="{{ asset('tabler/dist/css/tabler-payments.min.css') }}" rel="stylesheet"/>
