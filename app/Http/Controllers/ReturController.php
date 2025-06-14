@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Exception;
+use Illuminate\Support\Facades\Crypt;
+use Yajra\DataTables\Facades\DataTables;
 
 class ReturController extends Controller
 {
@@ -21,6 +23,10 @@ class ReturController extends Controller
             // 'allroles' => Role::all(),
             // 'unit' => Unit::all(),
         ]);
+    }
+    public function ListData(Request $request): View
+    {
+        return view('transaksi.ReturBarangList');
     }
     public function getBarang(Request $request){
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
@@ -73,5 +79,24 @@ class ReturController extends Controller
             DB::rollBack();
             return response()->json(['error' => 'Failed to save order', 'message' => $e->getMessage()], 500);
         }
+    }
+    public function getDataTable(Request $request){
+        $retur = ReturBarang::join('unit','unit.id','retur.unit_id')
+        ->join('users','users.id','retur.created_user')
+        ->select('retur.id','retur.nama_supplier','retur.tgl_retur','retur.note','unit.nama_unit','users.name as userinput');
+        //if($request->kategori != 'all'){$barang->where('kategori',$request->kategori);}
+        return DataTables::of($retur)
+        ->addIndexColumn()
+        ->filter(function ($query) use ($request) {
+            if ($request->has('search') && $request->search != '') {
+                $query->where(function ($query2) use($request) {
+                    return $query2
+                    ->orWhere('nama_supplier','like','%'.$request->search['value'].'%');
+                }); 
+            }
+        })
+        ->editColumn('id', function($query) {
+            return Crypt::encryptString($query->id);        })
+        ->make(true);
     }
 }

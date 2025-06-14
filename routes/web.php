@@ -34,6 +34,8 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::get('/getbarang', [ReturController::class, 'getBarang'])->name('retur.getbarang');
     Route::get('/getbarangbycode', [ReturController::class, 'getBarangByCode'])->name('retur.getbarangbycode');
     Route::post('/store', [ReturController::class, 'store'])->name('retur.store');
+    Route::get('/datatable', [ReturController::class, 'getDataTable'])->name('retur.datatable');
+    Route::get('/list', [ReturController::class, 'ListData'])->name('retur.list');
 });
 Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('ss',function(){
