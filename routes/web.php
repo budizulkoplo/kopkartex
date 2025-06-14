@@ -11,11 +11,13 @@ use App\Http\Controllers\SimpananController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\UsersController;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 Route::get('/', [AuthenticatedSessionController::class, 'create']);
 // Route::get('/', function () {
 //     return view('welcome');
 // });
+
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -27,6 +29,9 @@ Route::middleware('auth', 'global.app')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('simpanan')->group(function () {
+    Route::get('ss',function(){
+        dd(Hash::make('12345678'));
+    });
     Route::get('/', [PenerimaanController::class, 'index'])->name('penerimaan.form');
     Route::get('/getbarang', [PenerimaanController::class, 'getBarang'])->name('penerimaan.getbarang');
     Route::get('/getbarangbycode', [PenerimaanController::class, 'getBarangByCode'])->name('penerimaan.getbarangbycode');
