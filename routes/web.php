@@ -11,6 +11,7 @@ use App\Http\Controllers\SimpananController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\UsersController;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 Route::get('/', [AuthenticatedSessionController::class, 'create']);
 // Route::get('/', function () {
@@ -20,7 +21,9 @@ Route::get('/', [AuthenticatedSessionController::class, 'create']);
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified', 'global.app'])->name('dashboard');
-
+Route::get('/ss',function(){
+    dd(Hash::make('12345678'));
+});
 Route::middleware('auth', 'global.app')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
