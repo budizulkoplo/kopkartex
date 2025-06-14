@@ -13,29 +13,7 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
-        <style>
-            .label-fixed-width {
-                min-width: 100px; /* Sesuaikan dengan panjang label terpanjang */
-                text-align: right;
-                justify-content: flex-end;
-            }
-            .tt-menu {
-                width: 100%;
-                background-color: #fff;
-                border: 1px solid #ced4da;
-                border-radius: 0.25rem;
-                z-index: 1000;
-                max-height: 250px;
-                overflow-y: auto;
-            }
-            .tt-suggestion {
-                padding: 0.5rem 1rem;
-                cursor: pointer;
-            }
-            .tt-suggestion:hover {
-                background-color: #f8f9fa;
-            }
-            </style>
+        
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100 dark:bg-gray-900">

@@ -42,7 +42,7 @@
 
                     <div class="row mb-3">
                         <div class="col-md-12">
-                            <table id="tbterima" class="table table-sm table-striped" style="width: 100%; font-size: small;">
+                            <table id="tbterima" class="table table-sm table-striped table-bordered" style="width: 100%; font-size: small;">
                                 <thead>
                                     <tr>
                                         <th>#</th>

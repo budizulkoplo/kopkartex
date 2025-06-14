@@ -1,44 +1,46 @@
 <x-app-layout>
     <x-slot name="pagetitle">Mutasi Stok</x-slot>
-    <div class="app-content-header"> <!--begin::Container-->
-        <div class="container-fluid"> <!--begin::Row-->
-            <div class="row mb-3">
-                <div class="col-sm-6">
-                    <h3 class="mb-0">Mutasi Stok</h3>
-                </div>
-            </div> <!--end::Row-->
-        </div> <!--end::Container-->
-    </div>
+    
     <div class="app-content"> <!--begin::Container-->
         <div class="container"> <!--begin::Row-->
-            <form class="row g-3 needs-validation" novalidate id="frmterima">
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="card card-success card-outline">
-                        <div class="card-body p-1">
-                            <div class="input-group input-group-sm mb-1"> 
-                                <span class="input-group-text">Date</span>
+        <form class="needs-validation" novalidate id="frmterima">
+            <div class="card card-success card-outline mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Stock Transfer Form</h5>
+                </div>
+                <div class="card-body">
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="input-group input-group-sm mb-2"> 
+                                <span class="input-group-text w-25">Tanggal</span>
                                 <input type="text" class="form-control datepicker" name="date" required>
                                 <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
                             </div>
-                            <div class="input-group input-group-sm mb-1"> 
-                                <span class="input-group-text">Petugas</span>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="input-group input-group-sm mb-2"> 
+                                <span class="input-group-text w-25">Petugas</span>
                                 <input type="text" class="form-control" value="{{ auth()->user()->name }}" disabled>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-success card-outline mb-4">
-                        <div class="card-body p-1">
-                            <div class="input-group mb-3"> 
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="input-group input-group-sm mb-2"> 
+                                <span class="input-group-text w-25">Dari Unit</span>
                                 <select class="form-select" id="unit1" name="unit1" required>
                                     <option value=""></option>
                                     @foreach ($unit as $item)
                                         <option value="{{ $item->id }}">{{ $item->nama_unit }}</option>
                                     @endforeach
                                 </select>
-                                <span class="input-group-text"><i class="fa-solid fa-right-left"></i></span> 
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="input-group input-group-sm mb-2"> 
+                                <span class="input-group-text w-25">Ke Unit</span>
                                 <select class="form-select" id="unit2" name="unit2" required>
                                     <option value=""></option>
                                     @foreach ($unit as $item)
@@ -48,21 +50,21 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4" id="scnbarcode" style="display: none">
-                    <div class="input-group input-group-sm mb-1"> 
-                        <span class="input-group-text">Barcode</span>
-                        <input type="text" class="form-control typeahead" id="barcode-search">
-                        <input type="hidden" id="barcode-id">
-                        <span class="input-group-text bg-primary"><i class="bi bi-search text-white"></i></span>
+
+                    <div class="row mb-3" id="scnbarcode" style="display: none">
+                        <div class="col-md-6">
+                            <div class="input-group input-group-sm mb-2"> 
+                                <span class="input-group-text w-25">Barcode</span>
+                                <input type="text" class="form-control typeahead" id="barcode-search">
+                                <input type="hidden" id="barcode-id">
+                                <span class="input-group-text bg-primary"><i class="bi bi-search text-white"></i></span>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-12">
-                    <div class="card card-primary card-outline mb-4">
-                        <div class="card-body p-1">
-                            <table id="tbterima" class="table table-sm table-striped" style="width: 100%; font-size: small;">
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                        <table id="tbterima" class="table table-sm table-striped table-bordered" style="width: 100%; font-size: small;">
                                 <thead>
                                     <tr>
                                         <th>#</th>
@@ -77,20 +79,27 @@
                             </table>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div class="row row-cols-auto">
-                <div class="col">
-                    <div class="input-group"> 
-                        <span class="input-group-text">Catatan</span> 
-                        <textarea class="form-control" aria-label="With textarea" name="note"></textarea> 
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="input-group"> 
+                                <span class="input-group-text w-25">Catatan</span> 
+                                <textarea class="form-control" name="note" rows="2"></textarea> 
+                            </div>
+                        </div>
                     </div>
+
+                    <div class="row mb-2">
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-warning" onclick="clearform();"><i class="bi bi-arrow-clockwise"></i> Batal</button>
+                            <button type="submit" class="btn btn-success" id="btnsimpan" style="display: none"><i class="bi bi-floppy-fill"></i> Simpan</button>
+                        </div>
+                    </div>
+
                 </div>
-                <div class="col">
-                    <button type="button" class="btn btn-warning" onclick="clearform();"><i class="bi bi-arrow-clockwise"></i> Batal</button>
-                    <button type="submit" class="btn btn-success" id="btnsimpan" style="display: none"><i class="bi bi-floppy-fill"></i> Simpan</button></div>
             </div>
-            </form>
+        </form>
+
         </div>
     </div>
     <x-slot name="csscustom">
