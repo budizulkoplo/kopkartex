@@ -18,18 +18,20 @@ Route::get('/', [AuthenticatedSessionController::class, 'create']);
 //     return view('welcome');
 // });
 
+
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified', 'global.app'])->name('dashboard');
-Route::get('/ss',function(){
-    dd(Hash::make('12345678'));
-});
+
 Route::middleware('auth', 'global.app')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('simpanan')->group(function () {
+    Route::get('ss',function(){
+        dd(Hash::make('12345678'));
+    });
     Route::get('/', [PenerimaanController::class, 'index'])->name('penerimaan.form');
     Route::get('/getbarang', [PenerimaanController::class, 'getBarang'])->name('penerimaan.getbarang');
     Route::get('/getbarangbycode', [PenerimaanController::class, 'getBarangByCode'])->name('penerimaan.getbarangbycode');
