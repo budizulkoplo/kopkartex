@@ -231,7 +231,7 @@
             }
         });
         })();
-        $( document ).ready(function() {$('#bdy').addClass('sidebar-collapse')});
+        $( document ).ready(function() {$('#bdy').addClass('sidebar')});
     </script> <!--end::OverlayScrollbars Configure--> <!--end::Script-->
 </body><!--end::Body-->
 
