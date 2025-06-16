@@ -7,6 +7,7 @@ use App\Http\Controllers\MutasiStockController;
 use App\Http\Controllers\PenerimaanController;
 use App\Http\Controllers\PenjualanController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReturController;
 use App\Http\Controllers\SimpananController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserRoleController;
@@ -28,7 +29,15 @@ Route::middleware('auth', 'global.app')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
-Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('simpanan')->group(function () {
+Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/', [ReturController::class, 'index'])->name('retur.form');
+    Route::get('/getbarang', [ReturController::class, 'getBarang'])->name('retur.getbarang');
+    Route::get('/getbarangbycode', [ReturController::class, 'getBarangByCode'])->name('retur.getbarangbycode');
+    Route::post('/store', [ReturController::class, 'store'])->name('retur.store');
+    Route::get('/datatable', [ReturController::class, 'getDataTable'])->name('retur.datatable');
+    Route::get('/list', [ReturController::class, 'ListData'])->name('retur.list');
+});
+Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('ss',function(){
         dd(Hash::make('12345678'));
     });
