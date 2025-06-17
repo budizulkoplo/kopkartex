@@ -274,7 +274,7 @@
                     $('#tbterima tbody').append(str);
                 }
                 numbering();
-                $('#barcode-search').typeahead('val', '');
+                $('#barcode-search').val('');
             }
             function clearform(){
                 $('input[name="supplier"]').val('');
@@ -297,15 +297,7 @@
                         return false;
                     }
                 });
-                // Set up the Bloodhound suggestion engine
-                // var fruits = new Bloodhound({
-                //     datumTokenizer: Bloodhound.tokenizers.obj.whitespace('text'),
-                //     queryTokenizer: Bloodhound.tokenizers.whitespace,
-                //     remote: {
-                //     url: '{{ route('jual.getanggota') }}?q=%QUERY',
-                //     wildcard: '%QUERY'
-                //     }
-                // });
+                
                 let users = [];
                 let selectedFromList = false;
                 $('#customer').typeahead({
@@ -333,44 +325,32 @@
                     selectedFromList = false;
                     $('#idcustomer').val('');
                 });
-                // $('#barcode-search').typeahead(
-                //     {
-                //     hint: true,
-                //     highlight: true,
-                //     minLength: 1
-                //     },
-                //     {
-                //     name: 'fruits',
-                //     display: 'code', // what to show in input box
-                //     source: fruits,
-                //     templates: {
-                //         suggestion: function (data) {
-                //         return `<div>${data.text}</div>`;
-                //         }
-                //     }
-                //     }
-                // ).bind('typeahead:select', function (ev, suggestion) {
-                //     $('#barcode-id').val(suggestion.code); // save the ID in a hidden field
-                //     $.ajax({
-                //             url: '{{ route('jual.getbarangbycode') }}',
-                //             method: 'GET',
-                //             data: {
-                //                 kode: suggestion.code,
-                //             },
-                //             dataType: 'json',
-                //             success: function(response) {
-                //                 addRow(response);
-                //             },
-                //             error: function(xhr, status, error) {
-                //                 Swal.fire({
-                //                 title: "Barang tidak ditemukan!",
-                //                 icon: "error",
-                //                 draggable: true
-                //                 });
-                //             }
-                //         });
-                    
-                // });
+                let currentRequest = null;
+                $('#barcode-search').typeahead({
+                    source: function (query, process) {
+                        if (currentRequest !== null) {
+                            currentRequest.abort();
+                        }
+                        currentRequest = $.ajax({
+                        url: '{{ route('jual.getbarang') }}',       // Your backend endpoint
+                        type: 'GET',
+                        data: { q: query },
+                        dataType: 'json',
+                        success: function (data) {
+                            barang = data; // Save for lookup later
+                            return process(data.map(barang => barang.text));
+                        }
+                        });
+                        return currentRequest;
+                    },
+                    afterSelect: function (text) {
+                        const selected = barang.find(barang => barang.text === text);
+                        if (selected) {
+                            addRow(selected);
+                        }
+                    }
+                });
+                
                 $('.datepicker').datepicker({
                     format: 'dd-mm-yyyy',
                     autoclose: true,

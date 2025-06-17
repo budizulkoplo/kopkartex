@@ -10,7 +10,7 @@
                 </div>
                 <div class="card-body">
 
-                    <div class="row mb-3">
+                    <div class="row mb-0">
                         <div class="col-md-6">
                             <div class="input-group input-group-sm mb-2"> 
                                 <span class="input-group-text w-25">Tanggal</span>
@@ -26,7 +26,7 @@
                         </div>
                     </div>
 
-                    <div class="row mb-3">
+                    <div class="row mb-0">
                         <div class="col-md-6">
                             <div class="input-group input-group-sm mb-2"> 
                                 <span class="input-group-text w-25">Dari Unit</span>
@@ -133,7 +133,7 @@
         <script src="{{ asset('plugins/DataTable/dataTables.min.js') }}"></script>
         <script src="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.js') }}"></script>
         <script src="{{ asset('plugins/BootstrapDatePicker/bootstrap-datepicker.min.js') }}"></script>
-        <script src="{{ asset('plugins/typeahead.bundle.js') }}"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-3-typeahead/4.0.2/bootstrap3-typeahead.min.js"></script>
         <script>
             function validasi(){
                 if($('#unit1').val() == '' || $('#unit2').val() == ''){
@@ -170,7 +170,7 @@
                     $('#tbterima tbody').append(str);
                 }
                 numbering();
-                $('#barcode-search').typeahead('val', '');
+                $('#barcode-search').val('');
             }
             function clearform(){
                 $('input[name="invoice"]').val('');
@@ -188,41 +188,31 @@
                 $('#unit1, #unit2').on('change',function(){
                     validasi();
                 });
-                // Set up the Bloodhound suggestion engine
-                var fruits = new Bloodhound({
-                    datumTokenizer: Bloodhound.tokenizers.obj.whitespace('text'),
-                    queryTokenizer: Bloodhound.tokenizers.whitespace,
-                    remote: {
-                    url: '{{ route('mutasi.getbarang') }}?q=%QUERY',
-                    replace: function (url, query) {
-                        let extraParam = $('#unit1').val();  // get extra data dynamically
-                        return `{{ route('mutasi.getbarang') }}?q=${encodeURIComponent(query)}&unit=${encodeURIComponent(extraParam)}`;
+                let currentRequest = null;
+                $('#barcode-search').typeahead({
+                    source: function (query, process) {
+                        if (currentRequest !== null) {
+                            currentRequest.abort();
+                        }
+                        currentRequest = $.ajax({
+                        url: '{{ route('mutasi.getbarang') }}',       // Your backend endpoint
+                        type: 'GET',
+                        data: { q: query,unit: $('#unit1').val() },
+                        dataType: 'json',
+                        success: function (data) {
+                            barang = data; // Save for lookup later
+                            return process(data.map(barang => barang.text));
+                        }
+                        });
+                        return currentRequest;
                     },
-                    wildcard: '%QUERY'
-                    }
-                });
-                console.log(fruits)
-                $('#barcode-search').typeahead(
-                    {
-                    hint: true,
-                    highlight: true,
-                    minLength: 1
-                    },
-                    {
-                    name: 'fruits',
-                    display: 'code', // what to show in input box
-                    source: fruits,
-                    templates: {
-                        suggestion: function (data) {
-                            
-                        return `<div>${data.text}</div>`;
+                    afterSelect: function (text) {
+                        const selected = barang.find(barang => barang.text === text);
+                        if (selected) {
+                            $('#barcode-id').val(selected.code); // save the ID in a hidden field
+                            addRow(selected);
                         }
                     }
-                    }
-                ).bind('typeahead:select', function (ev, suggestion) {
-                    $('#barcode-id').val(suggestion.code); // save the ID in a hidden field
-                    addRow(suggestion);
-                    
                 });
                 $('.datepicker').datepicker({
                     format: 'dd-mm-yyyy',

@@ -116,7 +116,7 @@
         <script src="{{ asset('plugins/DataTable/dataTables.min.js') }}"></script>
         <script src="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.js') }}"></script>
         <script src="{{ asset('plugins/BootstrapDatePicker/bootstrap-datepicker.min.js') }}"></script>
-        <script src="{{ asset('plugins/typeahead.bundle.js') }}"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-3-typeahead/4.0.2/bootstrap3-typeahead.min.js"></script>
         <script>
             $(document).on('keydown', function(e) {
                 if (e.key === "Enter") {
@@ -144,7 +144,7 @@
                     $('#tbterima tbody').append(str);
                 }
                 numbering();
-                $('#barcode-search').typeahead('val', '');
+                $('#barcode-search').val('');
             }
             function clearform(){
                 $('input[name="invoice"]').val('');
@@ -153,36 +153,31 @@
                 $('#tbterima tbody tr').remove();
             }
             $(document).ready(function () {
-                // Set up the Bloodhound suggestion engine
-                var fruits = new Bloodhound({
-                    datumTokenizer: Bloodhound.tokenizers.obj.whitespace('text'),
-                    queryTokenizer: Bloodhound.tokenizers.whitespace,
-                    remote: {
-                    url: '{{ route('retur.getbarang') }}?q=%QUERY',
-                    wildcard: '%QUERY'
-                    }
-                });
-
-                $('#barcode-search').typeahead(
-                    {
-                    hint: true,
-                    highlight: true,
-                    minLength: 1
+                let currentRequest = null;
+                $('#barcode-search').typeahead({
+                    source: function (query, process) {
+                        if (currentRequest !== null) {
+                            currentRequest.abort();
+                        }
+                        currentRequest = $.ajax({
+                        url: '{{ route('retur.getbarang') }}',       // Your backend endpoint
+                        type: 'GET',
+                        data: { q: query },
+                        dataType: 'json',
+                        success: function (data) {
+                            barang = data; // Save for lookup later
+                            return process(data.map(barang => barang.text));
+                        }
+                        });
+                        return currentRequest;
                     },
-                    {
-                    name: 'fruits',
-                    display: 'code', // what to show in input box
-                    source: fruits,
-                    templates: {
-                        suggestion: function (data) {
-                        return `<div>${data.text}</div>`;
+                    afterSelect: function (text) {
+                        const selected = barang.find(barang => barang.text === text);
+                        if (selected) {
+                            $('#barcode-id').val(selected.code); // save the ID in a hidden field
+                            addRow(selected);
                         }
                     }
-                    }
-                ).bind('typeahead:select', function (ev, suggestion) {
-                    $('#barcode-id').val(suggestion.code); // save the ID in a hidden field
-                    addRow(suggestion);
-                    
                 });
                 $('.datepicker').datepicker({
                     format: 'dd-mm-yyyy',
