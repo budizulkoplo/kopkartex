@@ -194,20 +194,58 @@
                     $(this).find('td:first').text(index + 1);
                 });
             }
-            function kalkulasi(){
-                let subtotal=0,grand=0;
+            function kalkulasi(obj){
+                let subtotal=0,grand=0,barangtmp = [];
                 $('#tbterima tbody tr').each(function(index, element) {
                     var row = $(this);
                     var barangqty = row.find('.barangqty').val();
                     var hargabeli = row.find('.hargabeli').val();
                     var hargajual = row.find('.hargajual').val();
-                    subtotal += (hargajual*barangqty);
+                    var idbarang = row.find('.idbarang').val();
+                    var stok = row.find('.stok').val();
+                    barangtmp.push({'barangqty':barangqty,'stok':parseInt(stok),'idbarang':parseInt(idbarang),'hargabeli':parseInt(hargabeli),'hargajual':parseInt(hargajual)});
                 });
+                let grouped = Object.values(barangtmp.reduce((acc, curr) => {
+                    let key = `${curr.idbarang}_${curr.stok}_${curr.hargabeli}_${curr.hargajual}`;
+
+                    if (!acc[key]) {
+                        acc[key] = {
+                            idbarang: curr.idbarang,
+                            stok: curr.stok,
+                            hargabeli: curr.hargabeli,
+                            hargajual: curr.hargajual,
+                            barangqty: 0
+                        };
+                    }
+
+                    acc[key].barangqty += parseInt(curr.barangqty);
+                    return acc;
+                }, {}));
+                $.each(grouped, function(index, item) {
+                    subtotal += (item.hargajual*item.barangqty);
+                });
+                if(obj){
+                    var cekbarang = grouped.find(item => item.idbarang === parseInt($(obj).data('id')));
+                    console.log(cekbarang ,$(obj).data('id'))
+                    if(cekbarang.barangqty > cekbarang.stok){
+                        $(obj).val(0);
+                        kalkulasi();
+                        Swal.fire({
+                        position: 'top-end', // kanan atas
+                        icon: 'warning',
+                        title: 'Melebihi stok!',
+                        showConfirmButton: false,
+                        timer: 1500 // auto close dalam 1.5 detik
+                        });
+                        return;
+                    }
+                }
                 $('#subtotal').val(subtotal);
                 $('#grandtotal').val(subtotal * (1 - ($('#diskon').val() / 100)));
                 $('.topgrandtotal').text(formatRupiahWithDecimal($('#grandtotal').val()));
                 $('#dibayar').prop('min',  $('#grandtotal').val());
                 $('#kembali').val($('#dibayar').val()-$('#grandtotal').val());
+                
             }
             function invoice(){
                 $.ajax({
@@ -219,23 +257,24 @@
             }
             function addRow(datarow){
                 let str = '',boleh=true;
-                $('#tbterima tbody tr').each(function(index, element) {
-                    if(datarow.id == $(this).data('id'))
-                    {boleh=false;return false;}
-                });
+                // $('#tbterima tbody tr').each(function(index, element) {
+                //     if(datarow.id == $(this).data('id'))
+                //     {boleh=false;return false;}
+                // });
                 if(boleh){
                     str +=`<tr data-id="`+datarow.id+`" class="align-middle"><td></td><td>`+datarow.code+`</td><td>`+datarow.text+`</td>
                         <td>`+datarow.harga_jual+`
                         </td>
-                        <td>`+datarow.stok+`<input type="hidden" name="stok[]" value="`+datarow.stok+`"></td>
+                        <td>`+datarow.stok+`<input type="hidden" name="stok[]" class="stok" value="`+datarow.stok+`"></td>
                         <td>
-                            <input type="number" value="0" class="form-control form-control-sm w-auto barangqty" onfocus="this.select()" min="1" max="`+datarow.stok+`" name="qty[]" onkeyup="kalkulasi()" required>
+                            <input type="number" class="form-control form-control-sm w-auto barangqty" onfocus="this.select()" min="1" max="`+datarow.stok+`" name="qty[]" onkeyup="kalkulasi(this)" value="1" data-id="`+datarow.id+`" required>
                             <input type="hidden" name="idbarang[]" class="idbarang" value="`+datarow.id+`">
                             <input type="hidden" name="harga_beli[]" class="hargabeli" value="`+datarow.harga_beli+`">
                             <input type="hidden" name="harga_jual[]" class="hargajual" value="`+datarow.harga_jual+`">
                         </td>
                         <td><span class="badge btn bg-danger dellist" onclick="$(this).parent().parent().remove();kalkulasi();numbering();"><i class="bi bi-trash3-fill"></i></span></td></tr>`;
                     $('#tbterima tbody').append(str);
+                    kalkulasi();
                 }
                 numbering();
                 $('#barcode-search').val('');
