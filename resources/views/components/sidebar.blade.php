@@ -20,22 +20,37 @@
                     @php
                         $p1 = explode(';', $item->role);
                         $lanjut = 0;
+                        $isActiveParent = false;
+
                         if (!empty($item->children)) {
                             foreach ($item->children as $chl) {
                                 $p2 = explode(';', $chl->role);
                                 $inarray = array_intersect(auth()->user()->getRoleNames()->toArray(), $p2);
                                 if ($inarray) $lanjut++;
+
+                                if (Route::is($chl->link)) $isActiveParent = true;
+
+                                if (!empty($chl->children)) {
+                                    foreach ($chl->children as $chl2) {
+                                        $p4 = explode(';', $chl2->role);
+                                        $inarray2 = array_intersect(auth()->user()->getRoleNames()->toArray(), $p4);
+                                        if ($inarray2 && Route::is($chl2->link)) $isActiveParent = true;
+                                    }
+                                }
                             }
                         }
+
                         if (array_intersect(auth()->user()->getRoleNames()->toArray(), $p1)) {
                             $lanjut++;
                         }
+
+                        $itemActive = request()->routeIs($item->link);
                     @endphp
 
                     @if ($lanjut > 0)
-                        <li class="nav-item menu-item">
+                        <li class="nav-item menu-item {{ $isActiveParent || $itemActive ? 'menu-open' : '' }}">
                             <a href="{{ $item->children ? '#' : (Route::has($item->link) ? route($item->link) : '') }}"
-                               class="nav-link menu-link {{ request()->routeIs($item->link) ? 'active' : '' }}">
+                               class="nav-link menu-link {{ $itemActive || $isActiveParent ? 'active' : '' }}">
                                 <i class="nav-icon {{ $item->icon }}"></i>
                                 <p>
                                     {{ $item->name }}
@@ -46,22 +61,32 @@
                             </a>
 
                             @if ($item->children)
-                                <ul class="nav nav-treeview submenu ps-4">
+                                <ul class="nav nav-treeview submenu ps-4" style="{{ $isActiveParent ? 'display: block;' : '' }}">
                                     @foreach ($item->children as $chl)
                                         @php
                                             $p3 = explode(';', $chl->role);
                                             $inarray1 = array_intersect(auth()->user()->getRoleNames()->toArray(), $p3);
+                                            $isActiveSub = Route::is($chl->link);
+                                            $isActiveSubChild = false;
+
+                                            if (!empty($chl->children)) {
+                                                foreach ($chl->children as $chl2) {
+                                                    if (Route::is($chl2->link)) {
+                                                        $isActiveSubChild = true;
+                                                    }
+                                                }
+                                            }
                                         @endphp
 
                                         @if ($inarray1)
-                                            <li class="nav-item menu-item">
+                                            <li class="nav-item menu-item {{ $isActiveSubChild ? 'menu-open' : '' }}">
                                                 @if ($chl->children)
-                                                    <a href="#" class="nav-link menu-link">
+                                                    <a href="#" class="nav-link menu-link {{ $isActiveSubChild ? 'active' : '' }}">
                                                         <i class="nav-icon {{ $chl->icon }}"></i>
                                                         <p>{{ $chl->name }}</p>
                                                         <i class="nav-arrow bi bi-chevron-right"></i>
                                                     </a>
-                                                    <ul class="nav nav-treeview submenu ps-5">
+                                                    <ul class="nav nav-treeview submenu ps-5" style="{{ $isActiveSubChild ? 'display: block;' : '' }}">
                                                         @foreach ($chl->children as $chl2)
                                                             @php
                                                                 $p4 = explode(';', $chl2->role);
@@ -81,7 +106,7 @@
                                                 @else
                                                     @if (Route::has($chl->link))
                                                         <a href="{{ route($chl->link) }}"
-                                                           class="nav-link menu-link {{ request()->routeIs($chl->link) ? 'active' : '' }}">
+                                                           class="nav-link menu-link {{ $isActiveSub ? 'active' : '' }}">
                                                             <i class="nav-icon {{ $chl->icon }}"></i>
                                                             <p>{{ $chl->name }}</p>
                                                         </a>
@@ -127,6 +152,15 @@
 </script>
 
 <style>
+    .menu-open > .submenu {
+    display: block !important;
+    }
+
+    .nav-item.menu-item .nav-link.active {
+        background-color: #0d6efd;
+        color: #fff;
+    }
+
     .submenu {
         display: none;
     }
