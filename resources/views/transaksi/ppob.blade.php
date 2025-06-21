@@ -1,128 +1,94 @@
 <x-app-layout>
-    <x-slot name="pagetitle">Transaksi PPOB</x-slot>
-
+    <x-slot name="pagetitle">PPOB</x-slot>
     <div class="app-content">
         <div class="container">
-            <form id="frmppob" class="needs-validation" novalidate>
-                <div class="card card-info card-outline mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Form Transaksi PPOB</h5>
-                    </div>
-                    <div class="card-body p-3">
 
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="input-group input-group-sm mb-2">
-                                    <span class="input-group-text label-fixed-width">Tanggal</span>
-                                    <input type="text" class="form-control datepicker" name="tanggal" required>
-                                    <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
-                                </div>
-                                <div class="input-group input-group-sm mb-2">
-                                    <span class="input-group-text label-fixed-width">Kategori</span>
-                                    <select class="form-select" name="kategori" id="kategori" required>
-                                        <option value="">-- Pilih Kategori --</option>
-                                        <option value="pulsa">Pulsa</option>
-                                        <option value="token">Token Listrik</option>
-                                        <option value="tagihan">Tagihan Listrik</option>
-                                        <option value="bpjs">BPJS</option>
-                                        <option value="pdam">PDAM</option>
-                                    </select>
-                                </div>
-                                <div class="input-group input-group-sm mb-2">
-                                    <span class="input-group-text label-fixed-width">No. Tujuan / ID Pelanggan</span>
-                                    <input type="text" class="form-control" name="id_pelanggan" required>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <div class="input-group input-group-sm mb-2">
-                                    <span class="input-group-text label-fixed-width">Nominal</span>
-                                    <span class="input-group-text">Rp</span>
-                                    <input type="number" class="form-control" name="nominal" id="nominal" onkeyup="updateTotal()" onfocus="this.select()" required>
-                                </div>
-                                <div class="input-group input-group-sm mb-2">
-                                    <span class="input-group-text label-fixed-width">Admin Fee</span>
-                                    <span class="input-group-text">Rp</span>
-                                    <input type="number" class="form-control" name="admin" id="admin" value="1500" onkeyup="updateTotal()" onfocus="this.select()" required>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4 text-end">
-                                <label class="form-label fw-bold">Total Bayar</label>
-                                <div class="fs-3 fw-bold text-success" id="totalBayarText">Rp. 0</div>
-                            </div>
-                        </div>
-
-                        <div class="row justify-content-end">
-                            <div class="col-auto d-flex gap-2">
-                                <button type="reset" class="btn btn-warning"><i class="bi bi-arrow-clockwise"></i> Batal</button>
-                                <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Bayar</button>
-                            </div>
-                        </div>
-
-                    </div>
+            {{-- Form Input Utama --}}
+            <div class="row mb-4">
+                <div class="col-md-2">
+                    <input type="text" class="form-control form-control-sm" placeholder="ID Pelanggan">
                 </div>
-            </form>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm">
+                        <option value="">Cek PLN/PASCA</option>
+                        <option value="pln">PLN</option>
+                        <option value="pasca">PASCA</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" class="form-control form-control-sm" placeholder="Nominal">
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm">
+                        <option value="">Beli TOKEN</option>
+                        <option value="20">20rb</option>
+                        <option value="50">50rb</option>
+                        <option value="100">100rb</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control form-control-sm" placeholder="No HP Tujuan">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary btn-sm w-100"><i class="bi bi-search"></i> Pulsa</button>
+                </div>
+            </div>
+
+            {{-- Grid Layanan PPOB --}}
+            <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
+                @php
+                    $services = [
+                        ['icon' => 'bi-currency-exchange', 'name' => 'Transfer Antar Bank'],
+                        ['icon' => 'bi-lightning-charge', 'name' => 'Top Up Emoney'],
+                        ['icon' => 'bi-train-front', 'name' => 'Reservasi Kereta Api'],
+                        ['icon' => 'bi-phone', 'name' => 'Ponsel Pasca Bayar'],
+                        ['icon' => 'bi-wifi', 'name' => 'IndiHome'],
+                        ['icon' => 'bi-arrow-left-right', 'name' => 'Transfer Saldo'],
+                        ['icon' => 'bi-battery-charging', 'name' => 'PLN'],
+                        ['icon' => 'bi-droplet-half', 'name' => 'PDAM'],
+                        ['icon' => 'bi-sim', 'name' => 'Pulsa & Data'],
+                        ['icon' => 'bi-bus-front', 'name' => 'Bus AKAP & Travel'],
+                        ['icon' => 'bi-wallet2', 'name' => 'Cicilan'],
+                        ['icon' => 'bi-credit-card', 'name' => 'Kartu Kredit'],
+                        ['icon' => 'bi-lightning-charge-fill', 'name' => 'Top Up Mitra'],
+                        ['icon' => 'bi-bag-plus', 'name' => 'Ajak Bisnis'],
+                        ['icon' => 'bi-truck', 'name' => 'Ekspedisi Lion Parcel'],
+                        ['icon' => 'bi-box-seam', 'name' => 'Ekspedisi POS'],
+                        ['icon' => 'bi-controller', 'name' => 'Game Online'],
+                        ['icon' => 'bi-capslock', 'name' => 'TV & Internet'],
+                        ['icon' => 'bi-cash', 'name' => 'Pajak'],
+                        ['icon' => 'bi-cash-coin', 'name' => 'Bayar Pajak Kendaraan'],
+                    ];
+                @endphp
+
+                @foreach ($services as $service)
+                    <div class="col">
+                        <div class="card h-100 shadow-sm border-0 text-center service-box">
+                            <div class="card-body p-3">
+                                <div class="mb-2">
+                                    <i class="bi {{ $service['icon'] }} fs-2 text-primary"></i>
+                                </div>
+                                <div class="small">{{ $service['name'] }}</div>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
         </div>
     </div>
 
     <x-slot name="csscustom">
-        <link rel="stylesheet" href="{{ asset('plugins/BootstrapDatePicker/bootstrap-datepicker.min.css') }}">
-    </x-slot>
-
-    <x-slot name="jscustom">
-        <script src="{{ asset('plugins/BootstrapDatePicker/bootstrap-datepicker.min.js') }}"></script>
-        <script src="{{ asset('plugins/sweetalert2@11.js') }}"></script>
-        <script>
-        $(document).ready(function () {
-            $('.datepicker').datepicker({
-                format: 'dd-mm-yyyy',
-                autoclose: true,
-                todayHighlight: true
-            }).datepicker('setDate', new Date());
-
-            $('#frmppob').on('submit', function(e) {
-                e.preventDefault();
-                if (!this.checkValidity()) {
-                    this.classList.add('was-validated');
-                    return;
-                }
-
-                $.ajax({
-                    url: '{{ route("ppob.transaksi") }}',
-                    method: 'POST',
-                    data: $(this).serialize(),
-                    beforeSend: function () {
-                        Swal.showLoading();
-                    },
-                    success: function (res) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil',
-                            text: 'Transaksi PPOB berhasil!',
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
-                        $('#frmppob')[0].reset();
-                        updateTotal();
-                    },
-                    error: function () {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal',
-                            text: 'Transaksi gagal diproses.'
-                        });
-                    }
-                });
-            });
-        });
-
-        function updateTotal() {
-            let nominal = parseInt($('#nominal').val()) || 0;
-            let admin = parseInt($('#admin').val()) || 0;
-            let total = nominal + admin;
-            $('#totalBayarText').text(new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(total));
-        }
-        </script>
+        <style>
+            .service-box {
+                transition: transform 0.2s ease;
+                cursor: pointer;
+                border-radius: 10px;
+            }
+            .service-box:hover {
+                transform: translateY(-3px);
+                background-color: #f8f9fa;
+            }
+        </style>
     </x-slot>
 </x-app-layout>
