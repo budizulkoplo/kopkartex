@@ -12,8 +12,10 @@ use App\Http\Controllers\SimpananController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\UsersController;
+use App\Http\Controllers\PpobController;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+
 Route::get('/', [AuthenticatedSessionController::class, 'create']);
 // Route::get('/', function () {
 //     return view('welcome');
@@ -120,9 +122,8 @@ Route::prefix('menu')->middleware(['auth', 'verified', 'role:superadmin', 'globa
 Route::prefix('ppob')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [PpobController::class, 'index'])->name('ppob.form');
     Route::post('/transaksi', [PpobController::class, 'transaksi'])->name('ppob.transaksi');
-
-
 });
+
 
 
 require __DIR__.'/auth.php';
