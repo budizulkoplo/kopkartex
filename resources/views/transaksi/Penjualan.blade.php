@@ -1,160 +1,125 @@
 <x-app-layout>
     <x-slot name="pagetitle">Penjualan</x-slot>
-    <div class="app-content-header"> <!--begin::Container-->
-        <div class="container-fluid"> <!--begin::Row-->
-            <div class="row mb-3">
-                <div class="col-sm-6">
-                    <h3 class="mb-0">Penjualan - {{ $unit->nama_unit }}</h3>
-                </div>
-            </div> <!--end::Row-->
-        </div> <!--end::Container-->
-    </div>
-    <div class="app-content"> <!--begin::Container-->
-        <div class="container"> <!--begin::Row-->
-            <form class="row g-3 needs-validation" novalidate id="frmterima">
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <div class="card card-success card-outline">
-                        <div class="card-body p-1">
-                            <div class="input-group input-group-sm mb-1"> 
-                                <span class="input-group-text">Date</span>
-                                <input type="text" class="form-control datepicker" name="tanggal" required>
-                                <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
-                            </div>
-                            <div class="input-group input-group-sm mb-1"> 
-                                <span class="input-group-text" id="basic-addon2">Customer</span>
-                                <input type="text" class="form-control" placeholder="Customer/Anggota" aria-describedby="basic-addon2" id="customer" name="customer"> 
-                                <input type="hidden" id="idcustomer" name="idcustomer">
-                            </div>
-                        </div>
+    <div class="app-content">
+        <div class="container">
+            <form class="needs-validation" novalidate id="frmterima">
+                <div class="card card-success card-outline mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Form Penjualan - {{ $unit->nama_unit }}</h5>
                     </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card card-success card-outline mb-4">
-                        <div class="card-body p-1">
-                            <div class="row">
-                                <div class="input-group input-group-sm mb-1"> 
-                                    <span class="input-group-text">Kasir</span>
+                    <div class="card-body p-3">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="input-group input-group-sm mb-2"> 
+                                    <span class="input-group-text label-fixed-width">Tanggal</span>
+                                    <input type="text" class="form-control datepicker" name="tanggal" required>
+                                    <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
+                                </div>
+                                <div class="input-group input-group-sm mb-2"> 
+                                    <span class="input-group-text label-fixed-width">Customer</span>
+                                    <input type="text" class="form-control" id="customer" name="customer">
+                                    <input type="hidden" id="idcustomer" name="idcustomer">
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="input-group input-group-sm mb-2"> 
+                                    <span class="input-group-text label-fixed-width">Kasir</span>
                                     <input type="text" class="form-control" value="{{ auth()->user()->name }}" name="kasir" disabled>
                                 </div>
-                                <div class="input-group input-group-sm mb-1"> 
-                                    <span class="input-group-text">Barang</span>
+                                <div class="input-group input-group-sm mb-2"> 
+                                    <span class="input-group-text label-fixed-width">Barang</span>
                                     <input type="text" class="form-control typeahead" id="barcode-search">
-                                    <span class="input-group-text"><i class="fa-solid fa-barcode"></i></span>
                                     <input type="hidden" id="barcode-id">
+                                    <span class="input-group-text bg-primary"><i class="fa-solid fa-barcode text-white"></i></span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card mb-4">
-                        <div class="card-body p-1">
-                            <p class="fs-6 text-end">Invoice <span class="fw-bold txtinv">{{ $invoice }}</span></p>
-                           <p class="fs-1 fw-bold text-end mb-0 topgrandtotal"></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card card-primary card-outline mb-4">
-                        <div class="card-body p-1">
-                            <table id="tbterima" class="table table-sm table-striped" style="width: 100%; font-size: small;">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Kode</th>
-                                        <th>Nama Barang</th>
-                                        <th>@Harga</th>
-                                        <th>Stok</th>
-                                        <th>Qty</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="row row-cols-auto">
-                <div class="col">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="row"> 
-                                <label for="subtotal" class="col-sm-5 col-form-label">Sub Total</label>
-                                <div class="col-sm-7"> 
-                                    <div class="input-group input-group-sm mb-1"> 
-                                        <span class="input-group-text">Rp.</span>
-                                        <input type="number" class="form-control" value="0" name="subtotal" id="subtotal" disabled>
-                                    </div>
+
+                            <div class="col-md-4 text-end">
+                                <div class="mb-2">
+                                    <label class="form-label fw-bold">Invoice</label>
+                                    <div class="fs-6 fw-bold txtinv">{{ $invoice }}</div>
                                 </div>
+                                <div class="fs-3 fw-bold text-success topgrandtotal">Rp. 0</div>
                             </div>
-                            <div class="row"> 
-                                <label for="diskon" class="col-sm-5 col-form-label">Diskon</label>
-                                <div class="col-sm-7">
-                                <div class="input-group input-group-sm mb-1"> 
-                                    <input type="number" class="form-control" value="0" onfocus="this.select()" onkeyup="kalkulasi()" onchange="" name="diskon" id="diskon">
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <table id="tbterima" class="table table-sm table-striped table-bordered" style="width: 100%; font-size: small;">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Kode</th>
+                                            <th>Nama Barang</th>
+                                            <th>@Harga</th>
+                                            <th>Stok</th>
+                                            <th>Qty</th>
+                                            <th>Total</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text label-fixed-width">Subtotal</span>
+                                    <span class="input-group-text">Rp.</span>
+                                    <input type="number" class="form-control" value="0" name="subtotal" id="subtotal" disabled>
+                                </div>
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text label-fixed-width">Diskon</span>
+                                    <input type="number" class="form-control" value="0" onfocus="this.select()" onkeyup="kalkulasi()" name="diskon" id="diskon">
                                     <span class="input-group-text">%</span>
                                 </div>
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text label-fixed-width">Grand Total</span>
+                                    <span class="input-group-text">Rp.</span>
+                                    <input type="number" class="form-control" value="0" name="grandtotal" id="grandtotal" disabled>
                                 </div>
                             </div>
-                            <div class="row"> 
-                                <label for="grandtotal" class="col-sm-5 col-form-label">Grand Total</label>
-                                <div class="col-sm-7"> 
-                                    <div class="input-group input-group-sm mb-1"> 
-                                        <span class="input-group-text">Rp.</span>
-                                        <input type="number" class="form-control" value="0" name="grandtotal" id="grandtotal" disabled>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="row"> 
-                                <label for="metodebayar" class="col-sm-4 col-form-label">Metode</label>
-                                <div class="col-sm-8"> 
-                                    <select class="form-select form-select-sm" id="metodebayar" name="metodebayar" required="">
-                                        <option selected="" value="tunai">Tunai</option>
+
+                            <div class="col-md-4">
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text label-fixed-width">Metode</span>
+                                    <select class="form-select form-select-sm" id="metodebayar" name="metodebayar" required>
+                                        <option value="tunai" selected>Tunai</option>
                                         <option value="potong_gaji">Potong Gaji</option>
                                         <option value="cicilan">Cicilan</option>
                                     </select>
                                 </div>
-                            </div>
-                            <div class="row"> 
-                                <label for="dibayar" class="col-sm-4 col-form-label">Dibayar</label>
-                                <div class="col-sm-8">
-                                <div class="input-group input-group-sm mb-1"> 
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text label-fixed-width">Dibayar</span>
                                     <span class="input-group-text">Rp.</span>
-                                    <input type="number" class="form-control" value="0" onfocus="this.select()" name="dibayar" onkeyup="kalkulasi()" id="dibayar" required>
+                                    <input type="number" class="form-control" value="0" onfocus="this.select()" onkeyup="kalkulasi()" name="dibayar" id="dibayar" required>
                                 </div>
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text label-fixed-width">Kembali</span>
+                                    <span class="input-group-text">Rp.</span>
+                                    <input type="number" class="form-control" value="0" name="kembali" id="kembali" disabled>
                                 </div>
                             </div>
-                            <div class="row"> 
-                                <label for="kembali" class="col-sm-4 col-form-label">Kembali</label>
-                                <div class="col-sm-8"> 
-                                    <div class="input-group input-group-sm mb-1"> 
-                                        <span class="input-group-text">Rp.</span>
-                                        <input type="number" class="form-control" value="0" name="kembali" id="kembali" disabled>
-                                    </div>
+
+                            <div class="col-md-4">
+                                <div class="input-group input-group-sm mb-3"> 
+                                    <span class="input-group-text label-fixed-width">Catatan</span> 
+                                    <textarea class="form-control" name="note" rows="3"></textarea> 
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="row justify-content-end">
+                            <div class="col-auto d-flex gap-2">
+                                <button type="button" class="btn btn-warning" onclick="clearform();"><i class="bi bi-arrow-clockwise"></i> Batal</button>
+                                <button type="submit" class="btn btn-success"><i class="bi bi-floppy-fill"></i> Simpan</button>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col">
-                    <div class="input-group mb-3"> 
-                        <span class="input-group-text">Catatan</span> 
-                        <textarea class="form-control" aria-label="With textarea" name="note" id="note"></textarea> 
-                    </div>
-                    <button type="button" class="btn btn-warning" onclick="clearform();"><i class="bi bi-arrow-clockwise"></i> Batal</button>
-                    <button type="submit" class="btn btn-success"><i class="bi bi-floppy-fill"></i> Simpan</button>
-                </div>
-            </div>
             </form>
         </div>
     </div>
@@ -230,20 +195,63 @@
                     $(this).find('td:first').text(index + 1);
                 });
             }
-            function kalkulasi(){
-                let subtotal=0,grand=0;
+            function kalkulasi(obj){
+                let subtotal=0,grand=0,barangtmp = [];
                 $('#tbterima tbody tr').each(function(index, element) {
                     var row = $(this);
                     var barangqty = row.find('.barangqty').val();
                     var hargabeli = row.find('.hargabeli').val();
                     var hargajual = row.find('.hargajual').val();
-                    subtotal += (hargajual*barangqty);
+                    var idbarang = row.find('.idbarang').val();
+                    var stok = row.find('.stok').val();
+                    $(this).find('.totalitm').html(hargajual*barangqty);
+                    barangtmp.push({'barangqty':barangqty,'stok':parseInt(stok),'idbarang':parseInt(idbarang),'hargabeli':parseInt(hargabeli),'hargajual':parseInt(hargajual)});
                 });
+                let grouped = Object.values(barangtmp.reduce((acc, curr) => {
+                    let key = `${curr.idbarang}_${curr.stok}_${curr.hargabeli}_${curr.hargajual}`;
+
+                    if (!acc[key]) {
+                        acc[key] = {
+                            idbarang: curr.idbarang,
+                            stok: curr.stok,
+                            hargabeli: curr.hargabeli,
+                            hargajual: curr.hargajual,
+                            barangqty: 0
+                        };
+                    }
+
+                    acc[key].barangqty += parseInt(curr.barangqty);
+                    return acc;
+                }, {}));
+                $.each(grouped, function(index, item) {
+                    subtotal += (item.hargajual*item.barangqty);
+                });
+                if(obj){
+                    var cekbarang = grouped.find(item => item.idbarang === parseInt($(obj).data('id')));
+                    //console.log(cekbarang ,$(obj).data('id'))
+                    if(cekbarang.barangqty > cekbarang.stok){
+                        $(obj).val(0);
+                        kalkulasi();
+                        Swal.fire({
+                        position: 'top-end', // kanan atas
+                        icon: 'warning',
+                        title: 'Melebihi stok!',
+                        showConfirmButton: false,
+                        timer: 1500 // auto close dalam 1.5 detik
+                        });
+                        return;
+                    }else{
+                        let qty=$(obj).parent().find('.barangqty').val();
+                        let harga=$(obj).parent().find('.hargajual').val();
+                        $(obj).parent().find('.totalitm').html(harga*qty);
+                    }
+                }
                 $('#subtotal').val(subtotal);
                 $('#grandtotal').val(subtotal * (1 - ($('#diskon').val() / 100)));
                 $('.topgrandtotal').text(formatRupiahWithDecimal($('#grandtotal').val()));
                 $('#dibayar').prop('min',  $('#grandtotal').val());
                 $('#kembali').val($('#dibayar').val()-$('#grandtotal').val());
+                
             }
             function invoice(){
                 $.ajax({
@@ -255,23 +263,25 @@
             }
             function addRow(datarow){
                 let str = '',boleh=true;
-                $('#tbterima tbody tr').each(function(index, element) {
-                    if(datarow.id == $(this).data('id'))
-                    {boleh=false;return false;}
-                });
+                // $('#tbterima tbody tr').each(function(index, element) {
+                //     if(datarow.id == $(this).data('id'))
+                //     {boleh=false;return false;}
+                // });
                 if(boleh){
                     str +=`<tr data-id="`+datarow.id+`" class="align-middle"><td></td><td>`+datarow.code+`</td><td>`+datarow.text+`</td>
                         <td>`+datarow.harga_jual+`
                         </td>
-                        <td>`+datarow.stok+`<input type="hidden" name="stok[]" value="`+datarow.stok+`"></td>
+                        <td>`+datarow.stok+`<input type="hidden" name="stok[]" class="stok" value="`+datarow.stok+`"></td>
                         <td>
-                            <input type="number" value="0" class="form-control form-control-sm w-auto barangqty" onfocus="this.select()" min="1" max="`+datarow.stok+`" name="qty[]" onkeyup="kalkulasi()" required>
+                            <input type="number" class="form-control form-control-sm w-auto barangqty" onfocus="this.select()" min="1" max="`+datarow.stok+`" name="qty[]" onkeyup="kalkulasi(this)" value="1" data-id="`+datarow.id+`" required>
                             <input type="hidden" name="idbarang[]" class="idbarang" value="`+datarow.id+`">
                             <input type="hidden" name="harga_beli[]" class="hargabeli" value="`+datarow.harga_beli+`">
                             <input type="hidden" name="harga_jual[]" class="hargajual" value="`+datarow.harga_jual+`">
                         </td>
+                        <td class="totalitm"></td>
                         <td><span class="badge btn bg-danger dellist" onclick="$(this).parent().parent().remove();kalkulasi();numbering();"><i class="bi bi-trash3-fill"></i></span></td></tr>`;
                     $('#tbterima tbody').append(str);
+                    kalkulasi();
                 }
                 numbering();
                 $('#barcode-search').val('');
@@ -416,6 +426,8 @@
                             clearform();
                             loader(false);
                             invoice();
+                            const url = `{{ url('/penjualan/nota') }}/${response.invoice}`;
+                            window.open(url, '_blank');
                         },
                         error: function(xhr) {
                             alert('Something went wrong');loader(false);

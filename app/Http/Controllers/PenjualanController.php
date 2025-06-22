@@ -24,6 +24,19 @@ class PenjualanController extends Controller
             'unit' => Unit::find(Auth::user()->unit_kerja),
         ]);
     }
+    public function nota($invoice): View
+    {   
+        $hdr=Penjualan::join('users','users.id','penjualan.created_user')
+        ->select('penjualan.*','users.name as kasir')
+        ->where('penjualan.nomor_invoice',$invoice)->first();
+        $dtl=PenjualanDetail::join('barang','barang.id','penjualan_detail.barang_id')
+        ->select('barang.nama_barang','barang.kode_barang','penjualan_detail.qty','penjualan_detail.harga')
+        ->where('penjualan_id',$hdr->id)->get();
+        return view('transaksi.PenjualanNota', [
+            'hdr' => $hdr,
+            'dtl' => $dtl,
+        ]);
+    }
     function genCode(){
         $total = Penjualan::withTrashed()->whereDate('created_at', date("Y-m-d"))->count();
         $nomorUrut = $total + 1;
@@ -66,17 +79,20 @@ class PenjualanController extends Controller
     public function Store(Request $request){
         DB::beginTransaction();
         try {
-            $date = Carbon::parse($request->tanggal);
+            $date = Carbon::parse($request->tanggal)->setTimeFrom(Carbon::now());
             $penjualan = new Penjualan;
             $penjualan->nomor_invoice = $this->genCode();
-            $penjualan->tanggal = $date->format('Y-m-d');
-            $penjualan->total = $request->grandtotal;
+            $penjualan->tanggal = $date->toDateTimeString();
+            $penjualan->grandtotal = $request->grandtotal;
+            $penjualan->subtotal = $request->subtotal;
             $penjualan->metode_bayar = $request->metodebayar;
             $penjualan->unit_id = Auth::user()->unit_kerja;
             $penjualan->customer = $request->customer;
             $penjualan->anggota_id = $request->idcustomer;
             $penjualan->diskon = $request->diskon;
             $penjualan->note = $request->note;
+            $penjualan->dibayar = $request->dibayar;
+            $penjualan->kembali = $request->kembali;
             $penjualan->created_user = Auth::user()->id;
             $penjualan->save();
             $no=0;
@@ -92,7 +108,7 @@ class PenjualanController extends Controller
                 $no++;
             }
             DB::commit();
-            return response()->json(['message' => 'Order saved successfully.']);
+            return response()->json(['message' => 'Order saved successfully.','invoice'=>$penjualan->nomor_invoice]);
         } catch (Exception $e) {
             DB::rollBack();
             return response()->json(['error' => 'Failed to save order', 'message' => $e->getMessage()], 500);

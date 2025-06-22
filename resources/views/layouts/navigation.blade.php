@@ -113,19 +113,19 @@
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bd-theme-text" style="--bs-dropdown-min-width: 8rem;">
                   <li>
                     <button type="button" class="dropdown-item d-flex align-items-center active" data-bs-theme-value="light" aria-pressed="false">
-                      <i class="bi bi-sun-fill me-2"></i>Light
+                      <i class="fas fa-sun me-2"></i>Light
                       <i class="bi bi-check-lg ms-auto d-none"></i>
                     </button>
                   </li>
                   <li>
                     <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="dark" aria-pressed="false">
-                      <i class="bi bi-moon-fill me-2"></i>Dark
+                      <i class="fas fa-moon me-2"></i>Dark
                       <i class="bi bi-check-lg ms-auto d-none"></i>
                     </button>
                   </li>
                   <li>
                     <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="auto" aria-pressed="true">
-                      <i class="bi bi-circle-fill-half-stroke me-2"></i>Auto
+                      <i class="fas fa-circle-half-stroke me-2"></i>Auto
                       <i class="bi bi-check-lg ms-auto d-none"></i>
                     </button>
                   </li>
