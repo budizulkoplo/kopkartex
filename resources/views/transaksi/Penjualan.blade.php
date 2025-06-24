@@ -55,6 +55,7 @@
                                             <th>@Harga</th>
                                             <th>Stok</th>
                                             <th>Qty</th>
+                                            <th>Total</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -203,6 +204,7 @@
                     var hargajual = row.find('.hargajual').val();
                     var idbarang = row.find('.idbarang').val();
                     var stok = row.find('.stok').val();
+                    $(this).find('.totalitm').html(hargajual*barangqty);
                     barangtmp.push({'barangqty':barangqty,'stok':parseInt(stok),'idbarang':parseInt(idbarang),'hargabeli':parseInt(hargabeli),'hargajual':parseInt(hargajual)});
                 });
                 let grouped = Object.values(barangtmp.reduce((acc, curr) => {
@@ -226,7 +228,7 @@
                 });
                 if(obj){
                     var cekbarang = grouped.find(item => item.idbarang === parseInt($(obj).data('id')));
-                    console.log(cekbarang ,$(obj).data('id'))
+                    //console.log(cekbarang ,$(obj).data('id'))
                     if(cekbarang.barangqty > cekbarang.stok){
                         $(obj).val(0);
                         kalkulasi();
@@ -238,6 +240,10 @@
                         timer: 1500 // auto close dalam 1.5 detik
                         });
                         return;
+                    }else{
+                        let qty=$(obj).parent().find('.barangqty').val();
+                        let harga=$(obj).parent().find('.hargajual').val();
+                        $(obj).parent().find('.totalitm').html(harga*qty);
                     }
                 }
                 $('#subtotal').val(subtotal);
@@ -272,6 +278,7 @@
                             <input type="hidden" name="harga_beli[]" class="hargabeli" value="`+datarow.harga_beli+`">
                             <input type="hidden" name="harga_jual[]" class="hargajual" value="`+datarow.harga_jual+`">
                         </td>
+                        <td class="totalitm"></td>
                         <td><span class="badge btn bg-danger dellist" onclick="$(this).parent().parent().remove();kalkulasi();numbering();"><i class="bi bi-trash3-fill"></i></span></td></tr>`;
                     $('#tbterima tbody').append(str);
                     kalkulasi();
@@ -419,6 +426,8 @@
                             clearform();
                             loader(false);
                             invoice();
+                            const url = `{{ url('/penjualan/nota') }}/${response.invoice}`;
+                            window.open(url, '_blank');
                         },
                         error: function(xhr) {
                             alert('Something went wrong');loader(false);
