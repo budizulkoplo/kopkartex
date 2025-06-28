@@ -133,7 +133,7 @@ class UsersController extends Controller
         return response()->json($this->genCode(), 200);
     }
     public function getdata(Request $request){
-        $user = User::join('unit','unit.id','users.unit_kerja')
+        $user = User::leftJoin('unit','unit.id','users.unit_kerja')
         ->leftJoin('model_has_roles as radmin', function ($join) {
             $join->on('radmin.model_id', '=', 'users.id')->where('radmin.role_id', '=', 1);
         })

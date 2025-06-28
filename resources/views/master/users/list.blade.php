@@ -250,7 +250,7 @@
                             url: "{{ route('users.assignRole') }}",
                             method:"GET",data: { iduser:selectedID,name:checkedValues },
                             success: function(response) {
-                                table.ajax.reload();
+                                table.ajax.reload(null, false);
                             }
                         });
                     //}
