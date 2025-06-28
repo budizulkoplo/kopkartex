@@ -13,8 +13,10 @@ use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\UsersController;
 use App\Http\Controllers\PpobController;
+use App\Http\Controllers\AnggotaController;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+
 
 Route::get('/', [AuthenticatedSessionController::class, 'create']);
 // Route::get('/', function () {
@@ -84,6 +86,18 @@ Route::prefix('users')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::post('/password/update', [UsersController::class, 'updatePassword'])->name('users.updatepassword');
     Route::get('/getcode', [UsersController::class, 'getcode'])->name('users.getcode');
     Route::post('/store', [UsersController::class, 'Store'])->name('users.store');
+});
+Route::prefix('anggota')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('Anggota')->group(function () {
+    Route::get('/list', [AnggotaController::class, 'index'])->name('anggota.list');
+    Route::get('/permission', [UserRoleController::class, 'PermissionByRole']);
+    Route::post('/add', [UserRoleController::class, 'addRole']);
+    Route::delete('/delr', [UserRoleController::class, 'deleteRole']);
+    Route::delete('/delp', [UserRoleController::class, 'deletePermission']);
+    Route::get('/getdata', [AnggotaController::class, 'getdata'])->name('anggota.getdata');
+    Route::get('/assignRole', [AnggotaController::class, 'kasihRole'])->name('anggota.assignRole');
+    Route::post('/password/update', [AnggotaController::class, 'updatePassword'])->name('anggota.updatepassword');
+    Route::get('/getcode', [AnggotaController::class, 'getcode'])->name('anggota.getcode');
+    Route::post('/store', [AnggotaController::class, 'Store'])->name('anggota.store');
 });
 Route::prefix('unit')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [UnitController::class, 'index'])->name('unit.list');
