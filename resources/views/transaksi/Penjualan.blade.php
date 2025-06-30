@@ -2,7 +2,7 @@
     <x-slot name="pagetitle">Penjualan</x-slot>
     <div class="app-content">
         <div class="container">
-            <form class="needs-validation" novalidate id="frmterima">
+            <form class="needs-validation" novalidate id="frmterima" autocomplete="off">
                 <div class="card card-success card-outline mb-4">
                     <div class="card-header">
                         <h5 class="card-title mb-0">Form Penjualan - {{ $unit->nama_unit }}</h5>
@@ -15,8 +15,11 @@
                                     <input type="text" class="form-control datepicker" name="tanggal" required>
                                     <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
                                 </div>
-                                <div class="input-group input-group-sm mb-2"> 
-                                    <span class="input-group-text label-fixed-width">Customer</span>
+                                <div class="input-group input-group-sm mb-2 align-items-center">
+                                    <div class="input-group-text">
+                                        <input class="form-check-input mt-0 me-2" type="checkbox" value="" id="flexCheckDefault" checked>
+                                        <label for="flexCheckDefault" class="mb-0">Anggota</label>
+                                    </div>
                                     <input type="text" class="form-control" id="customer" name="customer">
                                     <input type="hidden" id="idcustomer" name="idcustomer">
                                 </div>
@@ -300,16 +303,11 @@
                 $('#kembali').val(0);
                 $('#tbterima tbody tr').remove();
             }
-            $(document).ready(function () {
-                $(window).keydown(function (event) {
-                    if (event.key === "Enter") {
-                        event.preventDefault();
-                        return false;
-                    }
-                });
-                
-                let users = [];
+            let users = [];
                 let selectedFromList = false;
+            let typeaheadEnabled = true;
+
+            function activateTypeahead() {
                 $('#customer').typeahead({
                     source: function (query, process) {
                         return $.ajax({
@@ -331,6 +329,32 @@
                         }
                     }
                 });
+            }
+            function destroyTypeahead() {
+                $('#customer').typeahead('destroy');
+                typeaheadEnabled = false;
+            }
+            $(document).ready(function () {
+                activateTypeahead();
+                $('#flexCheckDefault').on('change', function () {
+                    if ($(this).is(':checked')) {
+                        activateTypeahead();
+                        $('#customer').val('').prop('readonly', false);
+                        $('#idcustomer').val('');
+                    } else {
+                        destroyTypeahead();
+                        $('#customer').val('').prop('readonly', false);
+                        $('#idcustomer').val('');
+                    }
+                });
+                $(window).keydown(function (event) {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        return false;
+                    }
+                });
+                
+                
                 $('#customer').on('input', function () {
                     selectedFromList = false;
                     $('#idcustomer').val('');
