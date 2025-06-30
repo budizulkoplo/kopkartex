@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Menu;
 use Closure;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -36,7 +37,7 @@ class GlobalApp
         $menu = Menu::orderBy('seq', 'asc')->get();
         $request->merge([
             'menu' => $this->buildTree($menu),
-            //'globalprofile' => $user
+            
             ]);
         return $next($request);
     }
