@@ -93,12 +93,7 @@ Route::prefix('users')->middleware(['auth', 'verified', 'role:superadmin|admin',
 });
 Route::prefix('anggota')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('Anggota')->group(function () {
     Route::get('/list', [AnggotaController::class, 'index'])->name('anggota.list');
-    Route::get('/permission', [UserRoleController::class, 'PermissionByRole']);
-    Route::post('/add', [UserRoleController::class, 'addRole']);
-    Route::delete('/delr', [UserRoleController::class, 'deleteRole']);
-    Route::delete('/delp', [UserRoleController::class, 'deletePermission']);
     Route::get('/getdata', [AnggotaController::class, 'getdata'])->name('anggota.getdata');
-    Route::get('/assignRole', [AnggotaController::class, 'kasihRole'])->name('anggota.assignRole');
     Route::post('/password/update', [AnggotaController::class, 'updatePassword'])->name('anggota.updatepassword');
     Route::get('/getcode', [AnggotaController::class, 'getcode'])->name('anggota.getcode');
     Route::post('/store', [AnggotaController::class, 'Store'])->name('anggota.store');

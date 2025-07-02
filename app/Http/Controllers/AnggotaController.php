@@ -43,54 +43,10 @@ class AnggotaController extends Controller
         // Update the password
         return back()->with('success', 'Password updated successfully');
     }
-    public function kasihRole(Request $request)
-    {
-        $user = User::find($request->iduser);
-        $user->syncRoles([]); 
-        //$user->removeRole('users', 'personalia','admin');
-        foreach ($request->name as $key => $value) {
-            $user->assignRole($value);
-        }
-        return response()->json(true);
-    }
-    public function addRole(Request $request)
-    {
-        $role = Role::create(['name' => $request->name]);
-        return response()->json($role);
-    }
-    public function deleteRole(Request $request)
-    {
-        $role = Role::findByName($request->name); // Replace with your role name
-        // Get all users that have the role
-        $usersWithRole = User::role($role->name)->get();
-        // Detach the role from all users
-        foreach ($usersWithRole as $user) {
-            $user->removeRole($role);
-        }
-        $rtn=$role->delete();
-        return response()->json($rtn);
-    }
-    public function deletePermission(Request $request)
-    {
-        $permission = Permission::findByName($request->name);
-        $users = $permission->users; // Get all users with this permission
-        foreach ($users as $user) {
-            $user->revokePermissionTo($permission->name); // Remove the permission from each user
-        }
-        $rtn=$permission->delete(); // Delete the permission from the system
-        return response()->json($rtn);
-    }
-    public function PermissionByRole(Request $request)
-    {
-        $role = Role::findByName($request->name);
-        $permissions = $role->permissions;
-        return response()->json($permissions);
-    }
     public function Store(Request $request){
         $validatedData = $request->validate([
             'name' => 'required',
             'email' => 'required',
-            'tanggal_masuk' => 'required',
             'nik' => 'required',
         ]);
         
@@ -112,9 +68,11 @@ class AnggotaController extends Controller
             $usr->nik = $request->nik;
             $usr->jabatan = $request->jabatan;
             $usr->unit_kerja = $request->unit_kerja;
+            $usr->limit_ppob = $request->limit_ppob;
+            $usr->limit_hutang = $request->limit_hutang;
             $usr->status = $request->status ?'aktif':'nonaktif';
             $usr->save();
-            //$usr->assignRole($request->role);
+            $usr->assignRole('anggota');
 
             if($usr){
                 return response()->json('success', 200);
@@ -134,17 +92,10 @@ class AnggotaController extends Controller
     }
     public function getdata(Request $request)
     {
-        $user = User::select([
-            'id',
-            'nik',
-            'nomor_anggota',
-            'username',
-            'jabatan',
-            'gaji',
-            'limit_hutang',
-            'email',
-            'nohp',
-        ]);
+        $user = User::where('status','aktif')
+        ->whereDoesntHave('roles', function ($query) {
+            $query->where('name', 'superadmin');
+        });
 
         return DataTables::of($user)
             ->addIndexColumn()

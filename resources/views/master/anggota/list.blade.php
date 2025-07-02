@@ -10,20 +10,6 @@
         </div>
     </div>
     
-    @if (session('success'))
-    <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-
-    @if ($errors->any())
-        <div class="alert alert-danger">
-            <ul>
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-    
     <div class="app-content">
         <div class="container-fluid">
             <div class="row">
@@ -32,17 +18,7 @@
                         <div class="card-header pt-1 pb-1">
                             <div class="card-title">
                                 <div class="row row-cols-auto">
-                                    <div class="col">
-                                        <div class="input-group input-group-sm"> 
-                                            <span class="input-group-text" id="basic-addon1">HasRole</span> 
-                                            <select class="form-select form-select-sm" id="frole">
-                                                <option value="all">ALL</option>
-                                                @foreach ($roles as $item)
-                                                <option value="{{ $item->id }}">{{ $item->name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </div>
+                                    <div class="col"></div>
                                 </div>
                             </div>
                             <div class="card-tools"> 
@@ -58,7 +34,7 @@
                                         <th>Username</th>
                                         <th>NIK</th>
                                         <th>Jabatan</th>
-                                        <th>Gaji</th>
+                                        <th>Limit PPOB</th>
                                         <th>Limit Hutang</th>
                                         <th>Email</th>
                                         <th>No HP</th>
@@ -80,7 +56,7 @@
             <form action="{{ route('users.updatepassword') }}" method="POST">
                 @csrf
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Reset Password</h5>
+                    <h5 class="modal-title" id="exampleModalLabelReset">Reset Password</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -142,8 +118,12 @@
                             <input type="number" class="form-control form-control-sm" id="fgaji" name="gaji" required>
                         </div>
                         <div class="col col-lg-6 mb-1">
-                            <label for="exampleFormControlInput2" class="form-label">Limit Hutang</label>
+                            <label for="flimit_hutang" class="form-label">Limit Hutang</label>
                             <input type="number" class="form-control form-control-sm" id="flimit_hutang" name="limit_hutang" required>
+                        </div>
+                        <div class="col col-lg-6 mb-1">
+                            <label for="flimit_ppob" class="form-label">Limit PPOB</label>
+                            <input type="number" class="form-control form-control-sm" id="flimit_ppob" name="limit_ppob" required>
                         </div>
                         <div class="col col-lg-6 mb-1">
                             <label for="exampleFormControlInput2" class="form-label">No HP</label>
@@ -166,19 +146,54 @@
     
     <x-slot name="csscustom">
         <link href="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
+        <link href="{{ asset('plugins/loader/waitMe.min.css') }}" rel="stylesheet">
     </x-slot>
     
     <x-slot name="jscustom">
         <script src="{{ asset('plugins/sweetalert2@11.js') }}"></script>
         <script src="{{ asset('plugins/DataTable/dataTables.min.js') }}"></script>
         <script src="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.js') }}"></script>
+        <script src="{{ asset('plugins/loader/waitMe.min.js') }}"></script>
         <script>
+            function loader(obj,onoff){
+                if(onoff){
+                    obj.waitMe({
+                    effect : 'bouncePulse',
+                    text : 'Please wait',
+                    bg : 'rgba(255,255,255,0.7)',
+                    color : '#000',
+                    maxSize : '',
+                    waitTime : -1,
+                    textPos : 'vertical',
+                    fontSize : '',
+                    source : '',
+                    onClose : function() {}
+                    });
+                }else{
+                    obj.waitMe('hide');
+                }
+            }
             $(document).ready(function() {
+                $('#btnadd').on('click',function(){
+                    clearfrm();
+                    $.ajax({
+                        url: "{{ route('anggota.getcode') }}",method: "GET",
+                        beforeSend: function(xhr) {loader($('#frmusers'),true)},
+                        success: function(response) {
+                            $('input[name="nomor_anggota"]').val(response);
+                            loader($('#frmusers'),false);
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Gagal:', status, error);
+                            console.log('Response Text:', xhr.responseText);
+                            loader($('#frmusers'),false);
+                        },
+                    });
+                });
                 var table = $('#tabelAnggota').DataTable({
-                    processing: true,
-                    serverSide: true,
+                    ordering: false,"responsive": true,"processing": true,"serverSide": true,
                     ajax: {
-                        url: "{{ route('users.getdata') }}",
+                        url: "{{ route('anggota.getdata') }}",
                         type: "GET"
                     },
                     columns: [
@@ -187,7 +202,7 @@
                         { data: 'username', name: 'username' },
                         { data: 'nik', name: 'nik' },
                         { data: 'jabatan', name: 'jabatan' },
-                        { data: 'gaji', name: 'gaji' },
+                        { data: 'limit_ppob', name: 'limit_ppob' },
                         { data: 'limit_hutang', name: 'limit_hutang' },
                         { data: 'email', name: 'email' },
                         { data: 'nohp', name: 'nohp' },
@@ -225,6 +240,7 @@
                     $('#fjabatan').val('');
                     $('#fgaji').val('');
                     $('#flimit_hutang').val('');
+                    $('#flimit_ppob').val('');
                     $('#femail').val('');
                     $('#fnohp').val('');
                     $('#flexCheckChecked').prop('checked', true);
@@ -240,24 +256,25 @@
                     var id = $(this).data('id');
                     $('#exampleModalLabel').text('Edit Anggota');
                     
-                    $.ajax({
-                        url: "{{ route('anggota.getdata') }}",
-                        method: "GET",
-                        data: { id: id },
-                        success: function(response) {
-                            $('#fidusers').val(response.id);
-                            $('#fnomor_anggota').val(response.nomor_anggota);
-                            $('#fusername').val(response.username).prop('disabled', true);
-                            $('#fname').val(response.name);
-                            $('#fnik').val(response.nik);
-                            $('#fjabatan').val(response.jabatan);
-                            $('#fgaji').val(response.gaji);
-                            $('#flimit_hutang').val(response.limit_hutang);
-                            $('#femail').val(response.email);
-                            $('#fnohp').val(response.nohp);
-                            $('#flexCheckChecked').prop('checked', response.status == 1);
-                        }
-                    });
+                    var row = table.row($(this).closest('tr')).data();
+                    $('#fidusers').val(row.idusers);
+                    $('input[name="nomor_anggota"]').val(row.nomor_anggota);
+                    $('input[name="name"]').val(row.name);
+                    $('input[name="username"]').val(row.username);
+                    $('input[name="username"]').prop('disabled', true);
+                    $('input[name="nik"]').val(row.nik);
+                    $('input[name="jabatan"]').val(row.jabatan);
+                    $('select[name="unit_kerja"]').val(row.unit_kerja);
+                    $('input[name="tanggal_masuk"]').val(row.tanggal_masuk);
+                    $('input[name="limit_hutang"]').val(row.limit_hutang);
+                    $('input[name="limit_ppob"]').val(row.limit_ppob);
+                    $('input[name="email"]').val(row.email);
+                    console.log(row.status)
+                    if(row.status=='aktif'){
+                        $('#flexCheckChecked').prop('checked', true);
+                    }else{
+                        $('#flexCheckChecked').prop('checked', false);
+                    }   
                 });
 
                 $('#frmusers').on('submit', function(e) {
@@ -271,14 +288,14 @@
                     disabled.forEach(el => el.disabled = true);
                     
                     $.ajax({
-                        url: "{{ route('users.store') }}",
+                        url: "{{ route('anggota.store') }}",
                         method: "POST",
                         data: formData,
                         headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')},
                         contentType: false,
                         processData: false,
                         success: function(response) {
-                            table.ajax.reload();
+                            table.ajax.reload(null, false);
                             $('#exampleModalForm').modal('hide');
                             clearfrm();
                         },
@@ -286,10 +303,6 @@
                             // Handle errors
                         }
                     });
-                });
-
-                $('#frole').on('change', function() {
-                    table.ajax.reload();
                 });
             });
         </script>
