@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AnggotaController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\MenuController;
@@ -12,9 +13,12 @@ use App\Http\Controllers\SimpananController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\UsersController;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Response;
-use Illuminate\Support\Facades\Route;
+
 
 
 Route::get('/', [AuthenticatedSessionController::class, 'create']);
@@ -135,5 +139,27 @@ Route::prefix('menu')->middleware(['auth', 'verified', 'role:superadmin', 'globa
         return response()->json(request()->menu);
     });
 });
+Route::prefix('doc')->middleware(['auth', 'verified'])->group(function () {
+    Route::get('download/{filename}', function ($filename) {
+        if (!Auth::check()) {abort(403);}
+        $path = storage_path("app/private/doc/{$filename}");
+        if (!file_exists($path)) {abort(404);}
+        return Response::download($path);
+    });
+    Route::get('file/{path}/{filename}', function ($path,$filename) {
+        if (!Auth::check()) {abort(403);}
+        $path = storage_path("app/private/img/{$path}/{$filename}");
+        if (!File::exists($path)) {abort(404);}
+        $file = File::get($path);
+        $type = File::mimeType($path);
+        return Response::make($file, 200)->header("Content-Type", $type);
+    });
+});
+Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/', [ReturController::class, 'index'])->name('retur.form');
+        return response()->json(request()->menu);
+});
+
+
 
 require __DIR__.'/auth.php';
