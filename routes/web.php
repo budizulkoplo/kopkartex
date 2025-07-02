@@ -12,11 +12,11 @@ use App\Http\Controllers\SimpananController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\UsersController;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Route;
+
+
 Route::get('/', [AuthenticatedSessionController::class, 'create']);
 // Route::get('/', function () {
 //     return view('welcome');
@@ -87,6 +87,18 @@ Route::prefix('users')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::get('/getcode', [UsersController::class, 'getcode'])->name('users.getcode');
     Route::post('/store', [UsersController::class, 'Store'])->name('users.store');
 });
+Route::prefix('anggota')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('Anggota')->group(function () {
+    Route::get('/list', [AnggotaController::class, 'index'])->name('anggota.list');
+    Route::get('/permission', [UserRoleController::class, 'PermissionByRole']);
+    Route::post('/add', [UserRoleController::class, 'addRole']);
+    Route::delete('/delr', [UserRoleController::class, 'deleteRole']);
+    Route::delete('/delp', [UserRoleController::class, 'deletePermission']);
+    Route::get('/getdata', [AnggotaController::class, 'getdata'])->name('anggota.getdata');
+    Route::get('/assignRole', [AnggotaController::class, 'kasihRole'])->name('anggota.assignRole');
+    Route::post('/password/update', [AnggotaController::class, 'updatePassword'])->name('anggota.updatepassword');
+    Route::get('/getcode', [AnggotaController::class, 'getcode'])->name('anggota.getcode');
+    Route::post('/store', [AnggotaController::class, 'Store'])->name('anggota.store');
+});
 Route::prefix('unit')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [UnitController::class, 'index'])->name('unit.list');
     Route::get('/add', [UnitController::class, 'AddForm'])->name('unit.add');
@@ -121,22 +133,6 @@ Route::prefix('menu')->middleware(['auth', 'verified', 'role:superadmin', 'globa
     Route::put('/update', [MenuController::class, 'update'])->name('menu.update');
     Route::get('/test', function () {
         return response()->json(request()->menu);
-    });
-});
-Route::prefix('doc')->middleware(['auth', 'verified'])->group(function () {
-    Route::get('download/{filename}', function ($filename) {
-        if (!Auth::check()) {abort(403);}
-        $path = storage_path("app/private/doc/{$filename}");
-        if (!file_exists($path)) {abort(404);}
-        return Response::download($path);
-    });
-    Route::get('file/{path}/{filename}', function ($path,$filename) {
-        if (!Auth::check()) {abort(403);}
-        $path = storage_path("app/private/img/{$path}/{$filename}");
-        if (!File::exists($path)) {abort(404);}
-        $file = File::get($path);
-        $type = File::mimeType($path);
-        return Response::make($file, 200)->header("Content-Type", $type);
     });
 });
 
