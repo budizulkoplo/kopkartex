@@ -95,6 +95,10 @@
                                         <option value="cicilan">Cicilan</option>
                                     </select>
                                 </div>
+                                <div class="input-group input-group-sm mb-2 fieldcicilan" style="display: none">
+                                    <span class="input-group-text label-fixed-width">Jml.Cicilan</span>
+                                    <select class="form-select form-select-sm" id="jmlcicilan" name="jmlcicilan"></select>
+                                </div>
                                 <div class="input-group input-group-sm mb-2">
                                     <span class="input-group-text label-fixed-width">Dibayar</span>
                                     <span class="input-group-text">Rp.</span>
@@ -181,6 +185,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-3-typeahead/4.0.2/bootstrap3-typeahead.min.js"></script>
         <script src="{{ asset('plugins/loader/waitMe.js') }}"></script>
         <script>
+            var globtot=0;
             function loader(onoff){
                 if(onoff)
                 $('.app-wrapper').waitMe({effect : 'bounce',text : '',bg : 'rgba(255,255,255,0.7)',color : '#000',waitTime : -1,textPos : 'vertical',});
@@ -249,6 +254,7 @@
                         $(obj).parent().find('.totalitm').html(harga*qty);
                     }
                 }
+                window.globtot = subtotal * (1 - ($('#diskon').val() / 100));
                 $('#subtotal').val(subtotal);
                 $('#grandtotal').val(subtotal * (1 - ($('#diskon').val() / 100)));
                 $('.topgrandtotal').text(formatRupiahWithDecimal($('#grandtotal').val()));
@@ -334,7 +340,27 @@
                 $('#customer').typeahead('destroy');
                 typeaheadEnabled = false;
             }
+            $('.fieldcicilan').hide();
             $(document).ready(function () {
+                $('#metodebayar').on('change',function(){
+                    if($(this).val() == 'cicilan'){
+                        let str;
+                        $('.fieldcicilan').show();
+                        let maxcicil=0;
+                        if(window.globtot <= 1000000) {maxcicil=5;}
+                        else if(window.globtot > 1000000 && window.globtot <= 2000000){maxcicil=10;}
+                        else if(window.globtot > 2000000 && window.globtot <= 3000000){maxcicil=15;}
+                        else if(window.globtot > 3000000 && window.globtot <= 4000000){maxcicil=20;}
+                        else if(window.globtot > 4000000 && window.globtot <= 5000000){maxcicil=25;}
+                        for (let index = 2; index <= maxcicil; index++) {
+                            str +=`<option value='${index}'>${index}x</option>`
+                        }
+                        $('#jmlcicilan').html(str);
+                    }else{
+                        $('.fieldcicilan').hide();
+                        $('#jmlcicilan').html('');
+                    }
+                });
                 activateTypeahead();
                 $('#flexCheckDefault').on('change', function () {
                     if ($(this).is(':checked')) {
