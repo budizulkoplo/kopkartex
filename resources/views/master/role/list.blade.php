@@ -91,7 +91,6 @@
         
     </x-slot>
     <x-slot name="jscustom">
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
             function delr(obj,txtname){
                 Swal.fire({

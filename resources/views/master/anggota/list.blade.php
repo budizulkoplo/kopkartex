@@ -145,15 +145,8 @@
     </div>
     
     <x-slot name="csscustom">
-        <link href="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
-        <link href="{{ asset('plugins/loader/waitMe.min.css') }}" rel="stylesheet">
     </x-slot>
-    
     <x-slot name="jscustom">
-        <script src="{{ asset('plugins/sweetalert2@11.js') }}"></script>
-        <script src="{{ asset('plugins/DataTable/dataTables.min.js') }}"></script>
-        <script src="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.js') }}"></script>
-        <script src="{{ asset('plugins/loader/waitMe.min.js') }}"></script>
         <script>
             function loader(obj,onoff){
                 if(onoff){

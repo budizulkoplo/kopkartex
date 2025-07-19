@@ -160,12 +160,8 @@
         </div>
     </div>
     <x-slot name="csscustom">
-        <link href="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
     </x-slot>
     <x-slot name="jscustom">
-        <script src="{{ asset('plugins/sweetalert2@11.js') }}"></script>
-        <script src="{{ asset('plugins/DataTable/dataTables.min.js') }}"></script>
-        <script src="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.js') }}"></script>
         <script>
             
             var table = $('#tbusers').DataTable({

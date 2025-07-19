@@ -78,16 +78,8 @@
         </div>
     </div>
     <x-slot name="csscustom">
-        <link href="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
-        <link rel="stylesheet" href="{{ asset('plugins/daterangepicker-master/daterangepicker.css') }}">
     </x-slot>
     <x-slot name="jscustom">
-        <script src="{{ asset('plugins/moment.min.js') }}"></script>
-        <script src="{{ asset('plugins/moment-with-locales.js') }}"></script>
-        <script src="{{ asset('plugins/sweetalert2@11.js') }}"></script>
-        <script src="{{ asset('plugins/DataTable/dataTables.min.js') }}"></script>
-        <script src="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.js') }}"></script>
-        <script src="{{ asset('plugins/daterangepicker-master/daterangepicker.js') }}"></script>
         <script>
             const currentDate = moment().format('YYYY-MM-DD');
             var ds=currentDate,de=currentDate;
