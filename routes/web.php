@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Response;
-
+use App\Http\Controllers\MobileController;
 
 
 Route::get('/', [AuthenticatedSessionController::class, 'create']);
@@ -154,6 +154,8 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::get('/', [ReturController::class, 'index'])->name('retur.form');
         return response()->json(request()->menu);
 });
+
+Route::get('/mobile', [MobileController::class, 'index'])->name('mobile.home');
 
 
 

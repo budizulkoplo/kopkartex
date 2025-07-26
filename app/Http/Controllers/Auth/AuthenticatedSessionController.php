@@ -24,11 +24,22 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $request->authenticate();
+        $request->authenticate(); // validasi kredensial
 
-        $request->session()->regenerate();
+        $request->session()->regenerate(); // proteksi session fixation
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Ambil data user yang sedang login
+        $user = Auth::user();
+
+        // Redirect berdasarkan field `ui`
+        if ($user->ui === 'admin') {
+            return redirect()->intended(route('dashboard', absolute: false));
+        } elseif ($user->ui === 'user') {
+            return redirect()->intended(route('mobile.home', absolute: false));
+        }
+
+        // Default redirect jika tidak dikenali
+        return redirect('/');
     }
 
     /**
