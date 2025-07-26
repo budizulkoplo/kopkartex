@@ -119,11 +119,8 @@
         </div>
     </div> --}}
     <x-slot name="csscustom">
-        <link type="text/css" rel="stylesheet" href="{{ asset('plugins/loader/waitMe.css') }}">
     </x-slot>
     <x-slot name="jscustom">
-        <script src="{{ asset('plugins/loader/waitMe.js') }}"></script>
-        <script src="{{ asset('plugins/sweetalert2@11.js') }}"></script>
         <script>
             $('#inputGroupFile02').on('change', function (e) {
                 const file = e.target.files[0];

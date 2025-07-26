@@ -103,8 +103,6 @@
         </div>
     </div>
     <x-slot name="csscustom">
-        <link href="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
-        <link rel="stylesheet" href="{{ asset('plugins/BootstrapDatePicker/bootstrap-datepicker.min.css') }}">
         <style>
         /* Typeahead dropdown menu */
         .tt-menu {
@@ -129,11 +127,7 @@
         </style>
     </x-slot>
     <x-slot name="jscustom">
-        <script src="{{ asset('plugins/sweetalert2@11.js') }}"></script>
-        <script src="{{ asset('plugins/DataTable/dataTables.min.js') }}"></script>
-        <script src="{{ asset('plugins/DataTable/dataTables.bootstrap5.min.js') }}"></script>
-        <script src="{{ asset('plugins/BootstrapDatePicker/bootstrap-datepicker.min.js') }}"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-3-typeahead/4.0.2/bootstrap3-typeahead.min.js"></script>
+        {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-3-typeahead/4.0.2/bootstrap3-typeahead.min.js"></script> --}}
         <script>
             function validasi(){
                 if($('#unit1').val() == '' || $('#unit2').val() == ''){

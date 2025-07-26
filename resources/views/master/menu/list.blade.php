@@ -53,11 +53,8 @@
         </div>
     </div>
     <x-slot name="csscustom">
-        <link rel="stylesheet" href="{{ asset('jstree/themes/default/style.css') }}">
     </x-slot>
     <x-slot name="jscustom">
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <script src="{{ asset('jstree/jstree.js') }}"></script>
         <script>
             function treajax(group){
                 $('#jstree_demo_div').jstree("destroy").empty();

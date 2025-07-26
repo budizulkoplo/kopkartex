@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Penjualan;
+use App\Models\PenjualanCicil;
 use App\Models\PenjualanDetail;
 use App\Models\StokUnit;
 use App\Models\Unit;
@@ -91,11 +92,32 @@ class PenjualanController extends Controller
             $penjualan->anggota_id = $request->idcustomer;
             $penjualan->diskon = $request->diskon;
             $penjualan->note = $request->note;
+            if($request->metodebayar == 'cicilan'){
+                $penjualan->status = 'hutang';
+                $penjualan->jmlcicilan = $request->jmlcicilan;
+            }elseif($request->metodebayar == 'potong_gaji'){
+                $penjualan->status = 'hutang';
+                $penjualan->jmlcicilan = 0;
+            }else{
+                $penjualan->status = 'lunas';
+                $penjualan->jmlcicilan = 0;
+            }
             $penjualan->dibayar = $request->dibayar;
             $penjualan->kembali = $request->kembali;
             $penjualan->created_user = Auth::user()->id;
             $penjualan->save();
             $no=0;
+            if($request->jmlcicilan > 1){
+                $totalcicil = $request->grandtotal / $request->jmlcicilan;
+                for ($i=1; $i <= $request->jmlcicilan ; $i++) { 
+                    $cicil = new PenjualanCicil;
+                    $cicil->penjualan_id = $penjualan->id;
+                    $cicil->cicilan = $i;
+                    $cicil->total_cicilan = $totalcicil;
+                    $cicil->status = 'hutang';
+                    $cicil->save();
+                }
+            }
             foreach ($request->idbarang as $item) {
                 $dtl = new PenjualanDetail;
                 $dtl->penjualan_id = $penjualan->id;
