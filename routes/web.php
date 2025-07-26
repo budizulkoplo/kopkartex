@@ -155,8 +155,8 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin',
         return response()->json(request()->menu);
 });
 
-Route::get('/mobile', [MobileController::class, 'index'])->name('mobile.home');
-
-
+Route::get('/mobile/home', [MobileController::class, 'index'])
+    ->middleware('auth')
+    ->name('mobile.home');
 
 require __DIR__.'/auth.php';
