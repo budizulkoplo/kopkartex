@@ -81,7 +81,7 @@
 
     <div class="text-center mt-2" style="font-size: 11px; color: #777;">
         <img src="{{ asset('assets/img/logo.png') }}" alt="Logo" width="16" class="me-1 align-middle">
-        <strong>HRIS Mobile v3.0</strong> – RS PKU Muhammadiyah Boja
+        <strong>Kopkartex Mobile v3.0</strong> – RS PKU Muhammadiyah Boja
     </div>
 </div>
 
