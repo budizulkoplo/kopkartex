@@ -51,13 +51,16 @@
             </div>
         </div>
 
-        <div class="perf-item perf-saldo text-decoration-none">
-            <ion-icon name="cellular-outline"></ion-icon>
-            <div class="perf-text">
-                <div class="label">Limit PPOB</div>
-                <div class="value">Rp {{ number_format((float) str_replace(',', '.', $user->limit_ppob), 2, ',', '.') }}</div>
-            </div>
+<a href="{{ route('mobile.ppob') }}" class="text-decoration-none">
+    <div class="perf-item perf-saldo">
+        <ion-icon name="cellular-outline"></ion-icon>
+        <div class="perf-text">
+            <div class="label">Limit PPOB</div>
+            <div class="value">Rp {{ number_format((float) str_replace(',', '.', $user->limit_ppob), 2, ',', '.') }}</div>
         </div>
+    </div>
+</a>
+
 
         <div class="perf-item perf-saldo text-decoration-none">
             <ion-icon name="checkmark-done-outline"></ion-icon>

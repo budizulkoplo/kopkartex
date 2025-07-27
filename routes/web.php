@@ -155,8 +155,15 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin',
         return response()->json(request()->menu);
 });
 
+// UI untuk mobile end users
 Route::get('/mobile/home', [MobileController::class, 'index'])
     ->middleware('auth')
     ->name('mobile.home');
+
+Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function () {
+    Route::get('/ppob', [MobileController::class, 'ppob'])->name('ppob');
+});
+
+
 
 require __DIR__.'/auth.php';
