@@ -17,8 +17,8 @@
         <div id="user-info">
             <div id="user-role">KOPKARTEX MOBILE</div>
             <h3>{{ $user->name }}</h3>
-            <div id="user-role">Jabatan: <strong>{{ $user->jabatan ?? '-' }}</strong></div>
-            <div id="user-role">Unit Kerja: {{ $user->unit_kerja ?? '-' }}</div>
+            <div id="user-role">NIK: <strong>{{ $user->nik ?? '-' }}</strong></div>
+            
         </div>
     </div>
 </div>
@@ -27,15 +27,6 @@
     <div class="title">Data Keanggotaan Koperasi</div>
 
     <div class="performance-grid">
-
-        <div class="perf-item perf-saldo text-decoration-none">
-            <ion-icon name="card-outline"></ion-icon>
-            <div class="perf-text">
-                <div class="label">NIK</div>
-                <div class="value">{{ $user->nik }}</div>
-            </div>
-        </div>
-
         <div class="perf-item perf-saldo text-decoration-none">
             <ion-icon name="id-card-outline"></ion-icon>
             <div class="perf-text">
@@ -45,26 +36,10 @@
         </div>
 
         <div class="perf-item perf-saldo text-decoration-none">
-            <ion-icon name="person-circle-outline"></ion-icon>
-            <div class="perf-text">
-                <div class="label">Username</div>
-                <div class="value">{{ $user->username }}</div>
-            </div>
-        </div>
-
-        <div class="perf-item perf-saldo text-decoration-none">
             <ion-icon name="calendar-outline"></ion-icon>
             <div class="perf-text">
                 <div class="label">Tanggal Masuk</div>
                 <div class="value">{{ \Carbon\Carbon::parse($user->tanggal_masuk)->format('d-m-Y') }}</div>
-            </div>
-        </div>
-
-        <div class="perf-item perf-saldo text-decoration-none">
-            <ion-icon name="cash-outline"></ion-icon>
-            <div class="perf-text">
-                <div class="label">Gaji</div>
-                <div class="value">Rp {{ number_format((float) str_replace(',', '.', $user->gaji), 2, ',', '.') }}</div>
             </div>
         </div>
 
