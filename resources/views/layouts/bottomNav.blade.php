@@ -184,7 +184,7 @@
   </a>
   <a href="/presensi/agenda/list" class="quick-item {{ request()->is('presensi/agenda/list') ? 'active' : '' }}">
     <ion-icon name="document-text-outline"></ion-icon>
-    <span>Agenda</span>
+    <span>Belanja</span>
   </a>
 
   <button class="quick-item menu-main" id="menuToggle">
@@ -193,7 +193,7 @@
 
   <a href="/kalender" class="quick-item {{ request()->is('kalender') ? 'active' : '' }}">
     <ion-icon name="calendar-outline"></ion-icon>
-    <span>Kalender</span>
+    <span>Cicilan</span>
   </a>
 
   <form id="logout-form" action="{{ route('logout') }}" method="POST" style="all: unset; display: contents;">
