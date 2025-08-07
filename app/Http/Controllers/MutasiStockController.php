@@ -8,6 +8,7 @@ use App\Models\MutasiStokDetail;
 use App\Models\StokUnit;
 use App\Models\Unit;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -98,35 +99,42 @@ class MutasiStockController extends Controller
         }
     }
     public function store(Request $request){
-        $formattedDate = Carbon::parse($request->date)->format('Y-m-d');
-        $hdr=new MutasiStok;
-        $hdr->dari_unit = $request->unit1;
-        $hdr->ke_unit = $request->unit2;
-        $hdr->tanggal = $formattedDate;
-        $hdr->status = 1;
-        $hdr->note = $request->note;
-        $hdr->created_user = auth()->user()->id;
-        $hdr->save();
-        $idhdr = $hdr->id;
+        DB::beginTransaction();
+        try {
+            $formattedDate = Carbon::parse($request->date)->format('Y-m-d');
+            $hdr=new MutasiStok;
+            $hdr->dari_unit = $request->unit1;
+            $hdr->ke_unit = $request->unit2;
+            $hdr->tanggal = $formattedDate;
+            $hdr->status = 1;
+            $hdr->note = $request->note;
+            $hdr->created_user = auth()->user()->id;
+            $hdr->save();
+            $idhdr = $hdr->id;
 
-        $quantities = $request->input('qty');
-        $barang = $request->input('id');
-        foreach ($barang as $index => $id) {
-            $dtl = new MutasiStokDetail;
-            $dtl->mutasi_id = $idhdr;
-            $dtl->barang_id = $barang[$index];
-            $dtl->qty = $quantities[$index];
-            $dtl->save();
-            DB::statement("
-                INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at,created_at) VALUES (?, ?, ? ,NOW(),NOW())
-                ON DUPLICATE KEY UPDATE stok = stok - ?,updated_at=VALUES(updated_at),created_at=VALUES(created_at)", 
-                [$barang[$index], $request->unit1, $quantities[$index], $quantities[$index]]);
-            DB::statement("
-                INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at,created_at) VALUES (?, ?, ? ,NOW(),NOW())
-                ON DUPLICATE KEY UPDATE stok = stok + ?,updated_at=VALUES(updated_at),created_at=VALUES(created_at)", 
-                [$barang[$index], $request->unit2, $quantities[$index], $quantities[$index]]);
+            $quantities = $request->input('qty');
+            $barang = $request->input('id');
+            foreach ($barang as $index => $id) {
+                $dtl = new MutasiStokDetail;
+                $dtl->mutasi_id = $idhdr;
+                $dtl->barang_id = $barang[$index];
+                $dtl->qty = $quantities[$index];
+                $dtl->save();
+                DB::statement("
+                    INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at,created_at) VALUES (?, ?, ? ,NOW(),NOW())
+                    ON DUPLICATE KEY UPDATE stok = stok - ?,updated_at=VALUES(updated_at),created_at=VALUES(created_at)", 
+                    [$barang[$index], $request->unit1, $quantities[$index], $quantities[$index]]);
+                DB::statement("
+                    INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at,created_at) VALUES (?, ?, ? ,NOW(),NOW())
+                    ON DUPLICATE KEY UPDATE stok = stok + ?,updated_at=VALUES(updated_at),created_at=VALUES(created_at)", 
+                    [$barang[$index], $request->unit2, $quantities[$index], $quantities[$index]]);
+            }
+            DB::commit();
+            return response()->json($hdr);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json($e->getMessage(), 500);
         }
-        return response()->json($hdr);
     }
     public function Kembalikan(Request $request){
         $cekhdr = MutasiStok::find($request->idmutasi);

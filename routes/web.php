@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\MobileController;
-
+use App\Http\Controllers\StockOpnameController;
 
 Route::get('/', [AuthenticatedSessionController::class, 'create']);
 // Route::get('/', function () {
@@ -44,6 +44,14 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::post('/store', [ReturController::class, 'store'])->name('retur.store');
     Route::get('/datatable', [ReturController::class, 'getDataTable'])->name('retur.datatable');
     Route::get('/list', [ReturController::class, 'ListData'])->name('retur.list');
+});
+Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.form');
+    Route::get('/getbarang', [StockOpnameController::class, 'getBarang'])->name('stockopname.getbarang');
+    Route::get('/getbarangbycode', [StockOpnameController::class, 'getBarangByCode'])->name('stockopname.getbarangbycode');
+    Route::post('/store', [StockOpnameController::class, 'store'])->name('stockopname.store');
+    // Route::get('/datatable', [ReturController::class, 'getDataTable'])->name('retur.datatable');
+    // Route::get('/list', [ReturController::class, 'ListData'])->name('retur.list');
 });
 Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('ss',function(){
