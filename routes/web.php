@@ -45,14 +45,23 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::get('/datatable', [ReturController::class, 'getDataTable'])->name('retur.datatable');
     Route::get('/list', [ReturController::class, 'ListData'])->name('retur.list');
 });
+
 Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
-    Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.form');
+    Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.index'); // <- tampilan daftar barang
+    Route::get('/form', [StockOpnameController::class, 'form'])->name('stockopname.form'); // <- tampilkan form opname
     Route::get('/getbarang', [StockOpnameController::class, 'getBarang'])->name('stockopname.getbarang');
     Route::get('/getbarangbycode', [StockOpnameController::class, 'getBarangByCode'])->name('stockopname.getbarangbycode');
     Route::post('/store', [StockOpnameController::class, 'store'])->name('stockopname.store');
-    // Route::get('/datatable', [ReturController::class, 'getDataTable'])->name('retur.datatable');
-    // Route::get('/list', [ReturController::class, 'ListData'])->name('retur.list');
 });
+
+// Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+//     Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.form');
+//     Route::get('/getbarang', [StockOpnameController::class, 'getBarang'])->name('stockopname.getbarang');
+//     Route::get('/getbarangbycode', [StockOpnameController::class, 'getBarangByCode'])->name('stockopname.getbarangbycode');
+//     Route::post('/store', [StockOpnameController::class, 'store'])->name('stockopname.store');
+//     // Route::get('/datatable', [ReturController::class, 'getDataTable'])->name('retur.datatable');
+//     // Route::get('/list', [ReturController::class, 'ListData'])->name('retur.list');
+// });
 Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('ss',function(){
         dd(Hash::make('12345678'));

@@ -1,223 +1,147 @@
 <x-app-layout>
     <x-slot name="pagetitle">Stock Opname</x-slot>
-    <div class="app-content-header">
-    
-</div>
 
-<div class="app-content">
-    <div class="container">
-        <form class="needs-validation" novalidate id="frmterima">
-            <div class="card card-success card-outline mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Form Stock Opname</h5>
+    <div class="app-content-header mb-3"></div>
+
+    <div class="app-content">
+        <div class="container">
+            <form class="needs-validation" novalidate id="frmterima">
+                <div class="card card-success card-outline mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Form Stock Opname</h5>
+                    </div>
+                    <div class="card-body p-3">
+
+                        {{-- Informasi barang terpilih --}}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="alert alert-info py-2 mb-1">
+                                    <strong>Kode:</strong> {{ $selectedBarang->code ?? '-' }}<br>
+                                    <strong>Nama Barang:</strong> {{ $selectedBarang->text ?? '-' }}
+                                </div>
+                                <input type="hidden" name="barang_id" value="{{ $selectedBarang->id ?? '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-secondary py-2 mb-1">
+                                    <strong>Petugas:</strong> {{ auth()->user()->name }}<br>
+                                    <strong>Tanggal:</strong> <span id="opname-date"></span>
+                                    <input type="hidden" name="tgl_opname" id="tgl_opname_input">
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Table untuk input qty + expdate --}}
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <table id="tbterima" class="table table-sm table-striped table-bordered" style="width: 100%; font-size: small;">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Qty</th>
+                                            <th>ExpDate</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addRow()">
+                                    <i class="bi bi-plus-circle"></i> Tambah Baris
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row align-items-start">
+                            <div class="col-md-4 d-flex gap-2">
+                                <a href="/stock" class="btn btn-secondary">
+                                    ← Kembali ke List Barang
+                                </a>
+                                <button type="button" class="btn btn-warning" onclick="clearform();"><i class="bi bi-arrow-clockwise"></i> Batal</button>
+                                <button type="submit" class="btn btn-success"><i class="bi bi-floppy-fill"></i> Simpan</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body p-3">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <div class="input-group input-group-sm mb-2"> 
-                                <span class="input-group-text label-fixed-width">Date</span>
-                                <input type="text" class="form-control datepicker" name="tgl_opname" required>
-                                <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="input-group input-group-sm mb-2"> 
-                                <span class="input-group-text label-fixed-width">Petugas</span>
-                                <input type="text" class="form-control" value="{{ auth()->user()->name }}" disabled>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="input-group input-group-sm mb-2"> 
-                                <span class="input-group-text label-fixed-width">Barcode</span>
-                                <input type="text" class="form-control typeahead" id="barcode-search">
-                                <input type="hidden" id="barcode-id">
-                                <span class="input-group-text bg-primary"><i class="bi bi-search text-white"></i></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-12">
-                            <table id="tbterima" class="table table-sm table-striped table-bordered" style="width: 100%; font-size: small;">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Kode</th>
-                                        <th>Nama Barang</th>
-                                        <th>Qty</th>
-                                        <th>ExpDate</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="row align-items-start">
-                        <div class="col-md-4 d-flex gap-2">
-                            <button type="button" class="btn btn-warning" onclick="clearform();"><i class="bi bi-arrow-clockwise"></i> Batal</button>
-                            <button type="submit" class="btn btn-success"><i class="bi bi-floppy-fill"></i> Simpan</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
 
-    <x-slot name="csscustom">
-        <style>
-        /* Typeahead dropdown menu */
-        .tt-menu {
-        width: 100%;
-        background-color: #fff;
-        border: 1px solid #ced4da;
-        border-radius: 0.25rem;
-        z-index: 1000;
-        max-height: 250px;
-        overflow-y: auto;
-        }
-
-        /* Each suggestion */
-        .tt-suggestion {
-        padding: 0.5rem 1rem;
-        cursor: pointer;
-        }
-
-        .tt-suggestion:hover {
-        background-color: #f8f9fa; /* Bootstrap's hover color */
-        }
-        </style>
-    </x-slot>
     <x-slot name="jscustom">
-        {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-3-typeahead/4.0.2/bootstrap3-typeahead.min.js"></script> --}}
         <script>
-            $(document).on('keydown', function(e) {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                }
-            });
             function numbering(){
                 $('#tbterima tbody tr').each(function(index) {
                     $(this).find('td:first').text(index + 1);
                 });
             }
-            function addRow(datarow){
-                let str = '',boleh=true;
-                // $('#tbterima tbody tr').each(function(index, element) {
-                //     if(datarow.id == $(this).data('id'))
-                //     {boleh=false;return false;}
-                // });
-                if(boleh){
-                    str +=`<tr data-id="`+datarow.id+`" class="align-middle"><td></td>
-                        <td>`+datarow.code+`</td>
-                        <td>`+datarow.text+`</td>
+
+            function addRow(){
+                let row = `
+                    <tr class="align-middle">
+                        <td></td>
                         <td>
-                            <input type="number" class="form-control form-control-sm w-auto qty" onfocus="this.select()" min="1" value="0" name="qty[]" required>
+                            <input type="hidden" class="form-control form-control-sm"  name="code[]" value="{{ $selectedBarang->code}}" required>
+                            <input type="hidden" class="form-control form-control-sm"  name="id[]" value="{{ $selectedBarang->id}}" required>
+                            <input type="number" class="form-control form-control-sm qty" min="1" name="qty[]" value="0" required>
                         </td>
                         <td>
-                            <input type="date" class="form-control form-control-sm w-auto" min="1" name="exp[]" required>
-                            <input type="hidden" name="id[]" value="`+datarow.id+`">
-                            <input type="hidden" name="code[]" value="`+datarow.code+`">
+                            <input type="date" class="form-control form-control-sm" name="exp[]" required>
                         </td>
-                        <td><span class="badge bg-danger dellist" onclick="$(this).parent().parent().remove();numbering();"><i class="bi bi-trash3-fill"></i></span></td></tr>`;
-                    $('#tbterima tbody').append(str);
-                }
+                        <td>
+                            <span class="badge bg-danger dellist" onclick="$(this).closest('tr').remove(); numbering();">
+                                <i class="bi bi-trash3-fill"></i>
+                            </span>
+                        </td>
+                    </tr>
+                `;
+                $('#tbterima tbody').append(row);
                 numbering();
-                $('#barcode-search').val('');
             }
+
             function clearform(){
-                $('input[name="invoice"]').val('');
-                $('input[name="supplier"]').val('');
-                $('textarea[name="note"]').val('');
-                $('#tbterima tbody tr').remove();
+                $('#tbterima tbody').empty();
+                numbering();
             }
+
             $(document).ready(function () {
-                let currentRequest = null;
-                $('#barcode-search').typeahead({
-                    source: function (query, process) {
-                        if (currentRequest !== null) {
-                            currentRequest.abort();
-                        }
-                        currentRequest = $.ajax({
-                        url: '{{ route('stockopname.getbarang') }}',       // Your backend endpoint
-                        type: 'GET',
-                        data: { q: query },
-                        dataType: 'json',
-                        success: function (data) {
-                            barang = data; // Save for lookup later
-                            return process(data.map(barang => barang.text));
-                        }
-                        });
-                        return currentRequest;
-                    },
-                    afterSelect: function (text) {
-                        const selected = barang.find(barang => barang.text === text);
-                        if (selected) {
-                            $('#barcode-id').val(selected.code); // save the ID in a hidden field
-                            addRow(selected);
-                        }
-                    }
-                });
-                $('.datepicker').datepicker({
-                    format: 'dd-mm-yyyy',
-                    autoclose: true,
-                    todayHighlight: true
-                }).datepicker('setDate', new Date());
-                $('#barcode-search').on('keydown', function(e) {
-                    if (e.key === 'Enter') {
-                        $.ajax({
-                            url: '{{ route('stockopname.getbarangbycode') }}',
-                            method: 'GET',
-                            data: {
-                                kode: $(this).val(),
-                            },
-                            dataType: 'json',
-                            success: function(response) {
-                                addRow(response);
-                            },
-                            error: function(xhr, status, error) {
-                                Swal.fire({
-                                title: "Barang tidak ditemukan!",
-                                icon: "error",
-                                draggable: true
-                                });
-                            }
-                        });
-                    }
-                });
+                const today = new Date();
+                const formatted = today.toLocaleDateString('en-GB').split('/').join('-');
+                $('#opname-date').text(formatted);
+                $('#tgl_opname_input').val(formatted);
+
+                addRow(); // start with 1 row
+
                 $('#frmterima').on('submit', function(e) {
-                    e.preventDefault(); // Prevent default form submit
+                    e.preventDefault();
                     if (!this.checkValidity()) {
                         e.stopPropagation();
+                        this.classList.add('was-validated');
                     } else {
                         Swal.fire({
                             title: "Simpan data?",
-                            text: "data akan disimpan!",
+                            text: "Data akan disimpan!",
                             icon: "warning",
                             showCancelButton: true,
                             confirmButtonColor: "#3085d6",
                             cancelButtonColor: "#d33",
-                            confirmButtonText: "Ya, lanjutkan!"
-                            }).then((result) => {
+                            confirmButtonText: "Ya, simpan!"
+                        }).then((result) => {
                             if (result.isConfirmed) {
                                 $.ajax({
                                     type: 'POST',
-                                    url: '{{ route('stockopname.store') }}', // Your endpoint
-                                    data: $(this).serialize(), // Serialize form data
+                                    url: '{{ route('stockopname.store') }}',
+                                    data: $(this).serialize(),
                                     success: function(response) {
                                         Swal.fire({
-                                        position: "top-end",
-                                        icon: "success",
-                                        title: "berhasil tersimpan",
-                                        showConfirmButton: false,
-                                        timer: 2500
+                                            icon: 'success',
+                                            title: 'Berhasil disimpan!',
+                                            showConfirmButton: false,
+                                            timer: 2000
                                         });
-                                        clearform();
+                                        setTimeout(function() {
+                                            window.location.href = '/stock';
+                                        }, 2000);
                                     },
                                     error: function(xhr) {
-                                        alert('Something went wrong');
+                                        alert('Terjadi kesalahan saat menyimpan!');
                                     }
                                 });
                             }
