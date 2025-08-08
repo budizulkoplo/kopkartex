@@ -75,7 +75,7 @@
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">
             <div class="px-4">
-                <div class="font-medium text-base text-gray-800 dark:text-gray-200">{{ Auth::user()->name }}</div>
+                <div class="font-medium text-base text-gray-800 dark:text-gray-200"></div>
                 <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
             </div>
 
@@ -102,7 +102,7 @@
     <div class="container-fluid"> <!--begin::Start Navbar Links-->
         <ul class="navbar-nav">
             <li class="nav-item"> <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button"> <i class="bi bi-list"></i> </a> </li>
-            <li class="nav-item d-none d-md-block"> <a href="#" class="nav-link">{{ __(auth()->user()->name) }}</a> </li>
+            <!-- <li class="nav-item d-none d-md-block"> <a href="#" class="nav-link">{{ __(auth()->user()->name) }}</a> </li> -->
         </ul> <!--end::Start Navbar Links--> <!--begin::End Navbar Links-->
         <ul class="navbar-nav ms-auto"> <!--begin::Navbar Search-->
             <li class="nav-item dropdown">
@@ -137,7 +137,7 @@
                     @if (isset(Auth::user()->foto) && Storage::disk('private')->exists("img/foto/".Auth::user()->foto))
                     <img src="{{ url('/doc/file/foto/'.Auth::user()->foto.'?t='. time()) }}" class="user-image rounded-circle shadow" alt="User Image">
                     @else
-                        <img src="{{ url('/doc/file/foto/default.png') }}" class="user-image rounded-circle shadow" alt="User Image">
+                        <img src="{{ auth()->user()->avatar_url ?? asset('user.png') }}" class="user-image rounded-circle shadow" alt="User Image">
                     @endif
                 </a>
                 <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end"> <!--begin::User Image-->
