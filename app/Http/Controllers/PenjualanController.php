@@ -92,6 +92,8 @@ class PenjualanController extends Controller
             $penjualan->anggota_id = $request->idcustomer;
             $penjualan->diskon = $request->diskon;
             $penjualan->note = $request->note;
+            $penjualan->type_order = 'offline';
+            $penjualan->status_albil = 'finish';
             if($request->metodebayar == 'cicilan'){
                 $penjualan->status = 'hutang';
                 $penjualan->jmlcicilan = $request->jmlcicilan;
