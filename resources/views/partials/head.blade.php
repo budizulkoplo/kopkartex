@@ -6,7 +6,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<title>HRIS - {{ !empty($pagetitle) ?$pagetitle:config('app.name', 'Laravel') }}</title>
+<title>Kopkartex - {{ !empty($pagetitle) ?$pagetitle:config('app.name', 'Laravel') }}</title>
 <link rel="icon" type="image/x-icon" href="{{ asset('arisa.ico') }}">
 <link rel="stylesheet" href="{{ asset('css/bootstrap.min.css') }}">
 <link rel="stylesheet" href="{{ asset('css/overlayscrollbars.min.css') }}">
@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="{{ asset('css/tippy.css') }}">
 <link rel="stylesheet" href="{{ asset('plugins/quill/quill.snow.css') }}">
 <link rel="stylesheet" href="{{ asset('plugins/webdatarocks-1.4.19/webdatarocks.min.css') }}">
+<link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
 <style>
     .submenu {
         display: none;

@@ -20,7 +20,7 @@
                                         <input class="form-check-input mt-0 me-2" type="checkbox" value="" id="flexCheckDefault" checked>
                                         <label for="flexCheckDefault" class="mb-0">Anggota</label>
                                     </div>
-                                    <input type="text" class="form-control" id="customer" name="customer">
+                                    <input type="text" class="form-control" id="customer" name="customer" required>
                                     <input type="hidden" id="idcustomer" name="idcustomer">
                                 </div>
                             </div>
@@ -91,7 +91,6 @@
                                     <span class="input-group-text label-fixed-width">Metode</span>
                                     <select class="form-select form-select-sm" id="metodebayar" name="metodebayar" required>
                                         <option value="tunai" selected>Tunai</option>
-                                        <option value="potong_gaji">Potong Gaji</option>
                                         <option value="cicilan">Cicilan</option>
                                     </select>
                                 </div>
@@ -99,12 +98,12 @@
                                     <span class="input-group-text label-fixed-width">Jml.Cicilan</span>
                                     <select class="form-select form-select-sm" id="jmlcicilan" name="jmlcicilan"></select>
                                 </div>
-                                <div class="input-group input-group-sm mb-2">
+                                <div class="input-group input-group-sm mb-2 clmetode">
                                     <span class="input-group-text label-fixed-width">Dibayar</span>
                                     <span class="input-group-text">Rp.</span>
                                     <input type="number" class="form-control" value="0" onfocus="this.select()" onkeyup="kalkulasi()" name="dibayar" id="dibayar" required>
                                 </div>
-                                <div class="input-group input-group-sm mb-2">
+                                <div class="input-group input-group-sm mb-2 clmetode">
                                     <span class="input-group-text label-fixed-width">Kembali</span>
                                     <span class="input-group-text">Rp.</span>
                                     <input type="number" class="form-control" value="0" name="kembali" id="kembali" disabled>
@@ -340,18 +339,23 @@
                         let str;
                         $('.fieldcicilan').show();
                         let maxcicil=0;
-                        if(window.globtot <= 1000000) {maxcicil=5;}
-                        else if(window.globtot > 1000000 && window.globtot <= 2000000){maxcicil=10;}
-                        else if(window.globtot > 2000000 && window.globtot <= 3000000){maxcicil=15;}
-                        else if(window.globtot > 3000000 && window.globtot <= 4000000){maxcicil=20;}
-                        else if(window.globtot > 4000000 && window.globtot <= 5000000){maxcicil=25;}
-                        for (let index = 2; index <= maxcicil; index++) {
+                        if(window.globtot <= 1000000) {maxcicil=3;}
+                        else if(window.globtot > 1000000 && window.globtot <= 2000000){maxcicil=5;}
+                        else if(window.globtot > 2000000 && window.globtot <= 3000000){maxcicil=10;}
+                        else if(window.globtot > 3000000 && window.globtot <= 4000000){maxcicil=15;}
+                        else if(window.globtot > 4000000 && window.globtot <= 5000000){maxcicil=20;}
+                        else if(window.globtot > 5000000){maxcicil=25;}
+                        for (let index = 1; index <= maxcicil; index++) {
                             str +=`<option value='${index}'>${index}x</option>`
                         }
                         $('#jmlcicilan').html(str);
+                        $('.clmetode').hide();
+                        $('.clmetode').removeAttr('required');
                     }else{
                         $('.fieldcicilan').hide();
                         $('#jmlcicilan').html('');
+                        $('.clmetode').show();
+                        $('.clmetode').attr('required', true);
                     }
                 });
                 activateTypeahead();
@@ -360,10 +364,12 @@
                         activateTypeahead();
                         $('#customer').val('').prop('readonly', false);
                         $('#idcustomer').val('');
+                        //$('#customer').attr('required', true);
                     } else {
                         destroyTypeahead();
                         $('#customer').val('').prop('readonly', false);
                         $('#idcustomer').val('');
+                        //$('#customer').removeAttr('required');
                     }
                 });
                 $(window).keydown(function (event) {
