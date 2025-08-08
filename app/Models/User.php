@@ -50,4 +50,9 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
         ];
     }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_kerja', 'id');
+    }
 }
