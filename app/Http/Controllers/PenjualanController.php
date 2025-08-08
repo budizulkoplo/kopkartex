@@ -97,10 +97,7 @@ class PenjualanController extends Controller
             if($request->metodebayar == 'cicilan'){
                 $penjualan->status = 'hutang';
                 $penjualan->jmlcicilan = $request->jmlcicilan;
-            }elseif($request->metodebayar == 'potong_gaji'){
-                $penjualan->status = 'hutang';
-                $penjualan->jmlcicilan = 0;
-            }else{
+            }elseif($request->metodebayar == 'tunai'){
                 $penjualan->status = 'lunas';
                 $penjualan->jmlcicilan = 0;
             }
@@ -109,7 +106,7 @@ class PenjualanController extends Controller
             $penjualan->created_user = Auth::user()->id;
             $penjualan->save();
             $no=0;
-            if($request->jmlcicilan > 1){
+            if($request->jmlcicilan >= 1){
                 $totalcicil = $request->grandtotal / $request->jmlcicilan;
                 for ($i=1; $i <= $request->jmlcicilan ; $i++) { 
                     $cicil = new PenjualanCicil;
