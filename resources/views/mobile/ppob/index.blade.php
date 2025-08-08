@@ -12,9 +12,8 @@
 @endsection
 
 @section('content')
-<link rel="stylesheet" href="{{ asset('assets/css/home.css') }}">
 
-<div class="container mt-3">
+<div class="p-3" style="margin-top: 40px">
 
     <h4 class="mb-3">Top Up</h4>
     <div class="grid">
