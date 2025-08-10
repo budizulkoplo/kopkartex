@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AmbilBarangController;
 use App\Http\Controllers\AnggotaController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\BarangController;
@@ -45,7 +46,12 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::get('/datatable', [ReturController::class, 'getDataTable'])->name('retur.datatable');
     Route::get('/list', [ReturController::class, 'ListData'])->name('retur.list');
 });
-
+Route::prefix('ambilbarang')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/', [AmbilBarangController::class, 'index'])->name('ambil.list');
+    Route::get('/getPenjualan', [AmbilBarangController::class, 'getPenjualan'])->name('ambil.getPenjualan');
+    Route::get('/getPenjualanDtl/{id}', [AmbilBarangController::class, 'getPenjualanDtl'])->name('ambil.getPenjualanDtl');
+    Route::put('/AmbilBarang', [AmbilBarangController::class, 'AmbilBarang'])->name('ambil.AmbilBarang');
+});
 Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.index'); // <- tampilan daftar barang
     Route::get('/form', [StockOpnameController::class, 'form'])->name('stockopname.form'); // <- tampilkan form opname

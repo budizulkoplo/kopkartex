@@ -1,0 +1,42 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Penjualan;
+use App\Models\PenjualanDetail;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
+use Yajra\DataTables\DataTables;
+
+class AmbilBarangController extends Controller
+{
+    public function index(Request $request): View
+    {
+        return view('transaksi.AmbilBarang', []);
+    }
+    public function getPenjualan(Request $request)
+    {
+        $jual = Penjualan::where(['type_order'=>'mobile','status_ambil'=>'pending','unit_id'=>Auth::user()->unit_kerja])->whereBetween(DB::raw('DATE(tanggal)'), [$request->startdate, $request->enddate]);
+        return DataTables::of($jual)->addIndexColumn()->make(true);
+        
+    }
+    public function getPenjualanDtl($idjual)
+    {
+        $hdr = Penjualan::find($idjual);
+        $dtl = PenjualanDetail::join('barang','barang.id','penjualan_detail.barang_id')
+        ->where(['penjualan_detail.penjualan_id'=>$idjual])
+        ->select('penjualan_detail.*', 'barang.nama_barang', 'barang.kode_barang')->get();
+        return response()->json(['hdr'=>$hdr,'dtl'=>$dtl], 200);
+        
+    }
+    public function AmbilBarang(Request $request)
+    {
+        $request->validate(['id' => 'required']);
+        $jual = Penjualan::find($request->id);
+        $jual->status_ambil = 'finish';
+        $jual->ambil_at = now();
+        $jual->save();        
+    }
+}
