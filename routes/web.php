@@ -58,6 +58,8 @@ Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::get('/getbarang', [StockOpnameController::class, 'getBarang'])->name('stockopname.getbarang');
     Route::get('/getbarangbycode', [StockOpnameController::class, 'getBarangByCode'])->name('stockopname.getbarangbycode');
     Route::post('/store', [StockOpnameController::class, 'store'])->name('stockopname.store');
+    Route::post('/stockopname/mulai', [StockOpnameController::class, 'mulaiOpname'])->name('stockopname.mulai');
+
 });
 
 // Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {

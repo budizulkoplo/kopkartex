@@ -40,6 +40,15 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="mb-3">
+    <form action="{{ route('stockopname.mulai') }}" method="POST" onsubmit="return confirm('Mulai stock opname baru?')">
+        @csrf
+        <button type="submit" class="btn btn-success">
+            <i class="bi bi-play-circle"></i> Mulai Stock Opname
+        </button>
+    </form>
+</div>
+
 
                         <div class="card-body">
                             <table class="table table-sm table-bordered table-striped text-center" id="tbbarang" style="width: 100%; font-size: small;">
