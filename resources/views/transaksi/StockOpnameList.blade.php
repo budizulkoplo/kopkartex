@@ -1,23 +1,19 @@
 <x-app-layout>
     <x-slot name="pagetitle">Stock Opname</x-slot>
 
-    <div class="app-content-header">
+    <div class="app-content-header mb-3">
         <div class="container-fluid">
-            <div class="row">
-                <div class="col-sm-6">
-                    <h3 class="mb-0">Daftar Barang - Stock Opname</h3>
-                </div>
-            </div>
+            <h3 class="mb-0">Daftar Barang - Stock Opname</h3>
         </div>
     </div>
 
+    {{-- Notifikasi --}}
     @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
+        <div class="alert alert-success alert-dismissible fade show m-3">
             {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
-
     @if ($errors->any())
         <div class="alert alert-danger m-3">
             <ul class="mb-0">
@@ -30,68 +26,97 @@
 
     <div class="app-content">
         <div class="container-fluid">
-            <div class="row">
-                <div class="col-12">
-                    <div class="card card-info card-outline">
-                        <div class="card-header pt-2 pb-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>Unit:</strong> {{ auth()->user()->unit->nama_unit ?? '-' }}
-                                </div>
+            <div class="card card-info card-outline">
+                <div class="card-header">
+                    <span class="fw-bold">Unit: {{ auth()->user()->unit->nama_unit ?? '-' }}</span>
+                </div>
+
+                <div class="card-body">
+                    {{-- Filter Bulan & Mulai Opname --}}
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <form method="GET" action="{{ route('stockopname.index') }}" class="d-flex">
+                            <div class="input-group input-group-sm">
+                                <input type="month" name="bulan" value="{{ $bulan }}" class="form-control">
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="bi bi-filter"></i> Filter
+                                </button>
                             </div>
-                        </div>
-                        <div class="mb-3">
-    <form action="{{ route('stockopname.mulai') }}" method="POST" onsubmit="return confirm('Mulai stock opname baru?')">
-        @csrf
-        <button type="submit" class="btn btn-success">
-            <i class="bi bi-play-circle"></i> Mulai Stock Opname
-        </button>
-    </form>
-</div>
+                        </form>
 
+                        <form id="formMulaiOpname" method="POST" action="{{ route('stockopname.mulai') }}" class="d-flex">
+                            @csrf
+                            <div class="input-group input-group-sm">
+                                <input type="date" name="tgl_opname" value="{{ now()->format('Y-m-d') }}" class="form-control">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-play-circle"></i> Start Opname
+                                </button>
+                            </div>
+                        </form>
+                    </div>
 
-                        <div class="card-body">
-                            <table class="table table-sm table-bordered table-striped text-center" id="tbbarang" style="width: 100%; font-size: small;">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Kode Barang</th>
-                                        <th>Nama Barang</th>
-                                        <th>Stok Sistem</th>
-                                        <th>Stok Fisik</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($barang as $index => $item)
-                                        <tr class="{{ $item->opname_id ? 'table-warning' : '' }}">
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>{{ $item->kode_barang }}</td>
-                                            <td class="text-start">{{ $item->nama_barang }}</td>
-                                            <td>{{ $item->stock_sistem ?? $item->stok_unit ?? '-' }}</td>
-                                            <td>{{ $item->stock_fisik ?? '-' }}</td>
-                                            <td>
-                                                <a href="{{ route('stockopname.form', ['barang_id' => $item->id]) }}" class="btn btn-sm btn-primary">
-                                                    <i class="bi bi-pencil-square"></i> Input Opname
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div> <!-- end card-body -->
-                    </div> <!-- end card -->
+                    {{-- Tabel Barang --}}
+                    <table class="table table-sm table-bordered table-striped text-center" id="tbbarang" style="width: 100%; font-size: small;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Kode Barang</th>
+                                <th>Nama Barang</th>
+                                <th>Stok Sistem</th>
+                                <th>Stok Fisik</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($barang as $index => $item)
+                                <tr class="{{ $item->status === 'sukses' ? 'table-warning' : '' }}">
+                                    <td>{{ $index + 1 }}</td>
+                                    <td>{{ $item->kode_barang }}</td>
+                                    <td class="text-start">{{ $item->nama_barang }}</td>
+                                    <td>{{ $item->stock_sistem ?? $item->stok_unit ?? '-' }}</td>
+                                    <td>{{ $item->stock_fisik ?? '-' }}</td>
+                                    <td>
+                                        <a href="{{ route('stockopname.form', ['barang_id' => $item->id]) }}" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-pencil-square"></i> Input Opname
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+
                 </div>
             </div>
         </div>
     </div>
 
+    {{-- Script Custom --}}
     <x-slot name="jscustom">
         <script>
             $(document).ready(function () {
                 $('#tbbarang').DataTable({
                     pageLength: 50,
                     responsive: true
+                });
+
+                // SweetAlert konfirmasi mulai opname
+                $('#formMulaiOpname').on('submit', function(e) {
+                    e.preventDefault();
+                    let form = this;
+
+                    Swal.fire({
+                        title: 'Mulai Stock Opname?',
+                        text: "Jika bulan ini sudah ada data, data lama akan dihapus!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Ya, Lanjutkan!',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit();
+                        }
+                    });
                 });
             });
         </script>
