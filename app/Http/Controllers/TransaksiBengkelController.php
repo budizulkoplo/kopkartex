@@ -154,4 +154,18 @@ class TransaksiBengkelController extends Controller
             ], 500);
         }
     }
+
+        public function nota($invoice): View
+    {   
+        $hdr=Penjualan::join('users','users.id','penjualan.created_user')
+        ->select('penjualan.*','users.name as kasir')
+        ->where('penjualan.nomor_invoice',$invoice)->first();
+        $dtl=PenjualanDetail::join('barang','barang.id','penjualan_detail.barang_id')
+        ->select('barang.nama_barang','barang.kode_barang','penjualan_detail.qty','penjualan_detail.harga')
+        ->where('penjualan_id',$hdr->id)->get();
+        return view('transaksi.PenjualanNota', [
+            'hdr' => $hdr,
+            'dtl' => $dtl,
+        ]);
+    }
 }
