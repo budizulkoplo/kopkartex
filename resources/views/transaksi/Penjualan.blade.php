@@ -1,5 +1,21 @@
 <x-app-layout>
     <x-slot name="pagetitle">Penjualan</x-slot>
+        <div class="app-content-header">
+            <div class="container-fluid">
+                <div class="row mb-3">
+                    <div class="col-sm-6">
+                        <h3 class="mb-0">Form Penjualan</h3>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-end">
+                            <li class="breadcrumb-item">Penjualan</li>
+                            <li class="breadcrumb-item active" aria-current="page">Form</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     <div class="app-content">
         <div class="container">
             <form class="needs-validation" novalidate id="frmterima" autocomplete="off">
