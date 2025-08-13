@@ -157,13 +157,13 @@ class TransaksiBengkelController extends Controller
 
         public function nota($invoice): View
     {   
-        $hdr=Penjualan::join('users','users.id','penjualan.created_user')
-        ->select('penjualan.*','users.name as kasir')
-        ->where('penjualan.nomor_invoice',$invoice)->first();
-        $dtl=PenjualanDetail::join('barang','barang.id','penjualan_detail.barang_id')
-        ->select('barang.nama_barang','barang.kode_barang','penjualan_detail.qty','penjualan_detail.harga')
-        ->where('penjualan_id',$hdr->id)->get();
-        return view('transaksi.PenjualanNota', [
+        $hdr=TransaksiBengkel::join('users','users.id','transaksi_bengkels.created_user')
+        ->select('transaksi_bengkels.*','users.name as kasir')
+        ->where('transaksi_bengkels.nomor_invoice',$invoice)->first();
+        $dtl=TransaksiBengkelDetail::join('barang','barang.id','transaksi_bengkel_details.barang_id')
+        ->select('barang.nama_barang','barang.kode_barang','transaksi_bengkel_details.qty','transaksi_bengkel_details.harga')
+        ->where('transaksi_bengkel_id',$hdr->id)->get();
+        return view('transaksi.bengkelNota', [
             'hdr' => $hdr,
             'dtl' => $dtl,
         ]);

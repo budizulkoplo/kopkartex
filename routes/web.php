@@ -102,22 +102,18 @@ Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|adm
     Route::get('/getbarangbycode', [PenjualanController::class, 'getBarangByCode'])->name('jual.getbarangbycode');
     Route::post('/store', [PenjualanController::class, 'Store'])->name('jual.store');
     Route::get('/nota/{invoice}', [PenjualanController::class, 'nota'])->name('jual.nota');
+});
 
-Route::prefix('bengkel')
-    ->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])
-    ->group(function () {
+Route::prefix('bengkel')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
         Route::get('/', [TransaksiBengkelController::class, 'index'])->name('bengkel.form');
         Route::get('/getbarang', [TransaksiBengkelController::class, 'getBarang'])->name('bengkel.getbarang');
-        
         Route::get('/getjasa', [TransaksiBengkelController::class, 'getJasa'])->name('bengkel.getjasa');
         Route::get('/getinv', [TransaksiBengkelController::class, 'getInvoice'])->name('bengkel.getinv');
         Route::get('/getbarangbycode', [TransaksiBengkelController::class, 'getBarangByCode'])->name('bengkel.getbarangbycode');
-        
         Route::post('/store', [TransaksiBengkelController::class, 'store'])->name('bengkel.store');
         Route::get('/nota/{invoice}', [TransaksiBengkelController::class, 'nota'])->name('bengkel.nota');
     });
-
-});
+    
 Route::prefix('mutasi')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [MutasiStockController::class, 'index'])->name('mutasi.list');
     Route::get('/form', [MutasiStockController::class, 'FormMutasi'])->name('mutasi.form');
