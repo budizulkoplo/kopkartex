@@ -2,13 +2,44 @@
     <!-- Sidebar Brand -->
     <div class="sidebar-brand text-center py-4">
         <a href="{{ route('dashboard') }}">
-            <img src="{{ asset('logo.png') }}" alt="Kopkartex" class="brand-image opacity-75 shadow" style="height: 45px;">
+            <img src="{{ asset('logo.png') }}" alt="Kopkartex" class="brand-image opacity-75 shadow" style="height: 40px;">
         </a>
         <div class="brand-text fw-light mt-2" style="font-size: 1.2rem;">KOPKARTEX</div>
     </div>
-
     <!-- Sidebar Wrapper -->
     <div class="sidebar-wrapper">
+
+        @php
+            function singkatNama($nama) {
+                $parts = explode(' ', trim($nama));
+                if (count($parts) <= 1) return $nama;
+
+                $namaDepan = array_shift($parts);
+                $inisial = array_map(fn($p) => strtoupper(substr($p, 0, 1)) . '.', $parts);
+
+                return $namaDepan . ' ' . implode('', $inisial);
+            }
+
+            $displayName = singkatNama(auth()->user()->name ?? 'Guest');
+        @endphp
+
+        <div class="user-panel d-flex align-items-center p-3">
+            <div class="image me-2">
+                <img src="{{ auth()->user()->avatar_url ?? asset('user.png') }}"
+                    class="img-circle elevation-2"
+                    alt="User Image"
+                    style="width: 40px; height: 40px; object-fit: cover;">
+            </div>
+            <div class="info">
+                <a href="#" class="d-block text-white">{{ $displayName }}</a>
+                <small class="text-success">
+                    <small class="text-warning">
+                        {{ auth()->user()->unit->nama_unit ?? '-' }}
+                    </small>
+                </small>
+            </div>
+        </div>
+
         <!-- Search -->
         <div class="px-3 pt-2">
             <input type="text" id="menuSearch" class="form-control form-control-sm" placeholder="Cari menu...">

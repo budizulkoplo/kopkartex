@@ -1,5 +1,21 @@
 <x-app-layout>
     <x-slot name="pagetitle">Penjualan</x-slot>
+        <div class="app-content-header">
+            <div class="container-fluid">
+                <div class="row mb-3">
+                    <div class="col-sm-6">
+                        <h3 class="mb-0">Form Penjualan</h3>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-end">
+                            <li class="breadcrumb-item">Penjualan</li>
+                            <li class="breadcrumb-item active" aria-current="page">Form</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     <div class="app-content">
         <div class="container">
             <form class="needs-validation" novalidate id="frmterima" autocomplete="off">
@@ -300,6 +316,7 @@
                 $('#dibayar').val(0);
                 $('#kembali').val(0);
                 $('#tbterima tbody tr').remove();
+                $('#metodebayar').val('tunai').trigger('change');
             }
             let users = [];
                 let selectedFromList = false;
@@ -336,7 +353,7 @@
             $(document).ready(function () {
                 $('#metodebayar').on('change',function(){
                     if($(this).val() == 'cicilan'){
-                        let str;
+                        let str = '';
                         $('.fieldcicilan').show();
                         let maxcicil=0;
                         if(window.globtot <= 1000000) {maxcicil=3;}
@@ -345,19 +362,26 @@
                         else if(window.globtot > 3000000 && window.globtot <= 4000000){maxcicil=15;}
                         else if(window.globtot > 4000000 && window.globtot <= 5000000){maxcicil=20;}
                         else if(window.globtot > 5000000){maxcicil=25;}
+
                         for (let index = 1; index <= maxcicil; index++) {
-                            str +=`<option value='${index}'>${index}x</option>`
+                            str += `<option value='${index}'>${index}x</option>`;
                         }
                         $('#jmlcicilan').html(str);
-                        $('.clmetode').hide();
-                        $('.clmetode').removeAttr('required');
-                    }else{
+
+                        // Sembunyikan & nonaktifkan input dibayar/kembali
+                        $('.clmetode').hide()
+                                    .find('input, select').prop('required', false).val('');
+
+                    } else {
                         $('.fieldcicilan').hide();
                         $('#jmlcicilan').html('');
-                        $('.clmetode').show();
-                        $('.clmetode').attr('required', true);
+
+                        // Tampilkan & aktifkan kembali input dibayar/kembali
+                        $('.clmetode').show()
+                                    .find('input, select').prop('required', true);
                     }
                 });
+
                 activateTypeahead();
                 $('#flexCheckDefault').on('change', function () {
                     if ($(this).is(':checked')) {

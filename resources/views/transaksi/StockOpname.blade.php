@@ -134,11 +134,11 @@
                                             icon: 'success',
                                             title: 'Berhasil disimpan!',
                                             showConfirmButton: false,
-                                            timer: 2000
+                                            timer: 1000
                                         });
                                         setTimeout(function() {
                                             window.location.href = '/stock';
-                                        }, 2000);
+                                        }, 1000);
                                     },
                                     error: function(xhr) {
                                         alert('Terjadi kesalahan saat menyimpan!');

@@ -18,36 +18,111 @@ class StockOpnameController extends Controller
     {
         $unitId = Auth::user()->unit_kerja;
 
-        $barang = DB::table('stok_unit')
-            ->join('barang', 'barang.id', '=', 'stok_unit.barang_id')
-            ->leftJoin(DB::raw('(
-                SELECT so1.*
-                FROM stock_opname AS so1
-                INNER JOIN (
-                    SELECT id_barang, MAX(created_at) as max_created
-                    FROM stock_opname
-                    WHERE deleted_at IS NULL
-                    GROUP BY id_barang
-                ) AS so2 ON so1.id_barang = so2.id_barang AND so1.created_at = so2.max_created
-            ) AS opname'), function ($join) use ($unitId) {
-                $join->on('stok_unit.barang_id', '=', 'opname.id_barang')
-                    ->where('opname.id_unit', '=', $unitId);
-            })
-            ->where('stok_unit.unit_id', $unitId)
-            ->whereNull('stok_unit.deleted_at')
+        // Filter bulan (default bulan ini)
+        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
+        $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth()->format('Y-m-d');
+        $endDate   = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth()->format('Y-m-d');
+
+        $barang = DB::table('stock_opname')
+            ->join('barang', 'barang.id', '=', 'stock_opname.id_barang')
+            ->where('stock_opname.id_unit', $unitId)
+            ->whereBetween('stock_opname.tgl_opname', [$startDate, $endDate])
+            ->whereNull('stock_opname.deleted_at')
             ->select(
+                'stock_opname.id as opname_id',
                 'barang.id',
                 'barang.kode_barang',
                 'barang.nama_barang',
-                'stok_unit.stok as stok_unit',
-                'opname.stock_sistem',
-                'opname.stock_fisik',
-                'opname.id as opname_id'
+                'stock_opname.stock_sistem',
+                'stock_opname.stock_fisik',
+                'stock_opname.status',
+                'stock_opname.keterangan'
             )
             ->orderBy('barang.nama_barang')
             ->get();
 
-        return view('transaksi.StockOpnameList', compact('barang'));
+        return view('transaksi.StockOpnameList', compact('barang', 'bulan'));
+    }
+
+    public function mulaiOpname(Request $request)
+    {
+        $unitId = Auth::user()->unit_kerja;
+        $userId = Auth::user()->id;
+        $tglOpname = $request->tgl_opname ?? Carbon::now()->format('Y-m-d');
+
+        $bulanOpname = Carbon::parse($tglOpname)->format('Y-m');
+        $startDate = Carbon::createFromFormat('Y-m', $bulanOpname)->startOfMonth();
+        $endDate   = Carbon::createFromFormat('Y-m', $bulanOpname)->endOfMonth();
+
+        DB::beginTransaction();
+        try {
+            // Cek apakah sudah ada stock opname bulan ini
+            $exists = DB::table('stock_opname')
+                ->where('id_unit', $unitId)
+                ->whereBetween('tgl_opname', [$startDate, $endDate])
+                ->exists();
+
+            if ($exists) {
+                // Hapus data lama
+                DB::table('stock_opname')
+                    ->where('id_unit', $unitId)
+                    ->whereBetween('tgl_opname', [$startDate, $endDate])
+                    ->delete();
+            }
+
+            // Ambil semua barang (LEFT JOIN stok_unit)
+            $barangList = DB::table('barang')
+                ->leftJoin('stok_unit', function ($join) use ($unitId) {
+                    $join->on('barang.id', '=', 'stok_unit.barang_id')
+                        ->where('stok_unit.unit_id', '=', $unitId)
+                        ->whereNull('stok_unit.deleted_at');
+                })
+                ->select(
+                    'barang.id as id_barang',
+                    'barang.kode_barang',
+                    DB::raw('IFNULL(stok_unit.stok, 0) as stok_unit')
+                )
+                ->get();
+
+            foreach ($barangList as $barang) {
+                DB::table('stock_opname')->insert([
+                    'tgl_opname'   => $tglOpname,
+                    'id_unit'      => $unitId,
+                    'id_barang'    => $barang->id_barang,
+                    'kode_barang'  => $barang->kode_barang,
+                    'stock_sistem' => $barang->stok_unit,
+                    'stock_fisik'  => null,
+                    'keterangan'   => null,
+                    'user'         => $userId,
+                    'status'       => 'pending',
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->route('stockopname.index', ['bulan' => $bulanOpname])
+                ->with('success', 'Stock opname bulan ' . $bulanOpname . ' berhasil dimulai.');
+        } catch (Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    public function updateOpname(Request $request, $id)
+    {
+        $request->validate([
+            'stock_fisik' => 'required|integer|min:0'
+        ]);
+
+        DB::table('stock_opname')->where('id', $id)->update([
+            'stock_fisik' => $request->stock_fisik,
+            'keterangan'  => $request->keterangan,
+            'status'      => 'sukses',
+            'updated_at'  => now()
+        ]);
+
+        return redirect()->route('stockopname.index')->with('success', 'Stock opname berhasil disimpan.');
     }
 
     public function form(Request $request): View
@@ -135,6 +210,7 @@ class StockOpnameController extends Controller
                 $hdr->user = $userId;
                 $hdr->stock_sistem = $stoksys->stok;
                 $hdr->stock_fisik = $totalQty;
+                $hdr->status = "sukses";
                 $hdr->save();
 
                 // Simpan DTL
