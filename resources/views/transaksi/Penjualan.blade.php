@@ -31,21 +31,13 @@
                                     <input type="text" class="form-control datepicker" name="tanggal" required>
                                     <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
                                 </div>
-                                <div class="input-group input-group-sm mb-2 align-items-center">
-                                    <div class="input-group-text">
-                                        <input class="form-check-input mt-0 me-2" type="checkbox" value="" id="flexCheckDefault" checked>
-                                        <label for="flexCheckDefault" class="mb-0">Anggota</label>
-                                    </div>
-                                    <input type="text" class="form-control" id="customer" name="customer" required>
-                                    <input type="hidden" id="idcustomer" name="idcustomer">
+                                <div class="input-group input-group-sm mb-2"> 
+                                    <span class="input-group-text label-fixed-width">Petugas</span>
+                                    <input type="text" class="form-control" value="{{ auth()->user()->name }}" name="kasir" disabled>
                                 </div>
                             </div>
 
                             <div class="col-md-4">
-                                <div class="input-group input-group-sm mb-2"> 
-                                    <span class="input-group-text label-fixed-width">Kasir</span>
-                                    <input type="text" class="form-control" value="{{ auth()->user()->name }}" name="kasir" disabled>
-                                </div>
                                 <div class="input-group input-group-sm mb-2"> 
                                     <span class="input-group-text label-fixed-width">Barang</span>
                                     <input type="text" class="form-control typeahead" id="barcode-search">
@@ -109,6 +101,14 @@
                                         <option value="tunai" selected>Tunai</option>
                                         <option value="cicilan">Cicilan</option>
                                     </select>
+                                </div>
+                                <div class="input-group input-group-sm mb-2 align-items-center">
+                                    <div class="input-group-text">
+                                        <input class="form-check-input mt-0 me-2" type="checkbox" value="" id="flexCheckDefault" checked>
+                                        <label for="flexCheckDefault" class="mb-0">Anggota</label>
+                                    </div>
+                                    <input type="text" class="form-control" id="customer" name="customer" required autocomplete="off">
+                                    <input type="hidden" id="idcustomer" name="idcustomer">
                                 </div>
                                 <div class="input-group input-group-sm mb-2 fieldcicilan" style="display: none">
                                     <span class="input-group-text label-fixed-width">Jml.Cicilan</span>
@@ -369,16 +369,23 @@
                         $('#jmlcicilan').html(str);
 
                         // Sembunyikan & nonaktifkan input dibayar/kembali
-                        $('.clmetode').hide()
-                                    .find('input, select').prop('required', false).val('');
-
+                        $('.clmetode').hide().find('input, select').prop('required', false).val('');
+                        $('#flexCheckDefault')
+                        .prop('checked', true)
+                        .off('click.prevent') // hapus event lama kalau ada
+                        .on('click.prevent', function(e) {
+                            e.preventDefault(); // kunci
+                        }).change();
+                        // if($('#customer').val() === '' || $('#idcustomer').val() === '' ){
+                        //     $('#flexCheckDefault')
+                        // }
                     } else {
                         $('.fieldcicilan').hide();
                         $('#jmlcicilan').html('');
 
                         // Tampilkan & aktifkan kembali input dibayar/kembali
-                        $('.clmetode').show()
-                                    .find('input, select').prop('required', true);
+                        $('.clmetode').show().find('input, select').prop('required', true);
+                        $('#flexCheckDefault').off('click.prevent').change();
                     }
                 });
 
@@ -471,41 +478,53 @@
                 $('#frmterima').on('submit', function(e) {
                     e.preventDefault(); // Prevent default form submit
                     if (!this.checkValidity()) {
-                        e.stopPropagation();
+                        
                     } else {
-                        var form = $(this)[0];
-                        var formData = new FormData(form);
-
-                        // Manually append disabled inputs
-                        $(form).find(':input:disabled').each(function() {
-                            formData.append(this.name, $(this).val());
-                        });
-
-                        $.ajax({
-                        type: 'POST',
-                        url: '{{ route('jual.store') }}', // Your endpoint
-                        data: formData,
-                        processData: false,
-                        contentType: false,
-                        beforeSend: function(xhr) {loader(true);},
-                        success: function(response) {
+                        let checked = $('#flexCheckDefault').is(':checked');
+                        if ($('#metodebayar').va() === 'cicilan' && $('#idcustomer').val() == '') {
                             Swal.fire({
-                            position: "top-end",
-                            icon: "success",
-                            title: "Your work has been saved",
-                            showConfirmButton: false,
-                            timer: 2500
+                                position: "top-end",
+                                icon: "warning",
+                                title: "Anggota harus terisi",
+                                showConfirmButton: false,
+                                timer: 2500
+                                });
+                            e.stopPropagation();
+                        } else {
+                            var form = $(this)[0];
+                            var formData = new FormData(form);
+
+                            // Manually append disabled inputs
+                            $(form).find(':input:disabled').each(function() {
+                                formData.append(this.name, $(this).val());
                             });
-                            clearform();
-                            loader(false);
-                            invoice();
-                            const url = `{{ url('/penjualan/nota') }}/${response.invoice}`;
-                            window.open(url, '_blank');
-                        },
-                        error: function(xhr) {
-                            alert('Something went wrong');loader(false);
+
+                            $.ajax({
+                            type: 'POST',
+                            url: '{{ route('jual.store') }}', // Your endpoint
+                            data: formData,
+                            processData: false,
+                            contentType: false,
+                            beforeSend: function(xhr) {loader(true);},
+                            success: function(response) {
+                                Swal.fire({
+                                position: "top-end",
+                                icon: "success",
+                                title: "Your work has been saved",
+                                showConfirmButton: false,
+                                timer: 2500
+                                });
+                                clearform();
+                                loader(false);
+                                invoice();
+                                const url = `{{ url('/penjualan/nota') }}/${response.invoice}`;
+                                window.open(url, '_blank');
+                            },
+                            error: function(xhr) {
+                                alert('Something went wrong');loader(false);
+                            }
+                            });
                         }
-                        });
                     }
                 });
             });

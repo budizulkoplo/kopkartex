@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KonfigBunga;
 use App\Models\Penjualan;
 use App\Models\PenjualanCicil;
 use App\Models\PenjualanDetail;
@@ -77,6 +78,19 @@ class PenjualanController extends Controller
         }
         
     }
+    public function SetApproval(Request $request){
+        // if($request->jmlcicilan >= 1){
+        //         $totalcicil = $request->grandtotal / $request->jmlcicilan;
+        //         for ($i = $request->jmlcicilan; $i >= 1; $i--) {
+        //             $cicil = new PenjualanCicil;
+        //             $cicil->penjualan_id = $penjualan->id;
+        //             $cicil->cicilan = $i;
+        //             $cicil->total_cicilan = $totalcicil;
+        //             $cicil->status = 'hutang';
+        //             $cicil->save();
+        //         }
+        //     }
+    }
     public function Store(Request $request){
         DB::beginTransaction();
         try {
@@ -96,27 +110,23 @@ class PenjualanController extends Controller
             $penjualan->status_ambil = 'finish';
             if($request->metodebayar == 'cicilan'){
                 $penjualan->status = 'hutang';
-                $penjualan->jmlcicilan = $request->jmlcicilan;
+                $penjualan->tenor = $request->jmlcicilan;
+                $user = User::find($request->idcustomer);
+                if($user->gaji > $request->grandtotal){
+                    $penjualan->VarCicilan = 1;
+                }
+                $bunga = KonfigBunga::select('bunga_barang')->first();
+                $penjualan->bunga_barang = $bunga->bunga_barang;
             }elseif($request->metodebayar == 'tunai'){
                 $penjualan->status = 'lunas';
-                $penjualan->jmlcicilan = 0;
+                $penjualan->tenor = 0;
             }
             $penjualan->dibayar = $request->dibayar;
             $penjualan->kembali = $request->kembali;
             $penjualan->created_user = Auth::user()->id;
             $penjualan->save();
             $no=0;
-            if($request->jmlcicilan >= 1){
-                $totalcicil = $request->grandtotal / $request->jmlcicilan;
-                for ($i=1; $i <= $request->jmlcicilan ; $i++) { 
-                    $cicil = new PenjualanCicil;
-                    $cicil->penjualan_id = $penjualan->id;
-                    $cicil->cicilan = $i;
-                    $cicil->total_cicilan = $totalcicil;
-                    $cicil->status = 'hutang';
-                    $cicil->save();
-                }
-            }
+            
             foreach ($request->idbarang as $item) {
                 $dtl = new PenjualanDetail;
                 $dtl->penjualan_id = $penjualan->id;
