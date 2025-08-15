@@ -97,6 +97,7 @@
                                         <table class="table table-sm table-striped table-bordered" id="tabelBarang" style="font-size: small;">
                                             <thead>
                                                 <tr>
+                                                    <th>Barcode</th>
                                                     <th>Barang</th>
                                                     <th width="80px">Qty</th>
                                                     <th>Harga Jual</th>
@@ -297,6 +298,9 @@
                 $('#metodebayar').val('tunai').trigger('change');
                 $('textarea[name="note"]').val('');
             }
+            let users = [];
+                let selectedFromList = false;
+            let typeaheadEnabled = true;
 
             // === INIT SELECT2 JASA ===
             function initSelect2Jasa(context) {
@@ -415,7 +419,7 @@
                 $('#customer').typeahead({
                     source: function(query, process) {
                         return $.ajax({
-                            url: '{{ route('jual.getanggota') }}',
+                            url: '{{ route('bengkel.getanggota') }}',
                             type: 'GET',
                             data: { query: query },
                             dataType: 'json',
