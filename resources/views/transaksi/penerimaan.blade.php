@@ -1,5 +1,20 @@
 <x-app-layout>
     <x-slot name="pagetitle">Penerimaan</x-slot>
+        <div class="app-content-header">
+            <div class="container-fluid">
+                <div class="row mb-3">
+                    <div class="col-sm-6">
+                        <h3 class="mb-0">Form Penerimaan</h3>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-end">
+                            <li class="breadcrumb-item">Penerimaan</li>
+                            <li class="breadcrumb-item active" aria-current="page">Form</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
     <div class="app-content"> <!--begin::Container-->
         <div class="container"> <!--begin::Row-->
         <form class="needs-validation" novalidate id="frmterima">

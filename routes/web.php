@@ -21,6 +21,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\MobileController;
 use App\Http\Controllers\StockOpnameController;
+use App\Http\Controllers\JasaBengkelController;
+use App\Http\Controllers\TransaksiBengkelController;
 
 Route::get('/', [AuthenticatedSessionController::class, 'create']);
 // Route::get('/', function () {
@@ -58,7 +60,20 @@ Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::get('/getbarang', [StockOpnameController::class, 'getBarang'])->name('stockopname.getbarang');
     Route::get('/getbarangbycode', [StockOpnameController::class, 'getBarangByCode'])->name('stockopname.getbarangbycode');
     Route::post('/store', [StockOpnameController::class, 'store'])->name('stockopname.store');
+    Route::post('/stockopname/mulai', [StockOpnameController::class, 'mulaiOpname'])->name('stockopname.mulai');
 });
+
+Route::prefix('master/jasabengkel')
+    ->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])
+    ->name('master.jasabengkel.')
+    ->group(function () {
+        Route::get('/', [JasaBengkelController::class, 'index'])->name('index'); // daftar jasa
+        Route::get('/getdata', [JasaBengkelController::class, 'getdata'])->name('getdata'); // ajax datatable
+        Route::get('/getcode', [JasaBengkelController::class, 'getCode'])->name('getcode'); // generate kode baru
+        Route::post('/cekcode', [JasaBengkelController::class, 'cekCode'])->name('cekcode'); // cek kode unik
+        Route::post('/store', [JasaBengkelController::class, 'store'])->name('store'); // simpan / update data
+        Route::post('/hapus', [JasaBengkelController::class, 'hapus'])->name('hapus'); // hapus data
+    });
 
 // Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
 //     Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.form');
@@ -78,6 +93,7 @@ Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|ad
     Route::post('/store', [PenerimaanController::class, 'store'])->name('penerimaan.store');
     
 });
+
 Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [PenjualanController::class, 'index'])->name('jual.form');
     Route::get('/getbarang', [PenjualanController::class, 'getBarang'])->name('jual.getbarang');
@@ -86,8 +102,19 @@ Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|adm
     Route::get('/getbarangbycode', [PenjualanController::class, 'getBarangByCode'])->name('jual.getbarangbycode');
     Route::post('/store', [PenjualanController::class, 'Store'])->name('jual.store');
     Route::get('/nota/{invoice}', [PenjualanController::class, 'nota'])->name('jual.nota');
-
 });
+
+Route::prefix('bengkel')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+        Route::get('/', [TransaksiBengkelController::class, 'index'])->name('bengkel.form');
+        Route::get('/getbarang', [TransaksiBengkelController::class, 'getBarang'])->name('bengkel.getbarang');
+        Route::get('/getanggota', [TransaksiBengkelController::class, 'getAnggota'])->name('bengkel.getanggota');
+        Route::get('/getjasa', [TransaksiBengkelController::class, 'getJasa'])->name('bengkel.getjasa');
+        Route::get('/getinv', [TransaksiBengkelController::class, 'getInvoice'])->name('bengkel.getinv');
+        Route::get('/getbarangbycode', [TransaksiBengkelController::class, 'getBarangByCode'])->name('bengkel.getbarangbycode');
+        Route::post('/store', [TransaksiBengkelController::class, 'store'])->name('bengkel.store');
+        Route::get('/nota/{invoice}', [TransaksiBengkelController::class, 'nota'])->name('bengkel.nota');
+    });
+    
 Route::prefix('mutasi')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [MutasiStockController::class, 'index'])->name('mutasi.list');
     Route::get('/form', [MutasiStockController::class, 'FormMutasi'])->name('mutasi.form');
