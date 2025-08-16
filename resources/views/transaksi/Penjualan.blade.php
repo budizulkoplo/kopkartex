@@ -478,10 +478,10 @@
                 $('#frmterima').on('submit', function(e) {
                     e.preventDefault(); // Prevent default form submit
                     if (!this.checkValidity()) {
-                        
+                        e.stopPropagation();
                     } else {
                         let checked = $('#flexCheckDefault').is(':checked');
-                        if ($('#metodebayar').va() === 'cicilan' && $('#idcustomer').val() == '') {
+                        if ($('#metodebayar').val() === 'cicilan' && $('#idcustomer').val() == '') {
                             Swal.fire({
                                 position: "top-end",
                                 icon: "warning",
@@ -491,38 +491,56 @@
                                 });
                             e.stopPropagation();
                         } else {
-                            var form = $(this)[0];
-                            var formData = new FormData(form);
+                            Swal.fire({
+                            title: "Transaksi sekarang?",
+                            text: "Pastikan data sudah benar",
+                            icon: "warning",
+                            showCancelButton: true,
+                            confirmButtonColor: "#3085d6",
+                            cancelButtonColor: "#d33",
+                            confirmButtonText: "Ya, lanjutkan!"
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    var form = $(this)[0];
+                                    var formData = new FormData(form);
 
-                            // Manually append disabled inputs
-                            $(form).find(':input:disabled').each(function() {
-                                formData.append(this.name, $(this).val());
-                            });
+                                    // Manually append disabled inputs
+                                    $(form).find(':input:disabled').each(function() {
+                                        formData.append(this.name, $(this).val());
+                                    });
 
-                            $.ajax({
-                            type: 'POST',
-                            url: '{{ route('jual.store') }}', // Your endpoint
-                            data: formData,
-                            processData: false,
-                            contentType: false,
-                            beforeSend: function(xhr) {loader(true);},
-                            success: function(response) {
-                                Swal.fire({
-                                position: "top-end",
-                                icon: "success",
-                                title: "Your work has been saved",
-                                showConfirmButton: false,
-                                timer: 2500
-                                });
-                                clearform();
-                                loader(false);
-                                invoice();
-                                const url = `{{ url('/penjualan/nota') }}/${response.invoice}`;
-                                window.open(url, '_blank');
-                            },
-                            error: function(xhr) {
-                                alert('Something went wrong');loader(false);
-                            }
+                                    $.ajax({
+                                    type: 'POST',
+                                    url: '{{ route('jual.store') }}', // Your endpoint
+                                    data: formData,
+                                    processData: false,
+                                    contentType: false,
+                                    beforeSend: function(xhr) {loader(true);},
+                                    success: function(response) {
+                                        clearform();
+                                        loader(false);
+                                        invoice();
+                                        Swal.fire({
+                                            title: 'Berhasil!',
+                                            text: 'Nota penjualan berhasil dibuat',
+                                            icon: 'success',
+                                            confirmButtonText: 'Lihat Nota'
+                                        }).then((result) => {
+                                            if (result.isConfirmed) {
+                                                const url = `{{ url('/penjualan/nota') }}/${response.invoice}`;
+                                                window.open(url, '_blank');
+                                            }
+                                        });
+                                    },
+                                    error: function(xhr) {
+                                        Swal.fire({
+                                            title: "Error!",text: xhr.responseText,icon: "error"
+                                        });
+                                    }
+                                    });
+                                }else{
+                                    e.stopPropagation();
+                                }
                             });
                         }
                     }

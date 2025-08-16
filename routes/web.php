@@ -107,6 +107,7 @@ Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|adm
     Route::get('/getbarangbycode', [PenjualanController::class, 'getBarangByCode'])->name('jual.getbarangbycode');
     Route::post('/store', [PenjualanController::class, 'Store'])->name('jual.store');
     Route::get('/nota/{invoice}', [PenjualanController::class, 'nota'])->name('jual.nota');
+    Route::post('/cektanggungan', [PenjualanController::class, 'CekTanggungan'])->name('jual.cektanggungan');
 });
 
 Route::prefix('bengkel')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
