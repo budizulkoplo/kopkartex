@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AmbilBarangController;
 use App\Http\Controllers\AnggotaController;
+use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\BarangController;
 use App\Http\Controllers\MenuController;
@@ -109,7 +110,11 @@ Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|adm
     Route::get('/nota/{invoice}', [PenjualanController::class, 'nota'])->name('jual.nota');
     Route::post('/cektanggungan', [PenjualanController::class, 'CekTanggungan'])->name('jual.cektanggungan');
 });
-
+Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/', [ApprovalController::class, 'index'])->name('app.list');
+    Route::get('/gethutang', [ApprovalController::class, 'getHutang'])->name('app.gethutang');
+    
+});
 Route::prefix('bengkel')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
         Route::get('/', [TransaksiBengkelController::class, 'index'])->name('bengkel.form');
         Route::get('/getbarang', [TransaksiBengkelController::class, 'getBarang'])->name('bengkel.getbarang');
