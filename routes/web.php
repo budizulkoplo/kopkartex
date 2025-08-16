@@ -19,10 +19,15 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Response;
-use App\Http\Controllers\MobileController;
 use App\Http\Controllers\StockOpnameController;
 use App\Http\Controllers\JasaBengkelController;
 use App\Http\Controllers\TransaksiBengkelController;
+
+// Bagian Mobile UI
+use App\Http\Controllers\Mobile\DashboardController;
+use App\Http\Controllers\Mobile\BelanjaController;
+use App\Http\Controllers\Mobile\MobileProfileController;
+use App\Http\Controllers\Mobile\MobilePinjamanController;
 
 Route::get('/', [AuthenticatedSessionController::class, 'create']);
 // Route::get('/', function () {
@@ -206,14 +211,46 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin',
 });
 
 // UI untuk mobile end users
-Route::get('/mobile/home', [MobileController::class, 'index'])
-    ->middleware('auth')
-    ->name('mobile.home');
+Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function () {
+    Route::get('/home', [DashboardController::class, 'index'])->name('home');
+});
+
+Route::middleware(['auth'])->prefix('mobile/belanja')->name('mobile.belanja.')->group(function () {
+    Route::get('/', [BelanjaController::class, 'index'])->name('toko');
+    Route::get('/produk/{unitId}', [BelanjaController::class, 'produk'])->name('produk');
+
+    // keranjang
+    Route::post('/cart/add', [BelanjaController::class, 'addToCart'])->name('cart.add');
+    Route::get('/cart', [BelanjaController::class, 'cart'])->name('cart');
+    Route::post('/cart/update', [BelanjaController::class, 'updateCart'])->name('cart.update');
+    Route::post('/cart/remove', [BelanjaController::class, 'removeFromCart'])->name('cart.remove');
+
+    // checkout
+    Route::get('/checkout', [BelanjaController::class, 'checkout'])->name('checkout');
+    Route::post('/checkout/process', [BelanjaController::class, 'processCheckout'])->name('checkout.process');
+
+    // riwayat belanja
+    Route::get('/history', [BelanjaController::class, 'history'])->name('history');
+    Route::get('/history/{id}', [BelanjaController::class, 'historyDetail'])->name('history.detail');
+    Route::delete('/cancel/{id}', [BelanjaController::class, 'cancelOrder'])->name('cancel');
+
+});
+
+Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function () {
+    Route::get('/profile', [MobileProfileController::class, 'index'])->name('profile');
+    Route::post('/profile/update', [MobileProfileController::class, 'update'])->name('profile.update');
+});
+
+Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function () {
+    Route::get('/pinjaman', [MobilePinjamanController::class, 'index'])->name('pinjaman.index');
+    Route::get('/pinjaman/create', [MobilePinjamanController::class, 'create'])->name('pinjaman.create');
+    Route::post('/pinjaman/store', [MobilePinjamanController::class, 'store'])->name('pinjaman.store');
+});
+
 
 Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function () {
     Route::get('/ppob', [MobileController::class, 'ppob'])->name('ppob');
 });
-
 
 
 require __DIR__.'/auth.php';
