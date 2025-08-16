@@ -11,4 +11,5 @@ class Penjualan extends Model
     use HasFactory,SoftDeletes;
     protected $table = 'penjualan';
     protected $primaryKey = 'id';
+    
 }

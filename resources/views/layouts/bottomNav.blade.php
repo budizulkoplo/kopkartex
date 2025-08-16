@@ -178,12 +178,12 @@
 
 <!-- Bottom Quick Menu -->
 <div class="quickMenuBar">
-  <a href="/dashboard" class="quick-item {{ request()->is('dashboard') ? 'active' : '' }}">
+  <a href="/mobile/home" class="quick-item {{ request()->is('mobile/home') ? 'active' : '' }}">
     <ion-icon name="home-outline"></ion-icon>
     <span>Home</span>
   </a>
-  <a href="/presensi/agenda/list" class="quick-item {{ request()->is('presensi/agenda/list') ? 'active' : '' }}">
-    <ion-icon name="document-text-outline"></ion-icon>
+  <a href="/mobile/belanja" class="quick-item {{ request()->is('mobile/belanja') ? 'active' : '' }}">
+    <ion-icon name="storefront-outline"></ion-icon>
     <span>Belanja</span>
   </a>
 
@@ -191,9 +191,9 @@
     <ion-icon id="menuIcon" name="apps-outline"></ion-icon>
   </button>
 
-  <a href="/kalender" class="quick-item {{ request()->is('kalender') ? 'active' : '' }}">
-    <ion-icon name="calendar-outline"></ion-icon>
-    <span>Cicilan</span>
+  <a href="/mobile/belanja/history" class="quick-item {{ request()->is('mobile/belanja/history') ? 'active' : '' }}">
+    <ion-icon name="document-text-outline"></ion-icon>
+    <span>Riwayat</span>
   </a>
 
   <form id="logout-form" action="{{ route('logout') }}" method="POST" style="all: unset; display: contents;">
