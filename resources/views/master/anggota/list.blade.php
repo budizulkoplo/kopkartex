@@ -26,7 +26,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <table class="table table-bordered table-striped" id="tabelAnggota">
+                            <table id="tabelAnggota" class="table table-sm table-striped" style="width: 100%; font-size: small;">
                                 <thead>
                                     <tr>
                                         <th>No.</th>

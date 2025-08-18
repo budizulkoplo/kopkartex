@@ -130,10 +130,14 @@ Route::prefix('mutasi')->middleware(['auth', 'verified', 'role:superadmin|admin'
     Route::post('/store', [MutasiStockController::class, 'store'])->name('mutasi.store');
     Route::post('/kembalikan', [MutasiStockController::class, 'Kembalikan'])->name('mutasi.kembalikan');
 });
-Route::prefix('simpanan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('simpanan')->group(function () {
-    Route::get('/', [SimpananController::class, 'index'])->name('simpanan.list');
-    Route::get('/getdata', [SimpananController::class, 'getdata'])->name('simpanan.getdata');
-});
+
+Route::prefix('simpanan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+        Route::get('/', [SimpananController::class,'index'])->name('simpanan.list');
+        Route::get('/getdata', [SimpananController::class,'getData'])->name('simpanan.getdata');
+        Route::post('/store', [SimpananController::class,'store'])->name('simpanan.store');
+    });
+
+
 Route::prefix('users')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('Users')->group(function () {
     Route::get('/list', [UsersController::class, 'index'])->name('users.list');
     Route::get('/permission', [UserRoleController::class, 'PermissionByRole']);
