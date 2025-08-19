@@ -303,7 +303,6 @@
                         <td><span class="stoktext">`+datarow.stok+`</span><input type="hidden" name="stok[]" class="stok" value="`+datarow.stok+`"></td>
                         <td>
                             <input type="number" class="form-control form-control-sm w-auto barangqty" onfocus="this.select()" min="1" max="`+datarow.stok+`" name="qty[]" onkeyup="kalkulasi(this)" value="1" data-id="`+datarow.id+`" required>
-                             <input type="hidden" name="idbarang[]" class="idbarang" value="`+datarow.id+`">
                             <input type="hidden" name="harga_beli[]" class="hargabeli" value="`+datarow.harga_beli+`">
                             <input type="hidden" name="harga_jual[]" class="hargajual" value="`+datarow.harga_jual+`">
                         </td>
@@ -322,7 +321,7 @@
                             data: function(params) { return { q: params.term }; },
                             processResults: function(data) {
                                 return {
-                                    results: data.map(b => ({id: b.code, text: b.text, harga_jual: b.harga_jual, stok: b.stok, idbarang: b.id}))
+                                    results: data.map(b => ({id: b.id, code: b.code,text: b.text, harga_beli: b.harga_beli, harga_jual: b.harga_jual, stok: b.stok}))
                                 };
                             },
                             cache: true
@@ -331,8 +330,8 @@
                         let data = e.params.data;
                         console.log(data);
                         let row = $(this).closest('tr');
-                        row.attr("data-id", data.idbarang);
-                        row.find('.kodebarangtext').text(data.id); // bisa juga data.code kalau ada
+                        row.attr("data-id", data.id);
+                        row.find('.kodebarangtext').text(data.code); // bisa juga data.code kalau ada
                         row.find('.hargajual').val(data.harga_jual);
                         row.find('.hargajualtext').text(data.harga_jual);
                         row.find('.hargabeli').val(data.harga_beli);
@@ -340,8 +339,8 @@
                         row.find('.stok').val(data.stok);
                         row.find('.barangqty').val(1);
                         row.find('.barangqty').attr("max", data.stok);
-                        row.find('.barangqty').attr("data-id", data.idbarang);
-                        row.find('.idbarang').val(data.idbarang);
+                        row.find('.barangqty').attr("data-id", data.id);
+                        //row.find('.idbarang').val(data.id);
                         kalkulasi();
                     });
 
@@ -588,6 +587,7 @@
                                         });
                                     },
                                     error: function(xhr) {
+                                        loader(false);
                                         Swal.fire({
                                             title: "Error!",text: xhr.responseText,icon: "error"
                                         });

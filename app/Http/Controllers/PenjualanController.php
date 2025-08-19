@@ -155,7 +155,12 @@ class PenjualanController extends Controller
             return response()->json(['message' => 'Order saved successfully.','invoice'=>$penjualan->nomor_invoice]);
         } catch (Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Failed to save order', 'message' => $e->getMessage()], 500);
+            return response()->json([
+                'error'   => 'Failed to save order',
+                'message' => $e->getMessage(),
+                'file'    => $e->getFile(),
+                'line'    => $e->getLine(),
+            ], 500);
         }
     }
 }
