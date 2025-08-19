@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="pagetitle">Users</x-slot>
+    <x-slot name="pagetitle">Anggota</x-slot>
     <div class="app-content-header">
         <div class="container-fluid">
             <div class="row">
@@ -22,11 +22,11 @@
                                 </div>
                             </div>
                             <div class="card-tools"> 
-                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModalForm" id="btnadd"><i class="bi bi-file-earmark-plus"></i></button>
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModalForm" id="btnadd"><i class="bi bi-file-earmark-plus"></i> Pendaftaran Anggota</button>
                             </div>
                         </div>
                         <div class="card-body">
-                            <table class="table table-bordered table-striped" id="tabelAnggota">
+                            <table id="tabelAnggota" class="table table-sm table-striped" style="width: 100%; font-size: small;">
                                 <thead>
                                     <tr>
                                         <th>No.</th>
@@ -90,12 +90,12 @@
                     <input type="hidden" name="fidusers" id="fidusers">
                     <div class="row">
                         <div class="col col-lg-6 mb-1">
-                            <label for="exampleFormControlInput1" class="form-label">No.Anggota</label>
-                            <input type="text" class="form-control form-control-sm" id="fnomor_anggota" name="nomor_anggota" disabled>
+                            <label for="fnomor_anggota" class="form-label">No.Anggota</label>
+                            <input type="text" class="form-control form-control-sm" id="fnomor_anggota" name="nomor_anggota" required>
                         </div>
                         <div class="col col-lg-6 mb-1">
-                            <label for="exampleFormControlInput2" class="form-label">UserName</label>
-                            <input type="text" class="form-control form-control-sm" id="fusername" name="username" disabled required>
+                            <label for="fusername" class="form-label">Username</label>
+                            <input type="text" class="form-control form-control-sm" id="fusername" name="username" readonly required>
                         </div>
                         <div class="col col-lg-6 mb-1">
                             <label for="exampleFormControlInput2" class="form-label">Nama</label>
@@ -128,6 +128,11 @@
                         <div class="col col-lg-6 mb-1">
                             <label for="exampleFormControlInput2" class="form-label">No HP</label>
                             <input type="text" class="form-control form-control-sm" id="fnohp" name="nohp" required>
+                        </div>
+                        <!-- auto generate Simpanan Awal -->
+                        <div class="col col-lg-6 mb-1">
+                            <label for="fsimpanan_awal" class="form-label">Simpanan Awal</label>
+                            <input type="number" class="form-control form-control-sm" id="fsimpanan_awal" name="simpanan_awal" value="0" required>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" value="1" id="flexCheckChecked" name="status" checked>
@@ -167,13 +172,17 @@
                 }
             }
             $(document).ready(function() {
+                $('#fnomor_anggota').on('input', function() {
+                    var nomor = $(this).val();
+                    $('#fusername').val(nomor);
+                });
                 $('#btnadd').on('click',function(){
                     clearfrm();
                     $.ajax({
                         url: "{{ route('anggota.getcode') }}",method: "GET",
                         beforeSend: function(xhr) {loader($('#frmusers'),true)},
                         success: function(response) {
-                            $('input[name="nomor_anggota"]').val(response);
+                            // $('input[name="nomor_anggota"]').val(response);
                             loader($('#frmusers'),false);
                         },
                         error: function(xhr, status, error) {

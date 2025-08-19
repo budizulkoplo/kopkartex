@@ -12,6 +12,7 @@ use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Yajra\DataTables\Facades\DataTables;
+use App\Http\Controllers\SimpananController;
 
 class AnggotaController extends Controller
 {
@@ -57,7 +58,7 @@ class AnggotaController extends Controller
                 $usr = User::find($id);
             }else{
                 $usr = new User;
-                $usr->nomor_anggota = $this->genCode();
+                $usr->nomor_anggota = $request->nomor_anggota;
                 $usr->username = $request->username;
                 $usr->password = Hash::make('12345678');
             }
@@ -67,12 +68,41 @@ class AnggotaController extends Controller
             $usr->tanggal_masuk = $request->tanggal_masuk;
             $usr->nik = $request->nik;
             $usr->jabatan = $request->jabatan;
-            $usr->unit_kerja = $request->unit_kerja;
+            $usr->unit_kerja = 0;
             $usr->limit_ppob = $request->limit_ppob;
             $usr->limit_hutang = $request->limit_hutang;
+            $usr->nohp = $request->nohp;
             $usr->status = $request->status ?'aktif':'nonaktif';
+            $usr->ui = 'user';
             $usr->save();
             $usr->assignRole('anggota');
+
+            $simpananController = new SimpananController();
+
+                // auto buat simpanan pokok
+                DB::beginTransaction();
+                try {
+                    $simpanan = new \App\Models\SimpananHdr();
+                    $simpanan->id_anggota     = $usr->id;
+                    $simpanan->norek          = $simpananController->genNorek('Simpanan Pokok');
+                    $simpanan->nama_pemilik   = $usr->name;
+                    $simpanan->jenis_simpanan = 'Simpanan Pokok';
+                    $simpanan->saldo          = $request->simpanan_awal;
+                    $simpanan->save();
+
+                    // Buat detail pertama
+                    $dtl = new \App\Models\SimpananDtl();
+                    $dtl->idsimpanan = $simpanan->idsimpanan;
+                    $dtl->nominal    = $request->simpanan_awal;
+                    $dtl->saldo_awal = 0;
+                    $dtl->saldo_ahir = $request->simpanan_awal;
+                    $dtl->save();
+
+                    DB::commit();
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    return response()->json(['error' => 'Gagal membuat Simpanan Pokok', 'message' => $e->getMessage()], 500);
+                }
 
             if($usr){
                 return response()->json('success', 200);
@@ -81,6 +111,7 @@ class AnggotaController extends Controller
             }
         }
     }
+
     function genCode(){
         $total = User::withTrashed()->whereDate('created_at', date("Y-m-d"))->count();
         $nomorUrut = $total + 1;
