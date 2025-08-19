@@ -2,41 +2,146 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Simpan;
+use App\Models\SimpananHdr;
+use App\Models\SimpananDtl;
+use App\Models\User;
+use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
-use Yajra\DataTables\Facades\DataTables;
 
 class SimpananController extends Controller
 {
-    public function index(Request $request): View
+    public function index()
     {
-        return view('transaksi.simpanan', [
-            // 'roles' => Role::with('permissions')->get(),
-            // 'allroles' => Role::all(),
-            // 'unit' => Unit::all(),
-        ]);
+        $simpanan = SimpananHdr::with('anggota')->get();
+        $anggota = User::all();
+        return view('simpanan.index', compact('simpanan','anggota'));
     }
-    public function getdata(Request $request){
-        $barang = Simpan::join('users','simpan.anggota_id','users.id')
-        ->select('simpan.*','users.name','users.id as idusers','users.nik','users.nomor_anggota');
-        //if($request->kategori != 'all'){$barang->where('kategori',$request->kategori);}
-        return DataTables::of($barang)
-        ->addIndexColumn()
-        ->filter(function ($query) use ($request) {
-            if ($request->has('search') && $request->search != '') {
-                $query->where(function ($query2) use($request) {
-                    return $query2
-                    ->orWhere('users.name','like','%'.$request->search['value'].'%')
-                    ->orWhere('users.username','like','%'.$request->search['value'].'%')
-                    ->orWhere('users.nomor_anggota','like','%'.$request->search['value'].'%')
-                    ->orWhere('users.nik','like','%'.$request->search['value'].'%');
-                }); 
+
+    public function create(): View
+    {
+        $anggota = User::all();
+        return view('simpanan.create', compact('anggota'));
+    }
+
+    public function store(Request $request)
+    {
+        DB::beginTransaction();
+        try {
+            // generate norek otomatis berdasarkan jenis simpanan
+            $norek = $this->genNorek($request->jenis_simpanan);
+
+            $simpanan = new SimpananHdr();
+            $simpanan->id_anggota   = $request->id_anggota;
+            $simpanan->norek        = $norek;
+            $simpanan->nama_pemilik = $request->nama_pemilik;
+            $simpanan->jenis_simpanan = $request->jenis_simpanan;
+            $simpanan->saldo        = $request->nominal;
+            $simpanan->save();
+
+            // simpan transaksi pertama di detail
+            $dtl = new SimpananDtl();
+            $dtl->idsimpanan  = $simpanan->idsimpanan; // pakai primary key yg benar
+            $dtl->nominal     = $request->nominal;
+            $dtl->saldo_awal  = 0;
+            $dtl->saldo_ahir  = $request->nominal;
+            $dtl->save();
+
+            DB::commit();
+            return response()->json(['message' => 'Simpanan berhasil dibuat', 'norek' => $norek]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Gagal menyimpan simpanan', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function setor(Request $request, $id)
+    {
+        DB::beginTransaction();
+        try {
+            $simpanan = SimpananHdr::findOrFail($id);
+
+            $saldo_awal = $simpanan->saldo;
+            $simpanan->saldo += $request->nominal;
+            $simpanan->save();
+
+            $dtl = new SimpananDtl();
+            $dtl->idsimpanan  = $simpanan->id;
+            $dtl->nominal     = $request->nominal;
+            $dtl->saldo_awal  = $saldo_awal;
+            $dtl->saldo_ahir  = $simpanan->saldo;
+            $dtl->save();
+
+            DB::commit();
+            return response()->json(['message' => 'Setoran berhasil', 'saldo' => $simpanan->saldo]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Gagal setor', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function tarik(Request $request, $id)
+    {
+        DB::beginTransaction();
+        try {
+            $simpanan = SimpananHdr::findOrFail($id);
+
+            if ($simpanan->saldo < $request->nominal) {
+                return response()->json(['error' => 'Saldo tidak cukup'], 400);
             }
-        })
-        ->editColumn('simpan.id', function($query) {
-            return Crypt::encryptString($query->id);        })
-        ->make(true);
+
+            $saldo_awal = $simpanan->saldo;
+            $simpanan->saldo -= $request->nominal;
+            $simpanan->save();
+
+            $dtl = new SimpananDtl();
+            $dtl->idsimpanan  = $simpanan->id;
+            $dtl->nominal     = -$request->nominal; // negatif untuk penarikan
+            $dtl->saldo_awal  = $saldo_awal;
+            $dtl->saldo_ahir  = $simpanan->saldo;
+            $dtl->save();
+
+            DB::commit();
+            return response()->json(['message' => 'Penarikan berhasil', 'saldo' => $simpanan->saldo]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Gagal tarik', 'message' => $e->getMessage()], 500);
+        }
     }
+
+    public function show($id): View
+    {
+        $simpanan = SimpananHdr::with('details')->findOrFail($id);
+        return view('simpanan.show', compact('simpanan'));
+    }
+
+    public function genNorek($jenis)
+    {
+        $prefix = match ($jenis) {
+            'Simpanan Pokok'     => 'SP',
+            'Simpanan Wajib'     => 'SW',
+            'Simpanan Sukarela'  => 'SS',
+            'Simpanan Kelompok'  => 'SKL',
+            default     => '99',
+        };
+
+        $today = date("ymd");
+        $total = SimpananHdr::withTrashed()
+                    ->where('jenis_simpanan', $jenis)
+                    ->whereDate('created_at', date("Y-m-d"))
+                    ->count();
+
+        $urut = str_pad($total + 1, 4, '0', STR_PAD_LEFT);
+        return $prefix . $today . $urut; // contoh: 01 250818 0001
+    }
+
+    public function getData()
+    {
+        $simpanan = SimpananHdr::with('anggota')->get();
+        return response()->json($simpanan);
+    }
+
 }
