@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KonfigBunga;
 use App\Models\Penjualan;
 use App\Models\PenjualanCicil;
 use App\Models\PenjualanDetail;
@@ -77,6 +78,28 @@ class PenjualanController extends Controller
         }
         
     }
+    public function SetApproval(Request $request){
+        // if($request->jmlcicilan >= 1){
+        //         $totalcicil = $request->grandtotal / $request->jmlcicilan;
+        //         for ($i = $request->jmlcicilan; $i >= 1; $i--) {
+        //             $cicil = new PenjualanCicil;
+        //             $cicil->penjualan_id = $penjualan->id;
+        //             $cicil->cicilan = $i;
+        //             $cicil->total_cicilan = $totalcicil;
+        //             $cicil->status = 'hutang';
+        //             $cicil->save();
+        //         }
+        //     }
+    }
+    public function CekTanggungan(Request $request){
+        $tanggungan = Penjualan::where(['anggota_id'=>$request->anggota,'status'=>'hutang','metode_bayar'=>'cicilan','approval3'=>1])->selectRaw('SUM(grandtotal) as total')->value('total');
+        $usr = User::find($request->anggota);
+        if(($tanggungan+$request->grandtotal) < $usr->limit_hutang){
+            return response()->json(true,200);
+        }else{
+            return response()->json('Limit hutang melebihi total transaksi',400);
+        }
+    }
     public function Store(Request $request){
         DB::beginTransaction();
         try {
@@ -93,30 +116,30 @@ class PenjualanController extends Controller
             $penjualan->diskon = $request->diskon;
             $penjualan->note = $request->note;
             $penjualan->type_order = 'offline';
-            $penjualan->status_ambil = 'finish';
+            
             if($request->metodebayar == 'cicilan'){
                 $penjualan->status = 'hutang';
-                $penjualan->jmlcicilan = $request->jmlcicilan;
+                $penjualan->tenor = $request->jmlcicilan;
+                $user = User::find($request->idcustomer);
+                if($user->limit_hutang > $request->grandtotal){
+                    $penjualan->VarCicilan = 1;
+                }
+                $bunga = KonfigBunga::select('bunga_barang')->first();
+                $penjualan->bunga_barang = $bunga->bunga_barang;
+                $penjualan->status_ambil = 'pending';
+                $penjualan->kembali = 0;
+                $penjualan->dibayar = 0;
             }elseif($request->metodebayar == 'tunai'){
                 $penjualan->status = 'lunas';
-                $penjualan->jmlcicilan = 0;
+                $penjualan->tenor = 0;
+                $penjualan->status_ambil = 'finish';
+                $penjualan->kembali = $request->kembali;
+                $penjualan->dibayar = $request->dibayar;
             }
-            $penjualan->dibayar = $request->dibayar;
-            $penjualan->kembali = $request->kembali;
             $penjualan->created_user = Auth::user()->id;
             $penjualan->save();
             $no=0;
-            if($request->jmlcicilan >= 1){
-                $totalcicil = $request->grandtotal / $request->jmlcicilan;
-                for ($i=1; $i <= $request->jmlcicilan ; $i++) { 
-                    $cicil = new PenjualanCicil;
-                    $cicil->penjualan_id = $penjualan->id;
-                    $cicil->cicilan = $i;
-                    $cicil->total_cicilan = $totalcicil;
-                    $cicil->status = 'hutang';
-                    $cicil->save();
-                }
-            }
+            
             foreach ($request->idbarang as $item) {
                 $dtl = new PenjualanDetail;
                 $dtl->penjualan_id = $penjualan->id;
