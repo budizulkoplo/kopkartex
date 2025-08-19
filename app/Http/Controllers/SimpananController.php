@@ -118,7 +118,7 @@ class SimpananController extends Controller
         return view('simpanan.show', compact('simpanan'));
     }
 
-    private function genNorek($jenis)
+    public function genNorek($jenis)
     {
         $prefix = match ($jenis) {
             'Simpanan Pokok'     => 'SP',
