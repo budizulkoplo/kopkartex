@@ -31,19 +31,9 @@
                                     <input type="text" class="form-control datepicker" name="tanggal" required>
                                     <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
                                 </div>
-<<<<<<< HEAD
                                 <div class="input-group input-group-sm mb-2"> 
                                     <span class="input-group-text label-fixed-width">Petugas</span>
                                     <input type="text" class="form-control" value="{{ auth()->user()->name }}" name="kasir" disabled>
-=======
-                                <div class="input-group input-group-sm mb-2 align-items-center">
-                                    <div class="input-group-text">
-                                        <input class="form-check-input mt-0 me-2" type="checkbox" id="flexCheckDefault" checked>
-                                        <label for="flexCheckDefault" class="mb-0">Anggota</label>
-                                    </div>
-                                    <input type="text" class="form-control" id="customer" name="customer" required>
-                                    <input type="hidden" id="idcustomer" name="idcustomer">
->>>>>>> main
                                 </div>
                             </div>
 
@@ -119,7 +109,6 @@
                                         <option value="cicilan">Cicilan</option>
                                     </select>
                                 </div>
-<<<<<<< HEAD
                                 <div class="input-group input-group-sm mb-2 align-items-center">
                                     <div class="input-group-text">
                                         <input class="form-check-input mt-0 me-2" type="checkbox" value="" id="flexCheckDefault" checked>
@@ -129,9 +118,6 @@
                                     <input type="hidden" id="idcustomer" name="idcustomer">
                                 </div>
                                 <div class="input-group input-group-sm mb-2 fieldcicilan" style="display: none">
-=======
-                                <div class="input-group input-group-sm mb-2 fieldcicilan" style="display:none">
->>>>>>> main
                                     <span class="input-group-text label-fixed-width">Jml.Cicilan</span>
                                     <select class="form-select form-select-sm" id="jmlcicilan" name="jmlcicilan"></select>
                                 </div>
@@ -320,184 +306,6 @@
                 addRow({id:0, code:'', text:'', harga_jual:0, stok:0});
             });
 
-<<<<<<< HEAD
-                        // Sembunyikan & nonaktifkan input dibayar/kembali
-                        $('.clmetode').hide().find('input, select').prop('required', false).val('');
-                        $('#flexCheckDefault')
-                        .prop('checked', true)
-                        .off('click.prevent') // hapus event lama kalau ada
-                        .on('click.prevent', function(e) {
-                            e.preventDefault(); // kunci
-                        }).change();
-                        // if($('#customer').val() === '' || $('#idcustomer').val() === '' ){
-                        //     $('#flexCheckDefault')
-                        // }
-                    } else {
-                        $('.fieldcicilan').hide();
-                        $('#jmlcicilan').html('');
-
-                        // Tampilkan & aktifkan kembali input dibayar/kembali
-                        $('.clmetode').show().find('input, select').prop('required', true);
-                        $('#flexCheckDefault').off('click.prevent').change();
-                    }
-                });
-
-                activateTypeahead();
-                $('#flexCheckDefault').on('change', function () {
-                    if ($(this).is(':checked')) {
-                        activateTypeahead();
-                        $('#customer').val('').prop('readonly', false);
-                        $('#idcustomer').val('');
-                        //$('#customer').attr('required', true);
-                    } else {
-                        destroyTypeahead();
-                        $('#customer').val('').prop('readonly', false);
-                        $('#idcustomer').val('');
-                        //$('#customer').removeAttr('required');
-                    }
-                });
-                $(window).keydown(function (event) {
-                    if (event.key === "Enter") {
-                        event.preventDefault();
-                        return false;
-                    }
-                });
-                
-                
-                $('#customer').on('input', function () {
-                    selectedFromList = false;
-                    $('#idcustomer').val('');
-                });
-                let currentRequest = null;
-                $('#barcode-search').typeahead({
-                    source: function (query, process) {
-                        if (currentRequest !== null) {
-                            currentRequest.abort();
-                        }
-                        currentRequest = $.ajax({
-                        url: '{{ route('jual.getbarang') }}',       // Your backend endpoint
-                        type: 'GET',
-                        data: { q: query },
-                        dataType: 'json',
-                        success: function (data) {
-                            barang = data; // Save for lookup later
-                            return process(data.map(barang => barang.text));
-                        }
-                        });
-                        return currentRequest;
-                    },
-                    afterSelect: function (text) {
-                        const selected = barang.find(barang => barang.text === text);
-                        if (selected) {
-                            addRow(selected);
-                        }
-                    }
-                });
-                
-                $('.datepicker').datepicker({
-                    format: 'dd-mm-yyyy',
-                    autoclose: true,
-                    todayHighlight: true
-                }).datepicker('setDate', new Date());
-                $('#barcode-search').on('keydown', function(e) {
-                    if (e.key === 'Enter') {
-                        $.ajax({
-                            url: '{{ route('jual.getbarangbycode') }}',
-                            method: 'GET',
-                            data: {
-                                kode: $(this).val(),
-                            },
-                            dataType: 'json',
-                            beforeSend: function(xhr) {loader(true);},
-                            success: function(response) {
-                                addRow(response);
-                                loader(false);
-                                $('#barcode-search').val('');
-                            },
-                            error: function(xhr, status, error) {
-                                Swal.fire({
-                                position: "top-end",
-                                icon: "error",
-                                title: "Barang tidak ditemukan!",
-                                showConfirmButton: false,
-                                timer: 1500
-                                });
-                                $('#barcode-search').val('');
-                                loader(false);
-                            }
-                        });
-                    }
-                });
-                $('#frmterima').on('submit', function(e) {
-                    e.preventDefault(); // Prevent default form submit
-                    if (!this.checkValidity()) {
-                        e.stopPropagation();
-                    } else {
-                        let checked = $('#flexCheckDefault').is(':checked');
-                        if ($('#metodebayar').val() === 'cicilan' && $('#idcustomer').val() == '') {
-                            Swal.fire({
-                                position: "top-end",
-                                icon: "warning",
-                                title: "Anggota harus terisi",
-                                showConfirmButton: false,
-                                timer: 2500
-                                });
-                            e.stopPropagation();
-                        } else {
-                            Swal.fire({
-                            title: "Transaksi sekarang?",
-                            text: "Pastikan data sudah benar",
-                            icon: "warning",
-                            showCancelButton: true,
-                            confirmButtonColor: "#3085d6",
-                            cancelButtonColor: "#d33",
-                            confirmButtonText: "Ya, lanjutkan!"
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    var form = $(this)[0];
-                                    var formData = new FormData(form);
-
-                                    // Manually append disabled inputs
-                                    $(form).find(':input:disabled').each(function() {
-                                        formData.append(this.name, $(this).val());
-                                    });
-
-                                    $.ajax({
-                                    type: 'POST',
-                                    url: '{{ route('jual.store') }}', // Your endpoint
-                                    data: formData,
-                                    processData: false,
-                                    contentType: false,
-                                    beforeSend: function(xhr) {loader(true);},
-                                    success: function(response) {
-                                        clearform();
-                                        loader(false);
-                                        invoice();
-                                        Swal.fire({
-                                            title: 'Berhasil!',
-                                            text: 'Nota penjualan berhasil dibuat',
-                                            icon: 'success',
-                                            confirmButtonText: 'Lihat Nota'
-                                        }).then((result) => {
-                                            if (result.isConfirmed) {
-                                                const url = `{{ url('/penjualan/nota') }}/${response.invoice}`;
-                                                window.open(url, '_blank');
-                                            }
-                                        });
-                                    },
-                                    error: function(xhr) {
-                                        Swal.fire({
-                                            title: "Error!",text: xhr.responseText,icon: "error"
-                                        });
-                                    }
-                                    });
-                                }else{
-                                    e.stopPropagation();
-                                }
-                            });
-                        }
-                    }
-=======
             // Hapus row
             $(document).on('click','.hapus-baris', function(){ $(this).closest('tr').remove(); kalkulasi(); numbering(); });
 
@@ -561,7 +369,6 @@
                     beforeSend:()=>loader(true),
                     success:function(resp){ Swal.fire({icon:'success',title:'Tersimpan',timer:1500,showConfirmButton:false}); clearform(); loader(false); window.open(`{{ url('/penjualan/nota') }}/${resp.invoice}`,'_blank'); },
                     error:function(){ alert('Something went wrong'); loader(false); }
->>>>>>> main
                 });
             });
         });
