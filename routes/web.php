@@ -30,13 +30,13 @@ use App\Http\Controllers\Mobile\BelanjaController;
 use App\Http\Controllers\Mobile\MobileProfileController;
 use App\Http\Controllers\Mobile\MobilePinjamanController;
 
-Route::get('/', [AuthenticatedSessionController::class, 'create']);
+Route::get('/login', [AuthenticatedSessionController::class, 'create']);
 // Route::get('/', function () {
 //     return view('welcome');
 // });
 
 
-Route::get('/dashboard', function () {
+Route::get('/', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified', 'global.app'])->name('dashboard');
 
@@ -110,9 +110,10 @@ Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|adm
     Route::get('/nota/{invoice}', [PenjualanController::class, 'nota'])->name('jual.nota');
     Route::post('/cektanggungan', [PenjualanController::class, 'CekTanggungan'])->name('jual.cektanggungan');
 });
-Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd', 'global.app'])->group(function () {
     Route::get('/', [ApprovalController::class, 'index'])->name('app.list');
     Route::get('/gethutang', [ApprovalController::class, 'getHutang'])->name('app.gethutang');
+    Route::put('/setapp', [ApprovalController::class, 'setapproval'])->name('app.set');
     
 });
 Route::prefix('bengkel')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {

@@ -149,12 +149,16 @@ class UsersController extends Controller
         ->leftJoin('model_has_roles as ranggota', function ($join) {
             $join->on('ranggota.model_id', '=', 'users.id')->where('ranggota.role_id', '=', 6);
         })
+        ->leftJoin('model_has_roles as hrd', function ($join) {
+            $join->on('hrd.model_id', '=', 'users.id')->where('hrd.role_id', '=', 7);
+        })
         ->leftJoin('roles as r1','r1.id', 'rsuperadmin.role_id')
         ->leftJoin('roles as r2','r2.id', 'radmin.role_id')
         ->leftJoin('roles as r3','r3.id', 'rpengurus.role_id')
         ->leftJoin('roles as r4','r4.id', 'rbendahara.role_id')
         ->leftJoin('roles as r5','r5.id', 'ranggota.role_id')
-        ->select('users.*','unit.nama_unit','r1.name as r1','r2.name as r2','r3.name as r3','r4.name as r4','r5.name as r5');
+        ->leftJoin('roles as r6','r6.id', 'hrd.role_id')
+        ->select('users.*','unit.nama_unit','r1.name as r1','r2.name as r2','r3.name as r3','r4.name as r4','r5.name as r5','r6.name as r6');
         return DataTables::of($user)
                 ->addIndexColumn()
                 ->addColumn('idusers', function($row) {
@@ -167,7 +171,8 @@ class UsersController extends Controller
                                   ->orWhere('r2.id', $request->role)
                                   ->orWhere('r3.id', $request->role)
                                   ->orWhere('r4.id', $request->role)
-                                  ->orWhere('r5.id', $request->role);
+                                  ->orWhere('r5.id', $request->role)
+                                  ->orWhere('r6.id', $request->role);
                         });
                     }
                     if ($request->has('search') && $request->search != '') {

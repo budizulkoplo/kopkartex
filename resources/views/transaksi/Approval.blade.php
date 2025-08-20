@@ -13,7 +13,7 @@
         <div class="container"> <!--begin::Row-->
             <div class="row">
                 <div class="col-12">
-                    <div class="card card-info card-outline mb-4"> <!--begin::Header-->
+                    <div class="card card-info card-outline mb-4 cardizin"> <!--begin::Header-->
                         <div class="card-header pt-1 pb-1">
                             <div class="card-title">
                                 <div class="row">
@@ -94,29 +94,44 @@
                     { "data": "bunga_barang","orderable": false},
                     { "data": "approval1","orderable": false,
                         render: function (data, type, row, meta) {
-                            let tswitch= `<div class="form-check form-switch d-flex justify-content-center">
+                            let tswitch;
+                            @if(auth()->user()->hasAnyRole(['SuperAdmin','admin']))
+                                tswitch = `<div class="form-check form-switch d-flex justify-content-center">
                                             <input class="form-check-input chk2" onClick="approval(this,'`+row.id+`','approval1')" `+(data==1?'checked':'')+` type="checkbox" data-code="`+row.id+`" role="switch"/>
                                         </div>`;
+                            @else
+                                if(data === 0)
+                                tswitch='<i class="fa-regular fa-hourglass-half"></i>';
+                                else
+                                tswitch='<i class="fa-solid fa-circle-check" style="color: #1fbd8d;"></i><span></span>';
+                            @endif
                             return tswitch;
                         }
                     },
                     { "data": "approval2","orderable": false,
                         render: function (data, type, row, meta) {
                             let tswitch='';
-                            if(row.VarCicilan == 0){
+                            if(row.VarCicilan === 1){
                                 @if(auth()->user()->hasRole('SuperAdmin'))
                                     tswitch= `<div class="form-check form-switch d-flex justify-content-center">
                                             <input class="form-check-input chk2" onClick="approval(this,'`+row.id+`','approval2')" `+(data==1?'checked':'')+` type="checkbox" data-code="`+row.id+`" role="switch"/>
                                         </div>`;
                                 @elseif(auth()->user()->hasRole('hrd'))
-                                    tswitch= `<div class="form-check form-switch d-flex justify-content-center">
+                                    if(row.approval1 === 1){
+                                        tswitch= `<div class="form-check form-switch d-flex justify-content-center">
                                             <input class="form-check-input chk2" onClick="approval(this,'`+row.id+`','approval2')" `+(data==1?'checked':'')+` type="checkbox" data-code="`+row.id+`" role="switch"/>
                                         </div>`;
+                                    }else{
+                                        tswitch='<i class="fa-regular fa-hourglass-half"></i>';
+                                    }
                                 @else
+                                    if(row.approval2 === 0)
                                     tswitch='<i class="fa-regular fa-hourglass-half"></i>';
+                                    else
+                                    tswitch='<i class="fa-solid fa-circle-check" style="color: #1fbd8d;"></i>';
                                 @endif
                             }else{
-                                tswitch='';
+                                tswitch='-';
                             }
                             return tswitch;
                         }
@@ -126,7 +141,7 @@
                             let tswitch='';
                             @if(auth()->user()->hasAnyRole(['SuperAdmin','pengurus']))
                             if(row.VarCicilan == 0){
-                                if(row.approval2 == 0){
+                                if(row.approval1 == 0){
                                     tswitch='<i class="fa-regular fa-hourglass-half"></i>';
                                 }else{
                                     tswitch= `<div class="form-check form-switch d-flex justify-content-center">
@@ -134,7 +149,7 @@
                                         </div>`;
                                 }
                             }else{
-                                if(row.approval1 == 0){
+                                if(row.approval2 == 0){
                                     tswitch='<i class="fa-regular fa-hourglass-half"></i>';
                                 }else{
                                     tswitch= `<div class="form-check form-switch d-flex justify-content-center">
@@ -143,17 +158,17 @@
                                 }
                             }
                             @else
-                            if(row.VarCicilan == 0){
-                                if(row.approval2 == 0){
+                            if(row.VarCicilan == 1){
+                                if(row.approval3 == 0){
                                     tswitch='<i class="fa-regular fa-hourglass-half"></i>';
                                 }else{
-                                    tchecked='<i class="fa-solid fa-circle-check" style="color: #1fbd8d;"></i>';
+                                    tswitch='<i class="fa-solid fa-circle-check" style="color: #1fbd8d;"></i>';
                                 }
                             }else{
-                                if(row.approval1 == 0){
+                                if(row.approval1 == 1){
                                     tswitch='<i class="fa-regular fa-hourglass-half"></i>';
                                 }else{
-                                    tchecked='<i class="fa-solid fa-circle-check" style="color: #1fbd8d;"></i>';
+                                    tswitch='<i class="fa-solid fa-circle-check" style="color: #1fbd8d;"></i>';
                                 }
                             }
                             @endif
@@ -168,72 +183,58 @@
                     }
                 ],
             });
-            function ambil(idjual){
+            //function chkneed
+            function approval(obj,tcode,act){
+                let ckecked = obj.checked
                 Swal.fire({
-                    title: "Ambil barang?",
-                    text: "Pastikan pembayaran sudah dilakukan!",
+                    title: ckecked ? "Dokumen Disetujui?" : "Persetujuan di Batalkan?",
                     icon: "warning",
                     showCancelButton: true,
                     confirmButtonColor: "#3085d6",
                     cancelButtonColor: "#d33",
-                    confirmButtonText: "Ya, lanjutkan!"
+                    confirmButtonText: ckecked ? "Ya, saya setuju!" : "Batalkan sekarang"
                     }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
-                            type: 'PUT',
-                            url: "{{ route('ambil.AmbilBarang') }}",
-                            data: {id: idjual},
-                            beforeSend: function(xhr) {loader($('#exampleModal'),true)},
-                            success: function(response) {
-                                Swal.fire({title: "Berhasil!",icon: "success"});
-                                table.ajax.reload(null, false);
-                                $('#exampleModal').modal('hide');
-                                loader($('#exampleModal'),false);
+                            url: "{{ route('app.set') }}",
+                            method:"PUT",
+                            data: { 
+                                fld: act,
+                                code: tcode, 
+                                chk: ckecked?1:0,
                             },
-                            error: function(xhr) {
-                                Swal.fire({title: "Error!",text: xhr.responseText,icon: "error"});
-                                loader($('#exampleModal'),false);
+                            beforeSend: function(xhr) {loader($('.cardizin'),true);},
+                            success: function(response) {
+                                if(response){
+                                    table.ajax.reload();
+                                    Swal.fire({position: "top-end",icon: "success",title: "Success",showConfirmButton: false,timer: 2500});
+                                }else{
+                                    if(obj.checked)
+                                    $(obj).prop('checked', false);
+                                    else
+                                    $(obj).prop('checked', true);
+                                    Swal.fire({position: "top-end",icon: "error",title: response.message,showConfirmButton: false,timer: 1500});
+                                }
+                                loader($('.cardizin'),false);
+                            },
+                            error: function(jqXHR, textStatus, errorThrown) {
+                                if(obj.checked)
+                                    $(obj).prop('checked', false);
+                                else
+                                    $(obj).prop('checked', true);
+                                Swal.fire({position: "top-end",icon: "error",title: jqXHR.responseJSON.message,showConfirmButton: false,timer: 1500});
+                                loader($('.cardizin'),false);
                             }
                         });
-                        
+                    }else{
+                        if(obj.checked)
+                        $(obj).prop('checked', false);
+                        else
+                        $(obj).prop('checked', true);
                     }
                 });
             }
-            function dtl(idjual){
-                $.ajax({
-                    type: 'GET',
-                    url: "{{ route('ambil.getPenjualanDtl', ['id' => ':id']) }}".replace(':id', idjual),
-                    beforeSend: function(xhr) {loader($('#exampleModal'),true)},
-                    success: function(response) {
-                        let str='',grand=0,cn=1;
-                        $.each(response.dtl, function(index, value) {
-                            str += `<tr class="align-middle">
-                                <td>${cn}</td>
-                                <td>${value.kode_barang}</td>
-                                <td>${value.nama_barang}</td>
-                                <td>${value.qty}</td>
-                                <td>${value.harga}</td>
-                                <td>${value.qty*value.harga}</td>
-                                </tr>`;
-                            cn++;
-                            grand +=value.qty*value.harga;
-                        });
-                        $('#exampleModalLabel').text(response.hdr.nomor_invoice);
-                        $('#tbdtl tbody').html(str);
-                        $('#tbdtl tfoot').html(`
-                        <tr><th colspan="5" class="text-end">SubTotal</th><th>`+response.hdr.subtotal+`</th></tr>
-                        <tr><th colspan="5" class="text-end">Diskon</th><th>`+response.hdr.diskon+`%</th></tr>
-                        <tr><th colspan="5" class="text-end">GrandTotal</th><th>`+response.hdr.grandtotal+`</th></tr>
-                        <tr><th colspan="6" class="text-end"><button type="button" class="btn btn-success" onclick="ambil(`+response.hdr.id+`)">Ambil&Bayar</button></th></tr>
-                        `);
-                        loader($('#exampleModal'),false);
-                    },
-                    error: function(xhr) {
-                        Swal.fire({title: "Error!",text: xhr.responseText,icon: "error"});
-                        loader($('#exampleModal'),false);
-                    }
-                });
-            }
+            
             $( document ).ready(function() {
                 $('#txtperiod').daterangepicker({
                     opens: 'left', // Specify the position of the calendar
