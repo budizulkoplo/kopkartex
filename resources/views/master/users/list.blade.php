@@ -215,6 +215,11 @@
                             <input class="form-check-input chkrole" data-id="`+row.id+`" type="checkbox" name="chkrole[]" value="anggota" `+(row.r5 == 'anggota'? 'checked':'')+`>
                             <label class="form-check-label" for="flexCheckDefault">Anggota</label>
                             </div>`
+                            rls +=`<div class="form-check float-start pe-2">
+                            <input class="form-check-input chkrole" data-id="${row.id}" type="checkbox" name="chkrole[]" value="hrd" `+(row.r6 == 'hrd'? 'checked':'')+`>
+                            <label class="form-check-label" for="flexCheckDefault">HRD</label>
+                            </div>`
+                            
                             
                             return rls;
                         } 
