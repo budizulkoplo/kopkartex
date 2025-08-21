@@ -113,7 +113,7 @@ Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|adm
     Route::get('/nota/{invoice}', [PenjualanController::class, 'nota'])->name('jual.nota');
     Route::post('/cektanggungan', [PenjualanController::class, 'CekTanggungan'])->name('jual.cektanggungan');
 });
-Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd', 'global.app'])->group(function () {
+Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus', 'global.app'])->group(function () {
     Route::get('/', [ApprovalController::class, 'index'])->name('app.list');
     Route::get('/gethutang', [ApprovalController::class, 'getHutang'])->name('app.gethutang');
     Route::put('/setapp', [ApprovalController::class, 'setapproval'])->name('app.set');
