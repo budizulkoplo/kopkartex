@@ -29,6 +29,24 @@
 
 @section('content')
 <div class="p-3" style="margin-top: 40px">
+    <form method="GET" action="{{ route('mobile.belanja.produk', $toko->id) }}" class="mb-3">
+        <div class="d-flex border rounded overflow-hidden">
+            <input type="text" name="q" value="{{ request('q') }}"
+                class="form-control border-0 rounded-0 ps-3"
+                placeholder="Cari produk...">
+
+            <button type="submit" class="btn btn-primary rounded-0">
+                <ion-icon name="search-outline"></ion-icon>
+            </button>
+
+            @if(request('q'))
+                <a href="{{ route('mobile.belanja.produk', $toko->id) }}" 
+                class="btn btn-danger rounded-0">
+                    <ion-icon name="close-circle-outline"></ion-icon>
+                </a>
+            @endif
+        </div>
+    </form>
 
     @if($produkList->isEmpty())
         <div class="alert alert-warning text-center mt-4">
