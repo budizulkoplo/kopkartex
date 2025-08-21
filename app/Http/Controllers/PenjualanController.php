@@ -124,9 +124,14 @@ class PenjualanController extends Controller
                 $user = User::find($request->idcustomer);
                 $result = DB::select("SELECT hitung_cicilan(?, ?, ?, ?) AS jumlah", [$request->grandtotal, $bunga->bunga_barang, $request->jmlcicilan, 1]);
                 $cicilanpertama = $result[0]->jumlah;
-                if($user->limit_hutang > $cicilanpertama){
-                    $penjualan->VarCicilan = 1;
+
+                $batas = 0.35 * $user->gaji; // 35% dari gaji
+                if ($cicilanpertama < $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
+                    $penjualan->VarCicilan = 0; //Cicilan memenuhi syarat (di bawah 35% gaji)
+                } else {
+                    $penjualan->VarCicilan = 1; //Cicilan terlalu besar (melebihi 35% gaji)
                 }
+
                 $penjualan->bunga_barang = $bunga->bunga_barang;
                 $penjualan->status_ambil = 'pending';
                 $penjualan->kembali = 0;
