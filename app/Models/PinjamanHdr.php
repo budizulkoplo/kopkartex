@@ -12,7 +12,7 @@ class PinjamanHdr extends Model
 
     protected $table = 'pinjaman_hdr'; // pastikan sesuai nama tabel
 
-    protected $primaryKey = 'id_pinjaman';
+    protected $primaryKey = 'id';
     public $incrementing = false; // karena id_pinjaman varchar/uuid
     protected $keyType = 'string';
 
@@ -25,6 +25,17 @@ class PinjamanHdr extends Model
         'tenor',
         'jaminan',
         'status',
+        'VarCicilan',
+        'approval1',
+        'approval_at',
+        'approval1_user',
+        'approval2',
+        'approval2_at',
+        'approval2_user',
+        'approval3',
+        'approval3_at',
+        'approval3_user',
+        'bunga_pinjaman',
         'tgl_approve',
     ];
 
