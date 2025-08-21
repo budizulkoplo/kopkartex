@@ -31,7 +31,7 @@ class BelanjaController extends BaseMobileController
         return view('mobile.belanja.toko', compact('user', 'tokoList'));
     }
 
-    public function produk($unitId)
+    public function produk(Request $request, $unitId)
     {
         $user = Auth::user();
 
@@ -42,14 +42,23 @@ class BelanjaController extends BaseMobileController
         // Simpan unit_id di session supaya bisa dipakai saat checkout
         session(['cart_unit_id' => $unitId]);
 
-        $produkList = DB::table('barang as b')
+        $query = DB::table('barang as b')
             ->join('stok_unit as su', 'su.barang_id', '=', 'b.id')
             ->where('su.unit_id', $unitId)
             ->whereNull('b.deleted_at')
             ->whereNull('su.deleted_at')
-            ->select('b.id','b.kode_barang','b.nama_barang','b.kategori','b.satuan','b.harga_jual','su.stok','b.img')
-            ->orderBy('b.nama_barang')
-            ->get();
+            ->select('b.id','b.kode_barang','b.nama_barang','b.kategori','b.satuan','b.harga_jual','su.stok','b.img');
+
+        // Filter pencarian jika ada parameter q
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function($sub) use ($q) {
+                $sub->where('b.nama_barang', 'like', "%$q%")
+                    ->orWhere('b.kode_barang', 'like', "%$q%");
+            });
+        }
+
+        $produkList = $query->orderBy('b.nama_barang')->get();
 
         $toko = DB::table('unit')->where('id', $unitId)->first();
 

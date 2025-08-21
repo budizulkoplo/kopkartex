@@ -24,6 +24,9 @@ use App\Http\Controllers\StockOpnameController;
 use App\Http\Controllers\JasaBengkelController;
 use App\Http\Controllers\TransaksiBengkelController;
 
+//LAPORAN
+use App\Http\Controllers\LaporanController;
+
 // Bagian Mobile UI
 use App\Http\Controllers\Mobile\DashboardController;
 use App\Http\Controllers\Mobile\BelanjaController;
@@ -219,6 +222,25 @@ Route::prefix('doc')->middleware(['auth', 'verified'])->group(function () {
 Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [ReturController::class, 'index'])->name('retur.form');
         return response()->json(request()->menu);
+});
+
+//LAPORAN
+Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/stok-barang', [LaporanController::class, 'stokBarang'])->name('laporan.stokbarang');
+    Route::get('/stok-barang/data', [LaporanController::class, 'stokBarangData'])->name('laporan.stokbarang.data');
+
+    Route::get('/penjualan', [LaporanController::class, 'penjualan'])->name('laporan.penjualan');
+    Route::get('/penjualan/data', [LaporanController::class, 'penjualanData'])->name('laporan.penjualan.data');
+
+    Route::get('/penerimaan', [LaporanController::class, 'penerimaanLaporan'])->name('laporan.penerimaan');
+    Route::get('/penerimaan/data', [LaporanController::class, 'penerimaanData'])->name('laporan.penerimaan.data');
+
+    Route::get('/retur', [LaporanController::class, 'retur'])->name('laporan.retur');
+    Route::get('/retur/data', [LaporanController::class, 'returData'])->name('laporan.retur.data');
+
+    Route::get('/stok-opname', [LaporanController::class, 'stokOpname'])->name('laporan.stokopname');
+    Route::get('/stok-opname/data', [LaporanController::class, 'stokOpnameData'])->name('laporan.stokopname.data');
+
 });
 
 // UI untuk mobile end users
