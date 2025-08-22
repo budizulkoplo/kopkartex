@@ -118,13 +118,20 @@ class PenjualanController extends Controller
             $penjualan->type_order = 'offline';
             
             if($request->metodebayar == 'cicilan'){
+                $bunga = KonfigBunga::select('bunga_barang')->first();
                 $penjualan->status = 'hutang';
                 $penjualan->tenor = $request->jmlcicilan;
                 $user = User::find($request->idcustomer);
-                if($user->limit_hutang > $request->grandtotal){
-                    $penjualan->VarCicilan = 1;
+                $result = DB::select("SELECT hitung_cicilan(?, ?, ?, ?) AS jumlah", [$request->grandtotal, $bunga->bunga_barang, $request->jmlcicilan, 1]);
+                $cicilanpertama = $result[0]->jumlah;
+
+                $batas = 0.35 * $user->gaji; // 35% dari gaji
+                if ($cicilanpertama < $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
+                    $penjualan->VarCicilan = 0; //Cicilan memenuhi syarat (di bawah 35% gaji)
+                } else {
+                    $penjualan->VarCicilan = 1; //Cicilan terlalu besar (melebihi 35% gaji)
                 }
-                $bunga = KonfigBunga::select('bunga_barang')->first();
+
                 $penjualan->bunga_barang = $bunga->bunga_barang;
                 $penjualan->status_ambil = 'pending';
                 $penjualan->kembali = 0;
