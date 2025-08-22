@@ -32,6 +32,7 @@ use App\Http\Controllers\Mobile\DashboardController;
 use App\Http\Controllers\Mobile\BelanjaController;
 use App\Http\Controllers\Mobile\MobileProfileController;
 use App\Http\Controllers\Mobile\MobilePinjamanController;
+use App\Http\Controllers\Mobile\MobileStokOpnameController;
 
 Route::get('/login', [AuthenticatedSessionController::class, 'create']);
 // Route::get('/', function () {
@@ -283,6 +284,21 @@ Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function (
 
 Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function () {
     Route::get('/ppob', [MobileController::class, 'ppob'])->name('ppob');
+});
+
+
+Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function () {
+    // Halaman scan opname
+    Route::get('/stokopname', [MobileStokOpnameController::class, 'index'])->name('stokopname.index');
+
+    // Hasil scan barcode (post)
+    Route::post('/stokopname/scan', [MobileStokOpnameController::class, 'scanResult'])->name('stokopname.scan');
+
+    // Form opname barang hasil scan
+    Route::get('/stokopname/create/{id}', [MobileStokOpnameController::class, 'create'])->name('stokopname.create');
+
+    // Simpan opname
+    Route::post('/stokopname/store', [MobileStokOpnameController::class, 'store'])->name('stokopname.store');
 });
 
 
