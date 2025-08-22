@@ -56,22 +56,14 @@ class StockOpnameController extends Controller
 
         DB::beginTransaction();
         try {
-            // Cek apakah sudah ada stock opname bulan ini
-            $exists = DB::table('stock_opname')
+            // 1. Hapus data lama (lebih efisien)
+            DB::table('stock_opname')
                 ->where('id_unit', $unitId)
                 ->whereBetween('tgl_opname', [$startDate, $endDate])
-                ->exists();
+                ->delete();
 
-            if ($exists) {
-                // Hapus data lama
-                DB::table('stock_opname')
-                    ->where('id_unit', $unitId)
-                    ->whereBetween('tgl_opname', [$startDate, $endDate])
-                    ->delete();
-            }
-
-            // Ambil semua barang (LEFT JOIN stok_unit)
-            $barangList = DB::table('barang')
+            // 2. Query semua barang + stok unit
+            $barangQuery = DB::table('barang')
                 ->leftJoin('stok_unit', function ($join) use ($unitId) {
                     $join->on('barang.id', '=', 'stok_unit.barang_id')
                         ->where('stok_unit.unit_id', '=', $unitId)
@@ -81,29 +73,37 @@ class StockOpnameController extends Controller
                     'barang.id as id_barang',
                     'barang.kode_barang',
                     DB::raw('IFNULL(stok_unit.stok, 0) as stok_unit')
-                )
-                ->get();
+                );
 
-            foreach ($barangList as $barang) {
-                DB::table('stock_opname')->insert([
-                    'tgl_opname'   => $tglOpname,
-                    'id_unit'      => $unitId,
-                    'id_barang'    => $barang->id_barang,
-                    'kode_barang'  => $barang->kode_barang,
-                    'stock_sistem' => $barang->stok_unit,
-                    'stock_fisik'  => null,
-                    'keterangan'   => null,
-                    'user'         => $userId,
-                    'status'       => 'pending',
-                    'created_at'   => now(),
-                    'updated_at'   => now(),
-                ]);
-            }
+            // 3. Proses per chunk agar hemat memory & lebih cepat
+            $barangQuery->orderBy('barang.id')->chunk(1000, function ($barangList) use ($tglOpname, $unitId, $userId) {
+                $dataInsert = [];
+                foreach ($barangList as $barang) {
+                    $dataInsert[] = [
+                        'tgl_opname'   => $tglOpname,
+                        'id_unit'      => $unitId,
+                        'id_barang'    => $barang->id_barang,
+                        'kode_barang'  => $barang->kode_barang,
+                        'stock_sistem' => $barang->stok_unit,
+                        'stock_fisik'  => null,
+                        'keterangan'   => null,
+                        'user'         => $userId,
+                        'status'       => 'pending',
+                        'created_at'   => now(),
+                        'updated_at'   => now(),
+                    ];
+                }
+
+                // Sekali insert 1000 row
+                if (!empty($dataInsert)) {
+                    DB::table('stock_opname')->insert($dataInsert);
+                }
+            });
 
             DB::commit();
             return redirect()->route('stockopname.index', ['bulan' => $bulanOpname])
                 ->with('success', 'Stock opname bulan ' . $bulanOpname . ' berhasil dimulai.');
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->withErrors(['error' => $e->getMessage()]);
         }
