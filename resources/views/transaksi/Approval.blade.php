@@ -4,7 +4,7 @@
         <div class="container-fluid"> <!--begin::Row-->
             <div class="row">
                 <div class="col-sm-6">
-                    <h3 class="mb-0">Persetujuan Hutang</h3>
+                    <h3 class="mb-0">Persetujuan Pinjaman</h3>
                 </div>
             </div> <!--end::Row-->
         </div> <!--end::Container-->
@@ -28,7 +28,6 @@
                         </div> <!--end::Header--> <!--begin::Body-->
                         <div class="card-body">
                             <div class="row">
-                                <h3>Pinjaman</h3>
                                 <table id="tbpinjaman" class="table table-sm table-bordered" style="width: 100%; font-size: small;">
                                     <thead>
                                         <tr>
@@ -59,7 +58,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+                <h5 class="modal-title" id="exampleModalLabel">Detail Cicilan</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -69,10 +68,6 @@
                     </thead>
                     <tbody></tbody>
                 </table>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary">Save changes</button>
             </div>
             </div>
         </div>
