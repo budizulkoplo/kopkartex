@@ -55,7 +55,28 @@
             </div>
         </div>
     </div>
-    
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-sm" id="tbcicilan">
+                    <thead>
+                        <tr><th>Cicilan</th><th>Pokok</th><th>Bunga</th><th>Total</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary">Save changes</button>
+            </div>
+            </div>
+        </div>
+    </div>
     <x-slot name="csscustom">
     </x-slot>
     <x-slot name="jscustom">
@@ -94,7 +115,9 @@
                     { "data": "tgl_pengajuan","orderable": false },
                     { "data": "nomor_anggota","orderable": false},
                     { "data": "UserName","orderable": false},
-                    { "data": "nominal_pengajuan","orderable": false},
+                    { "data": "nominal_pengajuan","orderable": false,
+                        render: function (data, type, row, meta) {return formatRupiah(data,'');}
+                    },
                     { "data": "jaminan","orderable": false},
                     { "data": "tenor","orderable": false},
                     { "data": "bunga_pinjaman","orderable": false},
@@ -199,12 +222,83 @@
                     },
                     { "data": null,"orderable": false,
                         render: function (data, type, row, meta) {
-                            let str= `<span class="badge rounded-pill btn bg-warning editcel" data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="dtl('${row.id}')"><i class="fa-solid fa-circle-info"></i></span>`;
+                            let batal =``;
+                            if(row.approval3 == 0)
+                            batal = `<button type="button" class="btn btn-danger delcel" onclick="batal(${row.id})"><i class="fa-solid fa-trash"></i></button>`;
+
+                            let str= `
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-info editcel" data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="dtl(${row.id})"><i class="fa-solid fa-circle-info"></i></button>
+                            ${batal}
+                                    </div>`;
                             return str;
                         }
                     }
                 ],
             });
+            function formatRupiah(angka, prefix = "Rp") {
+                 // Pastikan angka berupa number (double/float)
+                if (typeof angka !== "number") {
+                    angka = parseFloat(angka);
+                    if (isNaN(angka)) return "";
+                }
+
+                // Format ke locale Indonesia
+                return angka.toLocaleString("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                    minimumFractionDigits: 0 // kalau mau tanpa ,00
+                }).replace("Rp", prefix);
+            }
+            function dtl(id){
+                axios.get('{{ route('app.dtlcicilan') }}', { params: {id: id} })
+                .then(response => {
+                    let str = ``;
+                    response.data.forEach(element => {
+                        str +=`<tr><td>${element.cicilan_ke}</td><td>${formatRupiah(element.pokok,'')}</td><td>${formatRupiah(element.bunga,'')}</td><td>${formatRupiah(element.jumlah,'')}</td></tr>`;
+                    });
+                    $('#tbcicilan tbody').html(str);
+                })
+                .catch(error => {
+                    Swal.showValidationMessage(
+                        `Request failed: ${error.response?.data?.message || error.message}`
+                    );
+                });
+            }
+            function batal(id){
+                Swal.fire({
+                    title: "Batalkan pinjaman",
+                    input: "text",
+                    inputAttributes: {
+                        autocapitalize: "off"
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: "Batalkan sekarang",
+                    showLoaderOnConfirm: true,
+                    inputPlaceholder: "alasan",
+                    preConfirm: (talasan) => {
+                        return axios.delete('{{ route('app.batal') }}', {
+                            data: {
+                                alasan: talasan,
+                                id: id
+                            }
+                        })
+                        .then(response => {
+                            return response.data; // supaya Swal resolve
+                        })
+                        .catch(error => {
+                            Swal.showValidationMessage(
+                                `Request failed: ${error.response?.data?.message || error.message}`
+                            );
+                        });
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire("Berhasil!", "Pinjaman sudah dibatalkan", "success");
+                        tbpinjaman.ajax.reload(null, false);
+                    }
+                });
+            }
             //function chkneed
             function approval(obj,tcode,act,jenis){
                 let ckecked = obj.checked
@@ -231,7 +325,7 @@
                             success: function(response) {
                                 if(response){
                                     if(jenis == 'penjualan'){
-                                        table.ajax.reload(null, false);
+                                        //table.ajax.reload(null, false);
                                     }else{
                                         tbpinjaman.ajax.reload(null, false);
                                     }
@@ -272,7 +366,7 @@
                     window.de = end.format('YYYY-MM-DD');
                 });
                 $('#txtperiod').on('change',function(){
-                    table.ajax.reload(null, false);
+                    //table.ajax.reload(null, false);
                     tbpinjaman.ajax.reload(null, false);
                 });
             });

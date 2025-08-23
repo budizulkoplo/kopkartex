@@ -117,6 +117,8 @@ Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admi
     Route::get('/', [ApprovalController::class, 'index'])->name('app.list');
     Route::get('/gethutang', [ApprovalController::class, 'getHutang'])->name('app.gethutang');
     Route::put('/setapp', [ApprovalController::class, 'setapproval'])->name('app.set');
+    Route::delete('/batal', [ApprovalController::class, 'Batal'])->name('app.batal');
+    Route::get('/dtlcicilan', [ApprovalController::class, 'CicilanDtl'])->name('app.dtlcicilan');
     
 });
 Route::prefix('bengkel')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
