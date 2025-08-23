@@ -44,6 +44,7 @@
     @if (isset($csscustom))
         {{ $csscustom }}
     @endif
+    @vite(['resources/js/app.js'])
     <!-- Scripts -->
     {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
 </head> <!--end::Head--> <!--begin::Body-->
