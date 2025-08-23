@@ -37,6 +37,7 @@
 <script src="{{ asset('plugins/webdatarocks-1.4.19/webdatarocks.js') }}"></script>
 <script src="{{ asset('js/bootstrap3-typeahead.min.js') }}"></script>
 <script src="{{ asset('plugins/sweetalert2/sweetalert2.all.min.js') }}"></script>
+<script src="{{ asset('plugins/jstree/jstree.min.js') }}"></script>
 <script>
         // Example starter JavaScript for disabling form submissions if there are invalid fields
         (function () {
