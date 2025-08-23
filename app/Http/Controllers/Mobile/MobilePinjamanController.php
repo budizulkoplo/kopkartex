@@ -46,12 +46,12 @@ class MobilePinjamanController extends BaseMobileController
         $result = DB::select("SELECT hitung_cicilan(?, ?, ?, ?) AS jumlah", [$request->nominal_pengajuan, $bunga->bunga_pinjaman, $request->tenor, 1]);
         $cicilanpertama = $result[0]->jumlah;
 
-        $cekaktif = PinjamanHdr::join('pinjaman_dtl','pinjaman_dtl.id_pinjaman','pinjaman_hdr.id_pinjaman')
+        $totalcicilan = PinjamanHdr::join('pinjaman_dtl','pinjaman_dtl.id_pinjaman','pinjaman_hdr.id_pinjaman')
         ->where(['pinjaman_hdr.nomor_anggota'=>$user->nomor_anggota,'pinjaman_dtl.status'=>'hutang'])
         ->sum('pinjaman_dtl.total_cicilan');
 
         $batas = 0.35 * $user->gaji; // 35% dari gaji
-        if (($cekaktif->total_cicilan+$cicilanpertama) < $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
+        if (($totalcicilan+$cicilanpertama) < $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
             $pinjaman->VarCicilan = 0; //Cicilan memenuhi syarat (di bawah 35% gaji)
         } else {
             $pinjaman->VarCicilan = 1; //Cicilan terlalu besar (melebihi 35% gaji)
