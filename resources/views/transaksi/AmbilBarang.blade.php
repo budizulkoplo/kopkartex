@@ -168,6 +168,7 @@
                                 <td>${value.qty}</td>
                                 <td>${value.harga}</td>
                                 <td>${value.qty*value.harga}</td>
+                                <td><button type="button" class="btn btn-sm btn-danger"><i class="fa-solid fa-trash"></i></button></td>
                                 </tr>`;
                             cn++;
                             grand +=value.qty*value.harga;
