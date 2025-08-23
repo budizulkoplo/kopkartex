@@ -178,7 +178,11 @@
                         <tr><th colspan="5" class="text-end">SubTotal</th><th>`+response.hdr.subtotal+`</th></tr>
                         <tr><th colspan="5" class="text-end">Diskon</th><th>`+response.hdr.diskon+`%</th></tr>
                         <tr><th colspan="5" class="text-end">GrandTotal</th><th>`+response.hdr.grandtotal+`</th></tr>
-                        <tr><th colspan="6" class="text-end"><button type="button" class="btn btn-success" onclick="ambil(`+response.hdr.id+`)">Ambil&Bayar</button></th></tr>
+                        <tr><th colspan="6" class="text-end">
+                            <button type="button" class="btn btn-warning"><i class="fas fa-box"></i> Diproses</button>
+                            <button type="button" class="btn btn-warning"><i class="fas fa-tools"></i> Siap diambil</button>
+                            <button type="button" class="btn btn-success" onclick="ambil(`+response.hdr.id+`)"><i class="fas fa-truck"></i> Ambil&Bayar</button>
+                        </th></tr>
                         `);
                         loader($('#exampleModal'),false);
                     },
