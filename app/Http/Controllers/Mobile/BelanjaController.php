@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\Mobile;
 
 use App\Http\Controllers\Controller;
+use App\Models\KonfigBunga;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use App\Models\Penjualan;
+use App\Models\PenjualanCicil;
 use App\Models\PenjualanDetail;
 use App\Models\StokUnit;
+use App\Models\User;
 
 class BelanjaController extends BaseMobileController
 
@@ -142,7 +145,12 @@ class BelanjaController extends BaseMobileController
         }
         return view('mobile.belanja.checkout', compact('cart'));
     }
-
+    function genCode(){
+        $total = Penjualan::withTrashed()->whereDate('created_at', date("Y-m-d"))->count();
+        $nomorUrut = $total + 1;
+        $newcode='INV-'.date("ymd").str_pad($nomorUrut, 3, '0', STR_PAD_LEFT);
+        return $newcode;
+    }
     public function processCheckout(Request $request)
     {
         $cart = session()->get('cart', []);
@@ -158,7 +166,7 @@ class BelanjaController extends BaseMobileController
             $grandtotal = $subtotal;
 
             $penjualan = new Penjualan;
-            $penjualan->nomor_invoice = 'INV-' . date('YmdHis');
+            $penjualan->nomor_invoice = $this->genCode();
             $penjualan->tanggal = Carbon::now();
             $penjualan->subtotal = $subtotal;
             $penjualan->grandtotal = $grandtotal;
@@ -166,21 +174,35 @@ class BelanjaController extends BaseMobileController
             $penjualan->anggota_id = $request->anggota_id ?? '';
             $penjualan->customer = $request->customer ?? 'Umum';
             $penjualan->diskon = 0;
-            $penjualan->dibayar = 0;
-            $penjualan->kembali = 0;
             $penjualan->unit_id = $unitId;
             $penjualan->note = $request->note;
             $penjualan->created_user = Auth::user()->id;
             $penjualan->type_order = 'mobile';
-            $penjualan->status_ambil = 'pending';
+            $penjualan->status_ambil = 'pesan';
             $penjualan->metode_bayar = $request->metode_bayar;
-
             if ($request->metode_bayar == 'cicilan') {
+                $tenor=$request->jmlcicilan ?? 1;
+                $bunga = KonfigBunga::select('bunga_barang')->first();
                 $penjualan->status = 'hutang';
-                $penjualan->tenor = $request->jmlcicilan ?? 1;
+                $penjualan->tenor = $tenor;
+                $result = DB::select("SELECT hitung_cicilan(?, ?, ?, ?) AS jumlah", [$grandtotal, $bunga->bunga_barang, $tenor, 1]);
+                $cicilanpertama = $result[0]->jumlah;
+
+                $totalcicilan = PenjualanCicil::where(['anggota_id'=>Auth::user()->id,'status'=>'hutang'])->sum('total_cicilan');
+
+                $batas = 0.35 * Auth::user()->gaji; // 35% dari gaji
+                if (($totalcicilan+$cicilanpertama) > $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
+                    return response()->json('Tidak dapat diproses, Melebihi batas limit',500);
+                }
+
+                $penjualan->bunga_barang = $bunga->bunga_barang;
+                $penjualan->kembali = 0;
+                $penjualan->dibayar = 0;
             } else {
-                $penjualan->status = 'pending';
+                $penjualan->status = 'lunas';
                 $penjualan->tenor = 0;
+                $penjualan->kembali = 0;
+                $penjualan->dibayar = 0;
             }
 
             $penjualan->save();
@@ -192,6 +214,23 @@ class BelanjaController extends BaseMobileController
                 $detail->qty = $item['qty'];
                 $detail->harga = $item['harga'];
                 $detail->save();
+            }
+
+            if($request->metodebayar == 'cicilan'){
+                $tenor=$request->jmlcicilan ?? 1;
+                for ($i = 1; $i <= $request->jmlcicilan; $i++) {
+                    $pokoktotal = DB::select("SELECT hitung_pokok(?, ?) AS jumlah", [$grandtotal, $tenor]);
+                    $bungatotal = DB::select("SELECT hitung_bunga(?, ?, ?, ?) AS jumlah", [$grandtotal, $bunga->bunga_barang, $tenor, $i]);
+                    $cicilan = new PenjualanCicil();
+                    $cicilan->penjualan_id = $penjualan->id;
+                    $cicilan->cicilan = $i;
+                    $cicilan->anggota_id = Auth::user()->id;
+                    $cicilan->pokok = $pokoktotal[0]->jumlah;
+                    $cicilan->bunga = $bungatotal[0]->jumlah;
+                    $cicilan->total_cicilan = $pokoktotal[0]->jumlah+$bungatotal[0]->jumlah;
+                    $cicilan->status = 'hutang';
+                    $cicilan->save();
+                }
             }
 
             DB::commit();
