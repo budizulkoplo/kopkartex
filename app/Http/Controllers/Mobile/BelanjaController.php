@@ -216,6 +216,23 @@ class BelanjaController extends BaseMobileController
                 $detail->save();
             }
 
+            if($request->metodebayar == 'cicilan'){
+                $tenor=$request->jmlcicilan ?? 1;
+                for ($i = 1; $i <= $request->jmlcicilan; $i++) {
+                    $pokoktotal = DB::select("SELECT hitung_pokok(?, ?) AS jumlah", [$grandtotal, $tenor]);
+                    $bungatotal = DB::select("SELECT hitung_bunga(?, ?, ?, ?) AS jumlah", [$grandtotal, $bunga->bunga_barang, $tenor, $i]);
+                    $cicilan = new PenjualanCicil();
+                    $cicilan->penjualan_id = $penjualan->id;
+                    $cicilan->cicilan = $i;
+                    $cicilan->anggota_id = Auth::user()->id;
+                    $cicilan->pokok = $pokoktotal[0]->jumlah;
+                    $cicilan->bunga = $bungatotal[0]->jumlah;
+                    $cicilan->total_cicilan = $pokoktotal[0]->jumlah+$bungatotal[0]->jumlah;
+                    $cicilan->status = 'hutang';
+                    $cicilan->save();
+                }
+            }
+
             DB::commit();
             session()->forget('cart');
             session()->forget('cart_unit_id');
