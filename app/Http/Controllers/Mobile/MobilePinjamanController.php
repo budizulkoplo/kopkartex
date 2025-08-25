@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Mobile;
 
 use App\Http\Controllers\Controller;
 use App\Models\KonfigBunga;
+use App\Models\PinjamanDtl;
 use Illuminate\Http\Request;
 use App\Models\PinjamanHdr;
 use App\Models\User;
@@ -46,9 +47,7 @@ class MobilePinjamanController extends BaseMobileController
         $result = DB::select("SELECT hitung_cicilan(?, ?, ?, ?) AS jumlah", [$request->nominal_pengajuan, $bunga->bunga_pinjaman, $request->tenor, 1]);
         $cicilanpertama = $result[0]->jumlah;
 
-        $totalcicilan = PinjamanHdr::join('pinjaman_dtl','pinjaman_dtl.id_pinjaman','pinjaman_hdr.id_pinjaman')
-        ->where(['pinjaman_hdr.nomor_anggota'=>$user->nomor_anggota,'pinjaman_dtl.status'=>'hutang'])
-        ->sum('pinjaman_dtl.total_cicilan');
+        $totalcicilan = PinjamanDtl::where(['nomor_anggota'=>$user->nomor_anggota,'status'=>'hutang'])->sum('total_cicilan');
 
         $batas = 0.35 * $user->gaji; // 35% dari gaji
         if (($totalcicilan+$cicilanpertama) < $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos

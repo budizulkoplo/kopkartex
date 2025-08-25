@@ -124,6 +124,7 @@ class ApprovalController extends Controller
                     $cicilan = new PinjamanDtl();
                     $cicilan->id_pinjaman = $pinjaman->id_pinjaman;
                     $cicilan->cicilan = $i;
+                    $cicilan->nomor_anggota = $pinjaman->nomor_anggota;
                     $cicilan->pokok = $pokok[0]->jumlah;
                     $cicilan->bunga = $bunga[0]->jumlah;
                     $cicilan->total_cicilan = $pokok[0]->jumlah+$bunga[0]->jumlah;
