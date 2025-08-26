@@ -17,12 +17,24 @@
                         <div class="card-header pt-1 pb-1">
                             <div class="card-title">
                                 <div class="row">
-                                <div class="col-md-auto pe-1">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text" id="inputGroup-sizing-sm">Tgl.Pembelian</span>
-                                        <input type="text" id="txtperiod" class="form-control">
+                                    <div class="col-md-auto pe-1">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text" id="inputGroup-sizing-sm">Tgl.Pembelian</span>
+                                            <input type="text" id="txtperiod" class="form-control">
+                                        </div>
                                     </div>
-                                </div>
+                                    <div class="col-md-auto pe-1">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text" id="inputGroup-sizing-sm">Status</span>
+                                            <select name="" class="form-control form-control-sm" id="txtstatus">
+                                                <option value="all">All</option>
+                                                <option value="pesan">dipesan</option>
+                                                <option value="proses">proses</option>
+                                                <option value="ready">siap</option>
+                                                <option value="finish">selesai</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div> <!--end::Header--> <!--begin::Body-->
@@ -104,7 +116,7 @@
                 ordering: false,"responsive": true,"processing": true,
                 "ajax": {
                     "url": "{{ route('ambil.getPenjualan') }}",
-                    "data":{startdate : function() { return window.ds},enddate : function() { return window.de}},
+                    "data":{startdate : function() { return window.ds},enddate : function() { return window.de},status:function(){return $('#txtstatus').val()}},
                     "type": "GET"
                 },
                 "columns": 
@@ -153,6 +165,29 @@
                     }
                 });
             }
+            function delitem(iddtl,idpenjualan){
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: "You won't be able to revert this!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#3085d6",
+                    cancelButtonColor: "#d33",
+                    confirmButtonText: "Yes, delete it!"
+                    }).then((result) => {
+                    if (result.isConfirmed) {
+                        axios.delete('{{ route('ambil.delitem') }}', {data: { id: iddtl,penjualan: idpenjualan }})
+                        .then(response => {
+                            Swal.fire({title: "Deleted!",text: "Your file has been deleted.",icon: "success"});
+                            dtl(idpenjualan);
+                            table.ajax.reload(null,false);
+                        })
+                        .catch(error => {
+                            Swal.fire({icon: 'error',title: 'Gagal',text: error});
+                        });
+                    }
+                });
+            }
             function dtl(idjual){
                 $.ajax({
                     type: 'GET',
@@ -168,7 +203,7 @@
                                 <td>${value.qty}</td>
                                 <td>${value.harga}</td>
                                 <td>${value.qty*value.harga}</td>
-                                <td><button type="button" class="btn btn-sm btn-danger"><i class="fa-solid fa-trash"></i></button></td>
+                                <td><button type="button" class="btn btn-sm btn-danger" onclick="delitem(${value.id},${value.penjualan_id})"><i class="fa-solid fa-trash"></i></button></td>
                                 </tr>`;
                             cn++;
                             grand +=value.qty*value.harga;
@@ -202,7 +237,7 @@
                     window.de = end.format('YYYY-MM-DD');
                 });
                 $('#txtperiod').on('change',function(){
-                    table.ajax.reload();
+                    table.ajax.reload(null,false);
                 });
             });
         </script>

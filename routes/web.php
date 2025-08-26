@@ -62,6 +62,7 @@ Route::prefix('ambilbarang')->middleware(['auth', 'verified', 'role:superadmin|a
     Route::get('/getPenjualan', [AmbilBarangController::class, 'getPenjualan'])->name('ambil.getPenjualan');
     Route::get('/getPenjualanDtl/{id}', [AmbilBarangController::class, 'getPenjualanDtl'])->name('ambil.getPenjualanDtl');
     Route::put('/AmbilBarang', [AmbilBarangController::class, 'AmbilBarang'])->name('ambil.AmbilBarang');
+    Route::delete('/delitem', [AmbilBarangController::class, 'DeleteItem'])->name('ambil.delitem');
 });
 Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.index'); // <- tampilan daftar barang
