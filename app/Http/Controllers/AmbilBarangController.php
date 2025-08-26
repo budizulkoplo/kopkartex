@@ -18,9 +18,17 @@ class AmbilBarangController extends Controller
     }
     public function getPenjualan(Request $request)
     {
-        $jual = Penjualan::where(['type_order'=>'mobile','status_ambil'=>'pending','unit_id'=>Auth::user()->unit_kerja])->whereBetween(DB::raw('DATE(tanggal)'), [$request->startdate, $request->enddate]);
+        $jual = Penjualan::where(['type_order'=>'mobile','unit_id'=>Auth::user()->unit_kerja])->whereBetween(DB::raw('DATE(tanggal)'), [$request->startdate, $request->enddate]);
+        if($request->status != 'all'){
+            $jual->where('status_ambil',$request->status);
+        }
         return DataTables::of($jual)->addIndexColumn()->make(true);
         
+    }
+    public function DeleteItem(Request $request){
+        PenjualanDetail::find($request->id)->delete();
+        DB::statement("CALL RecalcPenjualan(?)", [$request->penjualan]);
+        return response()->json('success', 200);
     }
     public function getPenjualanDtl($idjual)
     {
