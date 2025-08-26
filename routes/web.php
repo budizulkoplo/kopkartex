@@ -34,14 +34,23 @@ use App\Http\Controllers\Mobile\MobileProfileController;
 use App\Http\Controllers\Mobile\MobilePinjamanController;
 
 Route::get('/login', [AuthenticatedSessionController::class, 'create']);
-// Route::get('/', function () {
-//     return view('welcome');
-// });
-
 
 Route::get('/', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified', 'global.app'])->name('dashboard');
+    return redirect()->route('login');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->middleware('global.app:admin')->name('dashboard');
+
+    Route::get('/home', function () {
+        return view('home');
+    })->middleware('global.app:user')->name('mobile.home');
+});
+
+Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
+    ->name('logout');
 
 Route::middleware('auth', 'global.app')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
