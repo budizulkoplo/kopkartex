@@ -8,7 +8,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class StockOpnameDTL extends Model
 {
-    use HasFactory,SoftDeletes;
     protected $table = 'stock_opname_dtl';
-    protected $primaryKey = 'id';
+
+    protected $fillable = [
+        'opnameid',
+        'id_barang',
+        'qty',
+        'expired_date',
+    ];
 }

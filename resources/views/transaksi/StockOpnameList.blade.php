@@ -52,6 +52,10 @@
                                 </button>
                             </div>
                         </form>
+
+                        <a href="{{ route('mobile.stokopname.index') }}" class="btn btn-primary btn-sm d-flex align-items-center">
+                            <i class="bi bi-upc-scan me-1"></i> Scan Opname (Mobile)
+                        </a>
                     </div>
 
                     {{-- Tabel Barang --}}
