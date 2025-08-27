@@ -198,7 +198,8 @@ class LaporanController extends Controller
             $dates[] = $row;
         }
 
-        return response()->json(['data' => $dates]);
+        // ubah jadi DataTables
+        return DataTables::of($dates)->make(true);
     }
 
     public function retur(Request $request)
