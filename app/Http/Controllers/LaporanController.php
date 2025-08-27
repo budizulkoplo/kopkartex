@@ -64,13 +64,13 @@ class LaporanController extends Controller
 
     public function stokBarang()
     {
-        $unit = DB::table('unit')->whereNull('deleted_at')->pluck('nama_unit', 'id');
+        $units = DB::table('unit')->whereNull('deleted_at')->pluck('nama_unit', 'id');
 
         $data = DB::table('barang as b')
             ->select(
                 'b.kode_barang',
                 'b.nama_barang',
-                ...$unit->map(function ($nama, $id) {
+                ...$units->map(function ($nama, $id) {
                     return DB::raw("SUM(CASE WHEN su.unit_id = $id THEN su.stok ELSE 0 END) as `$nama`");
                 })->toArray()
             )
@@ -81,7 +81,7 @@ class LaporanController extends Controller
             ->get();
 
         return view('laporan.stok_barang', [
-            'units' => $unit,
+            'units' => $units,
             'data'  => $data,
         ]);
     }
@@ -146,13 +146,13 @@ class LaporanController extends Controller
         }
 
         // Ambil unit hanya yang jenis toko & bengkel
-        $unit = DB::table('unit')
+        $units = DB::table('unit')
             ->whereNull('deleted_at')
             ->whereIn('jenis', ['toko', 'bengkel'])
             ->pluck('nama_unit', 'id');
 
         return view('laporan.penjualan', [
-            'unit'      => $unit,
+            'units'      => $units,
             'bulan'      => $bulan,
             'start_date' => $start_date,
             'end_date'   => $end_date,
@@ -170,7 +170,7 @@ class LaporanController extends Controller
         }
 
         // Ambil unit hanya yang jenis toko & bengkel
-        $unit = DB::table('unit')
+        $units = DB::table('unit')
             ->whereNull('deleted_at')
             ->whereIn('jenis', ['toko', 'bengkel'])
             ->pluck('nama_unit', 'id');
@@ -185,7 +185,7 @@ class LaporanController extends Controller
         foreach ($period as $date) {
             $row = ['tanggal' => $date->format('Y-m-d')];
 
-            foreach ($unit as $unit_id => $unit_name) {
+            foreach ($units as $unit_id => $unit_name) {
                 $total = DB::table('penjualan')
                     ->whereDate('tanggal', $date->format('Y-m-d'))
                     ->where('unit_id', $unit_id)
@@ -254,7 +254,7 @@ class LaporanController extends Controller
         return response()->json(['data' => array_values($grouped)]);
     }
 
-    public function stokOpname(Request $request)
+     public function stokOpname(Request $request)
     {
         $bulan = $request->get('bulan', date('Y-m'));
         $unit  = $request->get('unit', 'all');

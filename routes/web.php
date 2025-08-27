@@ -32,16 +32,26 @@ use App\Http\Controllers\Mobile\DashboardController;
 use App\Http\Controllers\Mobile\BelanjaController;
 use App\Http\Controllers\Mobile\MobileProfileController;
 use App\Http\Controllers\Mobile\MobilePinjamanController;
+use App\Http\Controllers\Mobile\MobileStokOpnameController;
 
 Route::get('/login', [AuthenticatedSessionController::class, 'create']);
-// Route::get('/', function () {
-//     return view('welcome');
-// });
-
 
 Route::get('/', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified', 'global.app'])->name('dashboard');
+    return redirect()->route('login');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->middleware('global.app:admin')->name('dashboard');
+
+    Route::get('/home', function () {
+        return view('home');
+    })->middleware('global.app:user')->name('mobile.home');
+});
+
+Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
+    ->name('logout');
 
 Route::middleware('auth', 'global.app')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -286,6 +296,21 @@ Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function (
 
 Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function () {
     Route::get('/ppob', [MobileController::class, 'ppob'])->name('ppob');
+});
+
+
+Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function () {
+    // Halaman scan opname
+    Route::get('/stokopname', [MobileStokOpnameController::class, 'index'])->name('stokopname.index');
+
+    // Hasil scan barcode (post)
+    Route::post('/stokopname/scan', [MobileStokOpnameController::class, 'scanResult'])->name('stokopname.scan');
+
+    // Form opname barang hasil scan
+    Route::get('/stokopname/create/{id}', [MobileStokOpnameController::class, 'create'])->name('stokopname.create');
+
+    // Simpan opname
+    Route::post('/stokopname/store', [MobileStokOpnameController::class, 'store'])->name('stokopname.store');
 });
 
 

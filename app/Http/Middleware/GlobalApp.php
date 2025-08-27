@@ -32,13 +32,31 @@ class GlobalApp
         } 
         return $branch;
     }
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, $role = null): Response
     {
+        $user = Auth::user();
+
+        // Redirect jika user belum login
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        // Cek role jika parameter diberikan
+        if ($role && $user->ui !== $role) {
+            // Redirect ke halaman sesuai role
+            return match ($user->ui) {
+                'admin' => redirect()->route('dashboard'),
+                'user' => redirect()->route('mobile.home'),
+                default => redirect()->route('login'),
+            };
+        }
+
+        // Build menu
         $menu = Menu::orderBy('seq', 'asc')->get();
         $request->merge([
             'menu' => $this->buildTree($menu),
-            
-            ]);
+        ]);
+
         return $next($request);
     }
 }
