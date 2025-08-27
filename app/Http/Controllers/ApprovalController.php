@@ -19,6 +19,34 @@ class ApprovalController extends Controller
     {
         return view('transaksi.Approval', []);
     }
+    public function CicilanDtl(Request $request)
+    {
+        $pinjam = PinjamanHdr::find($request->id);
+        $sql = "
+        WITH RECURSIVE seq AS (
+            SELECT 1 AS n
+            UNION ALL
+            SELECT n+1 FROM seq WHERE n < {$pinjam->tenor}
+        )
+        SELECT 
+            n AS cicilan_ke,
+            hitung_pokok({$pinjam->nominal_pengajuan}, {$pinjam->tenor}) AS pokok,
+            hitung_bunga({$pinjam->nominal_pengajuan}, {$pinjam->bunga_pinjaman}, {$pinjam->tenor}, n) AS bunga,
+            hitung_cicilan({$pinjam->nominal_pengajuan}, {$pinjam->bunga_pinjaman}, {$pinjam->tenor}, n) AS jumlah
+        FROM seq;
+        ";
+        $result = DB::select($sql);
+        return response()->json($result);
+    }
+    public function Batal(Request $request)
+    {
+        $batal = PinjamanHdr::find($request->id);
+        $batal->canceled_at = now();
+        $batal->canceled_user = Auth::user()->id;
+        $batal->canceled_note = $request->alasan;
+        $batal->save();
+        $batal->delete();
+    }
     public function getHutang(Request $request)
     {
         if($request->jenis == 'pinjaman'){
@@ -96,6 +124,7 @@ class ApprovalController extends Controller
                     $cicilan = new PinjamanDtl();
                     $cicilan->id_pinjaman = $pinjaman->id_pinjaman;
                     $cicilan->cicilan = $i;
+                    $cicilan->nomor_anggota = $pinjaman->nomor_anggota;
                     $cicilan->pokok = $pokok[0]->jumlah;
                     $cicilan->bunga = $bunga[0]->jumlah;
                     $cicilan->total_cicilan = $pokok[0]->jumlah+$bunga[0]->jumlah;

@@ -12,30 +12,34 @@ use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-
+    /**
+     * Tampilkan halaman login
+     */
     public function create(): View|RedirectResponse
     {
+        // Jika user sudah login, redirect sesuai role
         if (Auth::check()) {
-            $user = Auth::user();
-
-            if ($user) {
-                return redirect()->to($this->redirectPath($user));
-            }
+            return redirect()->to($this->redirectTo());
         }
 
         return view('auth.login');
     }
 
+    /**
+     * Proses login
+     */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
         $request->session()->regenerate();
 
-        $user = Auth::user();
-
-        return redirect()->to($this->redirectPath($user));
+        // Redirect sesuai role
+        return redirect()->to($this->redirectTo());
     }
 
+    /**
+     * Logout user
+     */
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
@@ -46,12 +50,18 @@ class AuthenticatedSessionController extends Controller
         return redirect('/');
     }
 
-    protected function redirectPath($user): string
+    /**
+     * Redirect setelah login berdasarkan role
+     */
+    protected function redirectTo(): string
     {
+        $user = Auth::user();
+
         return match ($user->ui) {
-            'admin' => Route::has('dashboard') ? route('dashboard') : '/dashboard',
-            'user'  => Route::has('mobile.home') ? route('mobile.home') : '/home',
-            default => '/',
+            'admin' => route('dashboard'),
+            'user'  => route('mobile.home'),
+            default => route('login'), // fallback
         };
     }
+
 }

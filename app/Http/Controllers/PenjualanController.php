@@ -14,7 +14,10 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+
+use function Illuminate\Log\log;
 
 class PenjualanController extends Controller
 {
@@ -125,15 +128,16 @@ class PenjualanController extends Controller
                 $result = DB::select("SELECT hitung_cicilan(?, ?, ?, ?) AS jumlah", [$request->grandtotal, $bunga->bunga_barang, $request->jmlcicilan, 1]);
                 $cicilanpertama = $result[0]->jumlah;
 
+                $totalcicilan = PenjualanCicil::where(['anggota_id'=>$request->idcustomer,'status'=>'hutang'])
+                ->sum('total_cicilan');
+
                 $batas = 0.35 * $user->gaji; // 35% dari gaji
-                if ($cicilanpertama < $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
-                    $penjualan->VarCicilan = 0; //Cicilan memenuhi syarat (di bawah 35% gaji)
-                } else {
-                    $penjualan->VarCicilan = 1; //Cicilan terlalu besar (melebihi 35% gaji)
+                if (($totalcicilan+$cicilanpertama) > $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
+                    return response()->json('Tidak dapat diproses, Melebihi batas limit',500);
                 }
 
                 $penjualan->bunga_barang = $bunga->bunga_barang;
-                $penjualan->status_ambil = 'pending';
+                $penjualan->status_ambil = 'pesan';
                 $penjualan->kembali = 0;
                 $penjualan->dibayar = 0;
             }elseif($request->metodebayar == 'tunai'){
@@ -157,6 +161,21 @@ class PenjualanController extends Controller
 
                 StokUnit::where('unit_id',Auth::user()->unit_kerja)->where('barang_id',$item)->decrement('stok', $request->qty[$no]);
                 $no++;
+            }
+            if($request->metodebayar == 'cicilan'){
+                for ($i = 1; $i <= $request->jmlcicilan; $i++) {
+                    $pokoktotal = DB::select("SELECT hitung_pokok(?, ?) AS jumlah", [$request->grandtotal, $request->jmlcicilan]);
+                    $bungatotal = DB::select("SELECT hitung_bunga(?, ?, ?, ?) AS jumlah", [$request->grandtotal, $bunga->bunga_barang, $request->jmlcicilan, $i]);
+                    $cicilan = new PenjualanCicil();
+                    $cicilan->penjualan_id = $penjualan->id;
+                    $cicilan->cicilan = $i;
+                    $cicilan->anggota_id = $request->idcustomer;
+                    $cicilan->pokok = $pokoktotal[0]->jumlah;
+                    $cicilan->bunga = $bungatotal[0]->jumlah;
+                    $cicilan->total_cicilan = $pokoktotal[0]->jumlah+$bungatotal[0]->jumlah;
+                    $cicilan->status = 'hutang';
+                    $cicilan->save();
+                }
             }
             DB::commit();
             return response()->json(['message' => 'Order saved successfully.','invoice'=>$penjualan->nomor_invoice]);

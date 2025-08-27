@@ -82,7 +82,9 @@
               </div>
 
               <div class="form-footer">
-                <button type="submit" class="btn btn-primary w-100">Login</button>
+                <button type="submit" id="loginBtn" class="btn btn-primary w-100">
+                  Login
+                </button>
               </div>
             </form>
 
@@ -98,11 +100,28 @@
 
     <script src="{{ asset('tabler/dist/js/tabler.min.js') }}" defer></script>
     <script>
+      // toggle show/hide password
       document.getElementById('toggle-password').addEventListener('click', function(e) {
         e.preventDefault();
         const pw = document.getElementById('password');
         pw.type = pw.type === 'password' ? 'text' : 'password';
       });
+
+      // cegah double submit pada tombol login
+      const loginBtn = document.getElementById('loginBtn');
+      if (loginBtn) {
+        loginBtn.addEventListener('click', function(e) {
+          // disable tombol
+          this.disabled = true;
+          // ubah isi tombol jadi ada spinner
+          this.innerHTML = `
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            Memproses...
+          `;
+          // submit form
+          this.form.submit();
+        });
+      }
     </script>
   </body>
 </html>

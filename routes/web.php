@@ -35,14 +35,23 @@ use App\Http\Controllers\Mobile\MobilePinjamanController;
 use App\Http\Controllers\Mobile\MobileStokOpnameController;
 
 Route::get('/login', [AuthenticatedSessionController::class, 'create']);
-// Route::get('/', function () {
-//     return view('welcome');
-// });
-
 
 Route::get('/', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified', 'global.app'])->name('dashboard');
+    return redirect()->route('login');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->middleware('global.app:admin')->name('dashboard');
+
+    Route::get('/home', function () {
+        return view('home');
+    })->middleware('global.app:user')->name('mobile.home');
+});
+
+Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
+    ->name('logout');
 
 Route::middleware('auth', 'global.app')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -118,6 +127,8 @@ Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admi
     Route::get('/', [ApprovalController::class, 'index'])->name('app.list');
     Route::get('/gethutang', [ApprovalController::class, 'getHutang'])->name('app.gethutang');
     Route::put('/setapp', [ApprovalController::class, 'setapproval'])->name('app.set');
+    Route::delete('/batal', [ApprovalController::class, 'Batal'])->name('app.batal');
+    Route::get('/dtlcicilan', [ApprovalController::class, 'CicilanDtl'])->name('app.dtlcicilan');
     
 });
 Route::prefix('bengkel')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
