@@ -43,8 +43,10 @@ class AmbilBarangController extends Controller
     {
         $request->validate(['id' => 'required']);
         $jual = Penjualan::find($request->id);
-        $jual->status_ambil = 'finish';
-        $jual->ambil_at = now();
+        $jual->status_ambil = $request->status;
+        if($request->status == 'finish'){
+            $jual->ambil_at = now();
+        }
         $jual->save();        
     }
 }
