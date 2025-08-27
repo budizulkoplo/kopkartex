@@ -47,6 +47,7 @@
                                         <th>Tanggal Pembelian</th>
                                         <th>Customer</th>
                                         <th>Bayar</th>
+                                        <th>Status</th>
                                         <th></th>
                                     </tr>
                                 </thead>
@@ -126,6 +127,7 @@
                     { "data": "tanggal","orderable": false},
                     { "data": "customer","orderable": false},
                     { "data": "grandtotal","orderable": false},
+                    { "data": "status_ambil","orderable": false},
                     { "data": null,"orderable": false,
                         render: function (data, type, row, meta) {
                             let str= `<span class="badge rounded-pill btn bg-warning editcel" data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="dtl('${row.id}')"><i class="fa-solid fa-circle-info"></i></span>`;
@@ -134,36 +136,53 @@
                     }
                 ],
             });
-            function ambil(idjual){
-                Swal.fire({
-                    title: "Ambil barang?",
-                    text: "Pastikan pembayaran sudah dilakukan!",
-                    icon: "warning",
-                    showCancelButton: true,
-                    confirmButtonColor: "#3085d6",
-                    cancelButtonColor: "#d33",
-                    confirmButtonText: "Ya, lanjutkan!"
-                    }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            type: 'PUT',
-                            url: "{{ route('ambil.AmbilBarang') }}",
-                            data: {id: idjual},
-                            beforeSend: function(xhr) {loader($('#exampleModal'),true)},
-                            success: function(response) {
-                                Swal.fire({title: "Berhasil!",icon: "success"});
-                                table.ajax.reload(null, false);
-                                $('#exampleModal').modal('hide');
-                                loader($('#exampleModal'),false);
-                            },
-                            error: function(xhr) {
-                                Swal.fire({title: "Error!",text: xhr.responseText,icon: "error"});
-                                loader($('#exampleModal'),false);
-                            }
-                        });
-                        
-                    }
-                });
+            function ambil(idjual,pstatus,obj){
+                if(pstatus == 'proses' || pstatus == 'ready'){
+                    loader($('#exampleModal'),true);
+                    axios.put('{{ route('ambil.AmbilBarang') }}', {
+                        id: idjual,
+                        status: pstatus
+                    })
+                    .then(response => {
+                        $(obj).prop("disabled", true);
+                        loader($('#exampleModal'),false);
+                        table.ajax.reload(null,false);
+                    })
+                    .catch(error => {
+                        Swal.fire({title: "Error!",text: error,icon: "error"});
+                        loader($('#exampleModal'),true);
+                    });
+                }else{
+                    Swal.fire({
+                        title: "Ambil barang?",
+                        text: "Pastikan pembayaran sudah dilakukan!",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonColor: "#3085d6",
+                        cancelButtonColor: "#d33",
+                        confirmButtonText: "Ya, lanjutkan!"
+                        }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                type: 'PUT',
+                                url: "{{ route('ambil.AmbilBarang') }}",
+                                data: {id: idjual,status: pstatus},
+                                beforeSend: function(xhr) {loader($('#exampleModal'),true)},
+                                success: function(response) {
+                                    Swal.fire({title: "Berhasil!",icon: "success"});
+                                    table.ajax.reload(null, false);
+                                    $('#exampleModal').modal('hide');
+                                    loader($('#exampleModal'),false);
+                                },
+                                error: function(xhr) {
+                                    Swal.fire({title: "Error!",text: xhr.responseText,icon: "error"});
+                                    loader($('#exampleModal'),false);
+                                }
+                            });
+                            
+                        }
+                    });
+                }
             }
             function delitem(iddtl,idpenjualan){
                 Swal.fire({
@@ -215,9 +234,9 @@
                         <tr><th colspan="5" class="text-end">Diskon</th><th>`+response.hdr.diskon+`%</th></tr>
                         <tr><th colspan="5" class="text-end">GrandTotal</th><th>`+response.hdr.grandtotal+`</th></tr>
                         <tr><th colspan="6" class="text-end">
-                            <button type="button" class="btn btn-warning"><i class="fas fa-box"></i> Diproses</button>
-                            <button type="button" class="btn btn-warning"><i class="fas fa-tools"></i> Siap diambil</button>
-                            <button type="button" class="btn btn-success" onclick="ambil(`+response.hdr.id+`)"><i class="fas fa-truck"></i> Ambil&Bayar</button>
+                            <button type="button" class="btn btn-warning" onclick="ambil(${response.hdr.id},'proses',this)" ${response.hdr.status_ambil == 'proses' || response.hdr.status_ambil == 'ready' ? 'disabled':''}><i class="fas fa-box"></i> Diproses</button>
+                            <button type="button" class="btn btn-warning" onclick="ambil(${response.hdr.id},'ready',this)" ${response.hdr.status_ambil == 'ready' || response.hdr.status_ambil == 'finish' ? 'disabled':''}><i class="fas fa-tools"></i> Siap diambil</button>
+                            <button type="button" class="btn btn-success" onclick="ambil(${response.hdr.id},'finish',this)"><i class="fas fa-truck"></i> Ambil&Bayar</button>
                         </th></tr>
                         `);
                         loader($('#exampleModal'),false);
@@ -236,7 +255,7 @@
                     window.ds = start.format('YYYY-MM-DD');
                     window.de = end.format('YYYY-MM-DD');
                 });
-                $('#txtperiod').on('change',function(){
+                $('#txtperiod, #txtstatus').on('change',function(){
                     table.ajax.reload(null,false);
                 });
             });
