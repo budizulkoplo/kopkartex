@@ -7,7 +7,10 @@ use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Penerimaan;
 use App\Exports\LaporanPenerimaanExport;
+use App\Models\Barang;
+use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\Facades\DataTables;
 
 class LaporanController extends Controller
 {
@@ -82,27 +85,53 @@ class LaporanController extends Controller
             'data'  => $data,
         ]);
     }
-
-    public function stokBarangData()
+    public function stokBarangData(Request $request)
     {
-        $units = DB::table('unit')->whereNull('deleted_at')->pluck('nama_unit', 'id');
+        //$unit = DB::table('unit')->whereNull('deleted_at')->pluck('nama_unit', 'id');
+        $unit = Unit::pluck('nama_unit', 'id');
 
-        $data = DB::table('barang as b')
-            ->select(
-                'b.kode_barang',
-                'b.nama_barang',
-                ...$units->map(function ($nama, $id) {
+        $data = Barang::select(
+                'barang.kode_barang',
+                'barang.nama_barang',
+                ...$unit->map(function ($nama, $id) {
                     return DB::raw("SUM(CASE WHEN su.unit_id = $id THEN su.stok ELSE 0 END) as `$nama`");
                 })->toArray()
             )
-            ->leftJoin('stok_unit as su', 'b.id', '=', 'su.barang_id')
-            ->whereNull('b.deleted_at')
-            ->groupBy('b.id', 'b.kode_barang', 'b.nama_barang')
-            ->orderBy('b.nama_barang')
-            ->get();
-
-        return response()->json(['data' => $data]);
+            ->leftJoin('stok_unit as su', 'barang.id', '=', 'su.barang_id')
+            ->groupBy('barang.id', 'barang.kode_barang', 'barang.nama_barang');
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->filter(function ($query) use ($request) {
+                if ($request->has('search') && $request->search['value'] != '') {
+                    $query->where(function ($q) use ($request) {
+                        $q->orWhere('barang.kode_barang', 'like', '%' . $request->search['value'] . '%')
+                          ->orWhere('barang.nama_barang', 'like', '%' . $request->search['value'] . '%');
+                    });
+                }
+            })
+            ->make(true);
+        //return response()->json(['data' => $data]);
     }
+    // public function stokBarangDatasss()
+    // {
+    //     $unit = DB::table('unit')->whereNull('deleted_at')->pluck('nama_unit', 'id');
+
+    //     $data = DB::table('barang as b')
+    //         ->select(
+    //             'b.kode_barang',
+    //             'b.nama_barang',
+    //             ...$unit->map(function ($nama, $id) {
+    //                 return DB::raw("SUM(CASE WHEN su.unit_id = $id THEN su.stok ELSE 0 END) as `$nama`");
+    //             })->toArray()
+    //         )
+    //         ->leftJoin('stok_unit as su', 'b.id', '=', 'su.barang_id')
+    //         ->whereNull('b.deleted_at')
+    //         ->groupBy('b.id', 'b.kode_barang', 'b.nama_barang')
+    //         ->orderBy('b.nama_barang')
+    //         ->get();
+
+    //     return response()->json(['data' => $data]);
+    // }
 
     public function penjualan(Request $request)
     {
@@ -169,7 +198,8 @@ class LaporanController extends Controller
             $dates[] = $row;
         }
 
-        return response()->json(['data' => $dates]);
+        // ubah jadi DataTables
+        return DataTables::of($dates)->make(true);
     }
 
     public function retur(Request $request)

@@ -39,15 +39,7 @@
 
     {{-- JS Custom --}}
     <x-slot name="jscustom">
-        {{-- jQuery --}}
-        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-        {{-- DataTables Core + Buttons + Responsive (tanpa export) --}}
-        <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.0.3/b-3.0.1/r-3.0.1/datatables.min.css"/>
-        <script src="https://cdn.datatables.net/v/bs5/dt-2.0.3/b-3.0.1/r-3.0.1/datatables.min.js"></script>
-
-        {{-- Tambahan khusus export --}}
-        <script src="https://cdn.datatables.net/buttons/3.0.1/js/buttons.html5.min.js"></script>
+        
 
         {{-- JSZip untuk Excel --}}
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -55,9 +47,7 @@
 
         <script>
             var table = $('#tbstok').DataTable({
-                ordering: false,
-                responsive: true,
-                processing: true,
+                ordering: true,responsive: true,processing: true, serverSide: true,
                 pageLength: 25,
                 lengthMenu: [[25, 50, 100, 200, -1], [25, 50, 100, 200, "All"]],
                 ajax: {
@@ -83,7 +73,11 @@
                         text: '<i class="bi bi-file-earmark-excel"></i> Export Excel',
                         className: 'btn btn-success btn-sm',
                         exportOptions: {
-                            columns: ':visible'
+                            modifier: {
+                                search: 'applied',
+                                order: 'applied',
+                                page: 'all' // << ini agar semua halaman ikut
+                            }
                         }
                     }
                 ]
