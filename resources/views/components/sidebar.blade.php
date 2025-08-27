@@ -25,10 +25,18 @@
 
         <div class="user-panel d-flex align-items-center p-3">
             <div class="image me-2">
-                <img src="{{ auth()->user()->avatar_url ?? asset('user.png') }}"
+                @if (isset(Auth::user()->foto) && Storage::disk('private')->exists("img/foto/".Auth::user()->foto))
+                    <img src="{{ url('/doc/file/foto/'.Auth::user()->foto.'?t='. time()) }}"
                     class="img-circle elevation-2"
                     alt="User Image"
                     style="width: 40px; height: 40px; object-fit: cover;">
+                @else
+                    <img src="{{ asset('logo.png') }}"
+                    class="img-circle elevation-2"
+                    alt="User Image"
+                    style="width: 40px; height: 40px; object-fit: cover;">
+                @endif
+                
             </div>
             <div class="info">
                 <a href="#" class="d-block text-white">{{ $displayName }}</a>
