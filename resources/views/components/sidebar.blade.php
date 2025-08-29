@@ -31,7 +31,7 @@
                     alt="User Image"
                     style="width: 40px; height: 40px; object-fit: cover;">
                 @else
-                    <img src="{{ asset('logo.png') }}"
+                    <img src="{{ asset('user.png') }}"
                     class="img-circle elevation-2"
                     alt="User Image"
                     style="width: 40px; height: 40px; object-fit: cover;">

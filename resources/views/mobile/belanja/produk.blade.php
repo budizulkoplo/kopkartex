@@ -96,9 +96,16 @@
                                 <input type="hidden" name="id" value="{{ $p->id }}">
                                 <input type="hidden" name="nama" value="{{ $p->nama_barang }}">
                                 <input type="hidden" name="harga" value="{{ $p->harga_jual }}">
-                                <button type="submit" class="btn btn-sm btn-primary w-100">
-                                    <ion-icon name="cart-outline"></ion-icon> Tambah
-                                </button>
+
+                                @if($p->stok > 0)
+                                    <button type="submit" class="btn btn-sm btn-primary w-100">
+                                        <ion-icon name="cart-outline"></ion-icon> Tambah
+                                    </button>
+                                @else
+                                    <button type="button" class="btn btn-sm btn-secondary w-100" disabled>
+                                        <ion-icon name="close-circle-outline"></ion-icon> Habis
+                                    </button>
+                                @endif
                             </form>
 
                         </div>

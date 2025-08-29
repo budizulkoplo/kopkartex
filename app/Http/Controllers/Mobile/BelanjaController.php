@@ -199,7 +199,7 @@ class BelanjaController extends BaseMobileController
                 $penjualan->kembali = 0;
                 $penjualan->dibayar = 0;
             } else {
-                $penjualan->status = 'lunas';
+                $penjualan->status = 'pending';
                 $penjualan->tenor = 0;
                 $penjualan->kembali = 0;
                 $penjualan->dibayar = 0;
@@ -237,8 +237,10 @@ class BelanjaController extends BaseMobileController
             session()->forget('cart');
             session()->forget('cart_unit_id');
 
-            return redirect()->route('mobile.belanja.toko')
-                            ->with('success', 'Pesanan berhasil disimpan, Invoice: '.$penjualan->nomor_invoice);
+            return redirect()->route('mobile.belanja.history.detail', ['id' => $penjualan->id])
+                 ->with('success', 'Pesanan berhasil disimpan, Invoice: '.$penjualan->nomor_invoice);
+
+
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Gagal simpan order: '.$e->getMessage());
