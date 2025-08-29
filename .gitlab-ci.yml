@@ -4,7 +4,7 @@ stages:
 Deploy:
   stage: deploy
   variables:
-    VAR_DIREKTORI: "/home/budizul/kopkartex/www"
+    VAR_DIREKTORI: "/home/kopkartex/www"
     VAR_GIT_URL_TANPA_HTTP: "gitlab.com/bismillah340816/kopkartex.git"
     VAR_CLONE_KEY: "glpat-pkYhoNV3wbo-aLrhNm2d4286MQp1OmZuNzg2Cw.01.1207bwxfw"
     VAR_USER: "deployer"
@@ -36,4 +36,4 @@ Deploy:
     - ssh $VAR_USER@$VAR_IP "docker exec webserver php artisan migrate"
     - ssh $VAR_USER@$VAR_IP "docker exec webserver php artisan db:seed"
     - ssh $VAR_USER@$VAR_IP "docker exec webserver php artisan key:generate"
-    - echo "A!"
+    - echo "SELESAI"
