@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Penjualan;
 use App\Models\PenjualanDetail;
+use App\Models\StokUnit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -42,11 +43,17 @@ class AmbilBarangController extends Controller
     public function AmbilBarang(Request $request)
     {
         $request->validate(['id' => 'required']);
+        
         $jual = Penjualan::find($request->id);
         $jual->status_ambil = $request->status;
         if($request->status == 'finish'){
             $jual->ambil_at = now();
         }
-        $jual->save();        
+        $jual->save();      
+        // stok unit berkurang  
+        $detail = PenjualanDetail::where('penjualan_id',$request->id)->get();
+        foreach ($detail as $key => $value) {
+            StokUnit::where('unit_id',$jual->unit_id)->where('barang_id',$value->barang_id)->decrement('stok', $value->qty);
+        }
     }
 }

@@ -79,6 +79,7 @@
                                 <th>Qty</th>
                                 <th>Harga</th>
                                 <th>Total</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -222,7 +223,7 @@
                                 <td>${value.qty}</td>
                                 <td>${value.harga}</td>
                                 <td>${value.qty*value.harga}</td>
-                                <td><button type="button" class="btn btn-sm btn-danger" onclick="delitem(${value.id},${value.penjualan_id})"><i class="fa-solid fa-trash"></i></button></td>
+                                <td><button type="button" class="btn btn-sm btn-danger" onclick="delitem(${value.id},${value.penjualan_id})" ${response.hdr.status_ambil == 'finish' ? 'style="display:none"':'' }><i class="fa-solid fa-trash"></i></button></td>
                                 </tr>`;
                             cn++;
                             grand +=value.qty*value.harga;
@@ -230,13 +231,13 @@
                         $('#exampleModalLabel').text(response.hdr.nomor_invoice);
                         $('#tbdtl tbody').html(str);
                         $('#tbdtl tfoot').html(`
-                        <tr><th colspan="5" class="text-end">SubTotal</th><th>`+response.hdr.subtotal+`</th></tr>
-                        <tr><th colspan="5" class="text-end">Diskon</th><th>`+response.hdr.diskon+`%</th></tr>
-                        <tr><th colspan="5" class="text-end">GrandTotal</th><th>`+response.hdr.grandtotal+`</th></tr>
-                        <tr><th colspan="6" class="text-end">
-                            <button type="button" class="btn btn-warning" onclick="ambil(${response.hdr.id},'proses',this)" ${response.hdr.status_ambil == 'proses' || response.hdr.status_ambil == 'ready' ? 'disabled':''}><i class="fas fa-box"></i> Diproses</button>
+                        <tr><th colspan="5" class="text-end">SubTotal</th><th colspan="2">`+response.hdr.subtotal+`</th></tr>
+                        <tr><th colspan="5" class="text-end">Diskon</th><th colspan="2">`+response.hdr.diskon+`%</th></tr>
+                        <tr><th colspan="5" class="text-end">GrandTotal</th><th colspan="2">`+response.hdr.grandtotal+`</th></tr>
+                        <tr><th colspan="7" class="text-end">
+                            <button type="button" class="btn btn-warning" onclick="ambil(${response.hdr.id},'proses',this)" ${response.hdr.status_ambil == 'pesan' ? '':'disabled' }><i class="fas fa-box"></i> Diproses</button>
                             <button type="button" class="btn btn-warning" onclick="ambil(${response.hdr.id},'ready',this)" ${response.hdr.status_ambil == 'ready' || response.hdr.status_ambil == 'finish' ? 'disabled':''}><i class="fas fa-tools"></i> Siap diambil</button>
-                            <button type="button" class="btn btn-success" onclick="ambil(${response.hdr.id},'finish',this)"><i class="fas fa-truck"></i> Ambil&Bayar</button>
+                            <button type="button" class="btn btn-success" onclick="ambil(${response.hdr.id},'finish',this)" ${response.hdr.status_ambil == 'finish' ? 'disabled':'' }><i class="fas fa-truck"></i> Ambil&Bayar</button>
                         </th></tr>
                         `);
                         loader($('#exampleModal'),false);
