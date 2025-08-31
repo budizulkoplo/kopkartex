@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AmbilBarangController;
 use App\Http\Controllers\AnggotaController;
 use App\Http\Controllers\ApprovalController;
@@ -41,13 +42,18 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->middleware('global.app:admin')->name('dashboard');
+    // Route::get('/dashboard', function () {
+    //     return view('dashboard');
+    // })->middleware('global.app:admin')->name('dashboard');
+    Route::get('/dashboard', [AdminDashboardController::class, 'dashboard'])->middleware('global.app:admin')->name('dashboard');
+    // Route::get('/home', function () {
+    //     return view('home');
+    // })->middleware('global.app:user')->name('mobile.home');
+});
 
-    Route::get('/home', function () {
-        return view('home');
-    })->middleware('global.app:user')->name('mobile.home');
+// UI untuk mobile end users
+Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function () {
+    Route::get('/home', [DashboardController::class, 'index'])->name('home');
 });
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
@@ -254,11 +260,6 @@ Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin
     Route::get('/stok-opname', [LaporanController::class, 'stokOpname'])->name('laporan.stokopname');
     Route::get('/stok-opname/data', [LaporanController::class, 'stokOpnameData'])->name('laporan.stokopname.data');
 
-});
-
-// UI untuk mobile end users
-Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function () {
-    Route::get('/home', [DashboardController::class, 'index'])->name('home');
 });
 
 Route::middleware(['auth'])->prefix('mobile/belanja')->name('mobile.belanja.')->group(function () {
