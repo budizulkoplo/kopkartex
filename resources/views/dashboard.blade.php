@@ -8,37 +8,51 @@
     <div class="app-content"> <!--begin::Container-->
 
         <div class="container-fluid my-4">
-  <h2 class="mb-4">📊 Dashboard Penjualan</h2>
-  <div class="row g-4">
-    <!-- Chart Penjualan per Bulan -->
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">Penjualan per Bulan</div>
-        <div class="card-body">
-          <canvas id="chartBulanan"></canvas>
+        <h2 class="mb-4">📊 Dashboard Penjualan</h2>
+        <div class="row g-4">
+            <!-- Chart Penjualan per Bulan -->
+            <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">Penjualan per Bulan</div>
+                <div class="card-body">
+                <canvas id="chartBulanan"></canvas>
+                </div>
+            </div>
+            </div>
         </div>
-      </div>
-    </div>
-    <!-- Chart Metode Bayar -->
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-success text-white">Metode Pembayaran</div>
-        <div class="card-body">
-          <canvas id="chartMetode"></canvas>
+        <div class="row g-4">
+            <!-- Chart Metode Bayar -->
+            <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">Metode Pembayaran</div>
+                <div class="card-body">
+                <canvas id="chartMetode"></canvas>
+                </div>
+            </div>
+            </div>
+            <!-- Chart Status Transaksi -->
+            <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">Status Transaksi</div>
+                <div class="card-body">
+                <canvas id="chartStatus"></canvas>
+                </div>
+            </div>
+            </div>
         </div>
-      </div>
-    </div>
-    <!-- Chart Status Transaksi -->
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-warning text-dark">Status Transaksi</div>
-        <div class="card-body">
-          <canvas id="chartStatus"></canvas>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
+
+         <div class="row g-4">
+            <!-- Chart Top Barang -->
+            <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">Top 10 Barang Stok Terbanyak</div>
+                <div class="card-body">
+                <canvas id="chartTopBarang"></canvas>
+                </div>
+            </div>
+            </div>
+        </div>
 
 
     </div>
@@ -112,6 +126,30 @@
                 plugins: {
                     legend: { position: "bottom" }
                 }
+                }
+            });
+
+
+            const topBarangLabels = @json($topBarang->pluck('nama_barang'));
+            const topBarangData = @json($topBarang->pluck('total_stok'));
+
+
+            // Chart Top 10 Barang
+            new Chart(document.getElementById("chartTopBarang"), {
+                type: "bar",
+                data: {
+                labels: topBarangLabels,
+                datasets: [{
+                    label: "Jumlah Stok",
+                    data: topBarangData,
+                    backgroundColor: "rgba(75, 192, 192, 0.6)",
+                    borderColor: "rgba(75, 192, 192, 1)",
+                    borderWidth: 1
+                }]
+                },
+                options: {
+                indexAxis: "y",
+                scales: { x: { beginAtZero: true } }
                 }
             });
             </script>

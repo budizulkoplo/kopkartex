@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class AdminDashboardController extends Controller
@@ -28,6 +29,18 @@ class AdminDashboardController extends Controller
         ->groupBy('status')
         ->pluck('jumlah','status');
 
-    return view('dashboard', compact('bulanan','metode','status'));
+
+
+    // 3. Top 10 barang stok terbanyak (khusus unit_id=2)
+    $topBarang = DB::table('stok_unit as s')
+        ->join('barang as b', 'b.id', '=', 's.barang_id')
+        ->where('s.unit_id', Auth::user()->unit_kerja)
+        ->select('b.nama_barang', DB::raw('SUM(s.stok) as total_stok'))
+        ->groupBy('b.nama_barang')
+        ->orderByDesc('total_stok')
+        ->limit(10)
+        ->get();
+
+    return view('dashboard', compact('bulanan','metode','status','topBarang'));
 }
 }
