@@ -74,21 +74,32 @@
             </div>
             @endif
             {{ $slot }}
-        </main> <!--end::App Main--> <!--begin::Footer-->
-        <footer class="app-footer"> <!--begin::To the end-->
-            {{-- <div class="float-end d-none d-sm-inline">Anything you want</div> <!--end::To the end--> <!--begin::Copyright--> <strong>
-                Copyright &copy; 2014-2024&nbsp;
-                <a href="https://adminlte.io" class="text-decoration-none">AdminLTE.io</a>.
-            </strong>
-            All rights reserved. --}}
-            <!--end::Copyright-->
-        </footer> <!--end::Footer-->
-    </div> <!--end::App Wrapper--> <!--begin::Script--> <!--begin::Third Party Plugin(OverlayScrollbars)-->
-    
+        </main> 
+        <footer class="app-footer d-flex justify-content-between align-items-center px-3"
+                style="position: fixed; bottom: 0; left: 250px; right: 0; height: 50px; 
+                    background:#f8f9fa; border-top:1px solid #ddd; z-index: 1000;">
+            <div>
+                <strong>{{ date('Y') }} &copy;
+                <img src="{{ asset('piclogo.png') }}" alt="Developer Logo" height="25"></strong>
+            </div>
+            <div id="jam-indonesia" class="text-muted"></div>
+        </footer>
+    </div> 
 </body><!--end::Body-->
     @include('partials.script')
     @if (isset($jscustom))
         {{ $jscustom }}
     @endif
-    
 </html>
+<script>
+    function updateJam() {
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', 
+                          day: 'numeric', hour: '2-digit', minute: '2-digit', 
+                          second: '2-digit' };
+        document.getElementById('jam-indonesia').textContent = 
+            now.toLocaleDateString('id-ID', options);
+    }
+    updateJam();
+    setInterval(updateJam, 1000);
+</script>
