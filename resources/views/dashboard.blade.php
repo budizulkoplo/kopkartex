@@ -209,12 +209,20 @@
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false }, // nomor urut
                     { data: 'nomor_invoice', name: 'nomor_invoice' },
-                    { data: 'tanggal', name: 'tanggal' },
+                    { data: 'tanggal', name: 'tanggal', 
+                        render: function (data, type, row, meta) {
+                            return data ? moment(data).format("DD-MM-YYYY") : "";
+                        }
+                    },
                     { data: 'customer', name: 'customer' },
-                    { data: 'status_ambil', name: 'status_ambil' },
                     { data: 'grandtotal', name: 'grandtotal', 
                          render: function (data, type, row, meta) {return formatRupiah(data,'');}
                      },
+                    { data: 'status_ambil', name: 'status_ambil', 
+                        render: function (data, type, row, meta) {
+                            return `<span class="badge bg-${ data == 'finish' ? 'success' : 'warning' }">${data}</span>`;
+                        }
+                    },
                 ]
             });
         </script>
