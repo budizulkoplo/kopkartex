@@ -49,6 +49,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Route::get('/home', function () {
     //     return view('home');
     // })->middleware('global.app:user')->name('mobile.home');
+    // routes/web.php
+    Route::get('/admin/pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIni']);
+
 });
 
 // UI untuk mobile end users

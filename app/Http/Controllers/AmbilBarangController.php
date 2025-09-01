@@ -50,10 +50,16 @@ class AmbilBarangController extends Controller
             $jual->ambil_at = now();
         }
         $jual->save();      
-        // stok unit berkurang  
+        
         $detail = PenjualanDetail::where('penjualan_id',$request->id)->get();
-        foreach ($detail as $key => $value) {
-            StokUnit::where('unit_id',$jual->unit_id)->where('barang_id',$value->barang_id)->decrement('stok', $value->qty);
+        foreach ($detail as $value) {
+            StokUnit::where('unit_id',$jual->unit_id)
+                ->where('barang_id',$value->barang_id)
+                ->decrement('stok', $value->qty);
         }
+
+        // Kembalikan nomor invoice untuk cetak nota
+        return response()->json(['invoice' => $jual->nomor_invoice], 200);
     }
+
 }
