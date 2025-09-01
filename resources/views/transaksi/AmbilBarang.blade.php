@@ -170,10 +170,22 @@
                                 data: {id: idjual,status: pstatus},
                                 beforeSend: function(xhr) {loader($('#exampleModal'),true)},
                                 success: function(response) {
-                                    Swal.fire({title: "Berhasil!",icon: "success"});
                                     table.ajax.reload(null, false);
                                     $('#exampleModal').modal('hide');
-                                    loader($('#exampleModal'),false);
+                                    loader($('#exampleModal'), false);
+
+                                    // Buka nota di tab baru
+                                    Swal.fire({
+                                        title: "Berhasil!",
+                                        text: "Barang berhasil diambil dan nota siap dicetak",
+                                        icon: "success",
+                                        confirmButtonText: "Cetak Nota"
+                                    }).then((result) => {
+                                        if(result.isConfirmed){
+                                            const url = `{{ url('/penjualan/nota') }}/${response.invoice}`;
+                                            window.open(url, '_blank');
+                                        }
+                                    });
                                 },
                                 error: function(xhr) {
                                     Swal.fire({title: "Error!",text: xhr.responseText,icon: "error"});

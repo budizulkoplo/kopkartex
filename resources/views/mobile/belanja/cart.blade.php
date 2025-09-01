@@ -76,11 +76,11 @@
             </div>
 
             {{-- metode bayar fix --}}
-            <input type="hidden" name="metode_bayar" value="tunai">
+            <!-- <input type="hidden" name="metode_bayar" value="tunai">
             <div class="mb-3">
                 <label>Metode Bayar</label>
                 <input type="text" class="form-control" value="Bayar di Toko" readonly>
-            </div>
+            </div> -->
 
             <button type="submit" class="btn btn-success w-100">Simpan Pesanan</button>
         </form>

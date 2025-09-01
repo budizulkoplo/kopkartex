@@ -74,16 +74,30 @@
             </div>
             @endif
             {{ $slot }}
-        </main> <!--end::App Main--> <!--begin::Footer-->
-        <footer class="app-footer"> <!--begin::To the end-->
-            {{-- <div class="float-end d-none d-sm-inline">Anything you want</div> <!--end::To the end--> <!--begin::Copyright--> <strong>
-                Copyright &copy; 2014-2024&nbsp;
-                <a href="https://adminlte.io" class="text-decoration-none">AdminLTE.io</a>.
-            </strong>
-            All rights reserved. --}}
-            <!--end::Copyright-->
-        </footer> <!--end::Footer-->
-    </div> <!--end::App Wrapper--> <!--begin::Script--> <!--begin::Third Party Plugin(OverlayScrollbars)-->
+        </main> 
+        <footer class="app-footer d-flex justify-content-between align-items-center px-3">
+            <div>
+                <strong>{{ date('Y') }} &copy;</strong>
+                <img src="{{ asset('piclogo.png') }}" alt="Developer Logo" height="25">
+            </div>
+            <div id="jam-indonesia" class="text-muted"></div>
+        </footer>
+
+<script>
+    function updateJam() {
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', 
+                          day: 'numeric', hour: '2-digit', minute: '2-digit', 
+                          second: '2-digit' };
+        document.getElementById('jam-indonesia').textContent = 
+            now.toLocaleDateString('id-ID', options);
+    }
+    updateJam();
+    setInterval(updateJam, 1000);
+</script>
+
+
+    </div> 
     
 </body><!--end::Body-->
     @include('partials.script')

@@ -23,7 +23,7 @@
                 <div><strong>Tanggal:</strong> {{ \Carbon\Carbon::parse($penjualan->tanggal)->format('d-m-Y H:i') }}</div>
                 <div><strong>Customer:</strong> {{ $penjualan->customer }}</div>
                 <div><strong>Status Bayar:</strong> {{ ucfirst($penjualan->status) }}</div>
-                <div><strong>Status Ambil:</strong> 
+                <div><strong>Status Pesanan:</strong> 
                 <span id="status-ambil">{{ ucfirst($penjualan->status_ambil == 'finish' ? 'Sukses' : $penjualan->status_ambil) }}</span>
                 </div>
                 
@@ -59,7 +59,7 @@
             <strong>Rp {{ number_format($penjualan->grandtotal,0,',','.') }}</strong>
         </div>
     </div>
-    @if(strtolower($penjualan->status) === 'pending')
+    @if(strtolower($penjualan->status_ambil) === 'pesan')
         <form action="{{ route('mobile.belanja.cancel', $penjualan->id) }}" method="POST" class="mt-3">
             @csrf
             @method('DELETE')

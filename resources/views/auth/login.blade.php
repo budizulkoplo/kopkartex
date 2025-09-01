@@ -56,29 +56,27 @@
               @csrf
               <div class="mb-3">
                 <label class="form-label">Username</label>
-                <input type="text" name="username" class="form-control" placeholder="Enter your username" value="{{ old('username') }}" required autofocus autocomplete="username">
+                <input type="text" name="username" class="form-control" placeholder="Enter your username"
+                      value="{{ old('username') }}" required autofocus autocomplete="username">
               </div>
               <div class="mb-2">
                 <label class="form-label">Password</label>
                 <div class="input-group input-group-flat">
-                  <input type="password" id="password" name="password" class="form-control" placeholder="Your password" required autocomplete="current-password">
+                  <input type="password" id="password" name="password" class="form-control"
+                        placeholder="Your password" required autocomplete="current-password">
                   <span class="input-group-text">
                     <a href="#" class="link-secondary" title="Show password" id="toggle-password">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                          viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                          fill="none" stroke-linecap="round" stroke-linejoin="round">
                         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                         <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-                        <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
+                        <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6
+                                c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
                       </svg>
                     </a>
                   </span>
                 </div>
-              </div>
-
-              <div class="mb-2">
-                <label class="form-check">
-                  <input type="checkbox" name="remember" class="form-check-input">
-                  <span class="form-check-label">Remember me</span>
-                </label>
               </div>
 
               <div class="form-footer">
@@ -94,7 +92,16 @@
               </div>
             @endif
           </div>
+
+          {{-- Branding menyatu di dalam card --}}
+          <div class="card-footer text-center py-3" style="background-color:#ecf2f8;">
+            <img src="{{ asset('piclogo.png') }}" alt="Developer Logo" height="40">
+            <p class="text-muted small mb-0 mt-2">
+              &copy; PartnerInCode Project {{ date('Y') }}
+            </p>
+          </div>
         </div>
+
       </div>
     </div>
 
