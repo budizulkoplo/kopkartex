@@ -75,22 +75,14 @@
             @endif
             {{ $slot }}
         </main> 
-        <footer class="app-footer d-flex justify-content-between align-items-center px-3"
-                style="position: fixed; bottom: 0; left: 250px; right: 0; height: 50px; 
-                    background:#f8f9fa; border-top:1px solid #ddd; z-index: 1000;">
+        <footer class="app-footer d-flex justify-content-between align-items-center px-3">
             <div>
-                <strong>{{ date('Y') }} &copy;
-                <img src="{{ asset('piclogo.png') }}" alt="Developer Logo" height="25"></strong>
+                <strong>{{ date('Y') }} &copy;</strong>
+                <img src="{{ asset('piclogo.png') }}" alt="Developer Logo" height="25">
             </div>
             <div id="jam-indonesia" class="text-muted"></div>
         </footer>
-    </div> 
-</body><!--end::Body-->
-    @include('partials.script')
-    @if (isset($jscustom))
-        {{ $jscustom }}
-    @endif
-</html>
+
 <script>
     function updateJam() {
         const now = new Date();
@@ -103,3 +95,14 @@
     updateJam();
     setInterval(updateJam, 1000);
 </script>
+
+
+    </div> 
+    
+</body><!--end::Body-->
+    @include('partials.script')
+    @if (isset($jscustom))
+        {{ $jscustom }}
+    @endif
+    
+</html>
