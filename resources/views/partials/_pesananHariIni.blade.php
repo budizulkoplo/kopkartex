@@ -10,9 +10,6 @@
             {{ ucfirst($p->status_ambil ?? '-') }}
         </span>
     </td>
-    <td>
-        <a href="/ambilbarang" class="btn btn-sm btn-primary">Detail</a>
-    </td>
 </tr>
 @empty
 <tr>
