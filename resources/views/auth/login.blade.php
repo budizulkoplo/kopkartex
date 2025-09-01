@@ -94,7 +94,7 @@
           </div>
 
           {{-- Branding menyatu di dalam card --}}
-          <div class="card-footer text-center py-3" style="background-color:#e7f5ff;">
+          <div class="card-footer text-center py-3" style="background-color:#ecf2f8;">
             <img src="{{ asset('piclogo.png') }}" alt="Developer Logo" height="40">
             <p class="text-muted small mb-0 mt-2">
               &copy; PartnerInCode Project {{ date('Y') }}
