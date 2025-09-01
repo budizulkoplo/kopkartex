@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\Penjualan;
 use Carbon\Carbon;
+use Yajra\DataTables\Facades\DataTables;
 
 class AdminDashboardController extends Controller
 {
@@ -69,6 +70,27 @@ class AdminDashboardController extends Controller
             ->get();
 
         return view('partials._pesananHariIni', compact('pesananTerbaru'));
+    }
+
+    public function pesananHariIniData(Request $request)
+    {
+        $pesananTerbaru = DB::table('penjualan')
+            ->whereDate('tanggal', Carbon::today())
+            ->where('unit_id', Auth::user()->unit_kerja)
+            ->where('type_order', 'mobile')
+            ->orderByDesc('id')
+            ->limit(10);
+        return DataTables::of($pesananTerbaru)
+            ->addIndexColumn()
+            ->filter(function ($query) use ($request) {
+                if ($request->has('search') && $request->search['value'] != '') {
+                    $query->where(function ($q) use ($request) {
+                        $q->orWhere('customer', 'like', '%' . $request->search['value'] . '%')
+                          ->orWhere('nomor_invoice', 'like', '%' . $request->search['value'] . '%');
+                    });
+                }
+            })
+            ->make(true);
     }
 
 }

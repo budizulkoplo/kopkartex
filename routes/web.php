@@ -51,6 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // })->middleware('global.app:user')->name('mobile.home');
     // routes/web.php
     Route::get('/admin/pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIni']);
+    Route::get('/admin/data-pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIniData'])->name('dashboard.pesananHariIniData');
 
 });
 

@@ -46,26 +46,10 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse($pesananTerbaru as $index => $p)
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>{{ $p->nomor_invoice ?? '-' }}</td>
-                                            <td>{{ \Carbon\Carbon::parse($p->tanggal)->format('d-m-Y') }}</td>
-                                            <td>{{ $p->customer ?? '-' }}</td>
-                                            <td>{{ number_format($p->grandtotal, 0, ',', '.') }}</td>
-                                            <td>
-                                                <span class="badge bg-{{ $p->status_ambil == 'finish' ? 'success' : 'warning' }}">
-                                                    {{ ucfirst($p->status_ambil ?? '-') }}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                        @empty
-                                        <tr>
-                                            <td colspan="6" class="text-center">Belum ada pesanan</td>
-                                        </tr>
-                                        @endforelse
+                                        
                                     </tbody>
                                 </table>
+                                
                             </div>
                         </div>
                     </div>
@@ -212,18 +196,32 @@
                     scales: { x: { beginAtZero: true } }
                 }
             });
+            var table = $('#tbdatatable').DataTable({
+                processing: false,
+                serverSide: false,
+                paging: false,          // hilangkan pagination
+                searching: false,       // hilangkan search box
+                info: false,            // hilangkan tulisan "Showing ..."
+                lengthChange: false,    // hilangkan dropdown "entries per page"
+                ordering: false,        // ⛔ matikan sorting di semua kolom
+                ajax: "{{ route('dashboard.pesananHariIniData') }}",
+                columns: [
+                    { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false }, // nomor urut
+                    { data: 'nomor_invoice', name: 'nomor_invoice' },
+                    { data: 'tanggal', name: 'tanggal' },
+                    { data: 'customer', name: 'customer' },
+                    { data: 'status_ambil', name: 'status_ambil' },
+                    { data: 'grandtotal', name: 'grandtotal' },
+                ]
+            });
         </script>
 
         <script>
-            function loadPesanan() {
-                fetch("{{ url('/admin/pesanan-hari-ini') }}")
-                    .then(res => res.text())
-                    .then(html => {
-                        document.querySelector("#tbdatatable tbody").innerHTML = html;
-                    });
-            }
-
-            setInterval(loadPesanan, 10000); // refresh tiap 10 detik
+            // reload otomatis tiap 10 detik (10000 ms)
+            setInterval(function () {
+                table.ajax.reload(null, false); 
+                // parameter false = biar tidak reset ke page 1
+            }, 10000);
         </script>
     </x-slot>
 </x-app-layout>
