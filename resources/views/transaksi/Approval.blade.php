@@ -231,20 +231,20 @@
                     }
                 ],
             });
-            function formatRupiah(angka, prefix = "Rp") {
-                 // Pastikan angka berupa number (double/float)
-                if (typeof angka !== "number") {
-                    angka = parseFloat(angka);
-                    if (isNaN(angka)) return "";
-                }
+            // function formatRupiah(angka, prefix = "Rp") {
+            //      // Pastikan angka berupa number (double/float)
+            //     if (typeof angka !== "number") {
+            //         angka = parseFloat(angka);
+            //         if (isNaN(angka)) return "";
+            //     }
 
-                // Format ke locale Indonesia
-                return angka.toLocaleString("id-ID", {
-                    style: "currency",
-                    currency: "IDR",
-                    minimumFractionDigits: 0 // kalau mau tanpa ,00
-                }).replace("Rp", prefix);
-            }
+            //     // Format ke locale Indonesia
+            //     return angka.toLocaleString("id-ID", {
+            //         style: "currency",
+            //         currency: "IDR",
+            //         minimumFractionDigits: 0 // kalau mau tanpa ,00
+            //     }).replace("Rp", prefix);
+            // }
             function dtl(id){
                 axios.get('{{ route('app.dtlcicilan') }}', { params: {id: id} })
                 .then(response => {

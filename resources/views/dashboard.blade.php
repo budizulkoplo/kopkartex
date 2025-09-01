@@ -196,6 +196,7 @@
                     scales: { x: { beginAtZero: true } }
                 }
             });
+            
             var table = $('#tbdatatable').DataTable({
                 processing: false,
                 serverSide: false,
@@ -211,7 +212,9 @@
                     { data: 'tanggal', name: 'tanggal' },
                     { data: 'customer', name: 'customer' },
                     { data: 'status_ambil', name: 'status_ambil' },
-                    { data: 'grandtotal', name: 'grandtotal' },
+                    { data: 'grandtotal', name: 'grandtotal', 
+                         render: function (data, type, row, meta) {return formatRupiah(data,'');}
+                     },
                 ]
             });
         </script>
