@@ -4,7 +4,7 @@
             <div class="container-fluid">
                 <div class="row mb-3">
                     <div class="col-sm-6">
-                        <h3 class="mb-0">Form Penjualan</h3>
+                        <h3 class="mb-0">Form Penjualan - {{ $unit->nama_unit }}</h3>
                     </div>
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-end">
@@ -20,8 +20,8 @@
         <div class="container">
             <form class="needs-validation" novalidate id="frmterima" autocomplete="off">
                 <div class="card card-success card-outline mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Form Penjualan - {{ $unit->nama_unit }}</h5>
+                    <div class="card-header p-2">
+                        <div class="alert alert-warning ps-2 p-0 mb-0" role="alert" id="detailcus" style="display: none"></div>
                     </div>
                     <div class="card-body p-3">
                         <div class="row mb-3">
@@ -31,19 +31,28 @@
                                     <input type="text" class="form-control datepicker" name="tanggal" required>
                                     <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
                                 </div>
-                                <div class="input-group input-group-sm mb-2"> 
-                                    <span class="input-group-text label-fixed-width">Petugas</span>
-                                    <input type="text" class="form-control" value="{{ auth()->user()->name }}" name="kasir" disabled>
+                                <div class="input-group input-group-sm mb-2 align-items-center">
+                                    <div class="input-group-text">
+                                        <input class="form-check-input mt-0 me-2" type="checkbox" value="" id="flexCheckDefault" checked>
+                                        <label for="flexCheckDefault" class="mb-0">Anggota</label>
+                                    </div>
+                                    <input type="text" class="form-control" id="customer" name="customer" required autocomplete="off">
+                                    <input type="hidden" id="idcustomer" name="idcustomer">
                                 </div>
                             </div>
 
                             <div class="col-md-4">
+                                <div class="input-group input-group-sm mb-2"> 
+                                    <span class="input-group-text label-fixed-width">Petugas</span>
+                                    <input type="text" class="form-control" value="{{ auth()->user()->name }}" name="kasir" disabled>
+                                </div>
                                 <div class="input-group input-group-sm mb-2"> 
                                     <span class="input-group-text label-fixed-width">Barang</span>
                                     <input type="text" class="form-control typeahead" id="barcode-search">
                                     <input type="hidden" id="barcode-id">
                                     <span class="input-group-text bg-primary"><i class="fa-solid fa-barcode text-white"></i></span>
                                 </div>
+                                
                             </div>
 
                             <div class="col-md-4 text-end">
@@ -107,14 +116,7 @@
                                         <option value="cicilan">Cicilan</option>
                                     </select>
                                 </div>
-                                <div class="input-group input-group-sm mb-2 align-items-center">
-                                    <div class="input-group-text">
-                                        <input class="form-check-input mt-0 me-2" type="checkbox" value="" id="flexCheckDefault" checked>
-                                        <label for="flexCheckDefault" class="mb-0">Anggota</label>
-                                    </div>
-                                    <input type="text" class="form-control" id="customer" name="customer" required autocomplete="off">
-                                    <input type="hidden" id="idcustomer" name="idcustomer">
-                                </div>
+                                
                                 <div class="input-group input-group-sm mb-2 fieldcicilan" style="display: none">
                                     <span class="input-group-text label-fixed-width">Jml.Cicilan</span>
                                     <select class="form-select form-select-sm" id="jmlcicilan" name="jmlcicilan"></select>
@@ -373,30 +375,53 @@
             let typeaheadEnabled = true;
 
             function activateTypeahead() {
+                $('#detailcus').html('');
                 $('#customer').typeahead({
-                    source: function (query, process) {
-                        return $.ajax({
-                        url: '{{ route('jual.getanggota') }}',       // Your backend endpoint
-                        type: 'GET',
-                        data: { query: query },
-                        dataType: 'json',
-                        success: function (data) {
-                            users = data; // Save for lookup later
-                            return process(data.map(user => user.name));
-                        }
+                    minLength: 2,
+                    displayText: function(item) {
+                        return item.name + " (" + item.nomor_anggota + ")";
+                    },
+                    source: function(query, process) {
+                        return $.get('{{ route('jual.getanggota') }}', { query: query }, function(data) {
+                            return process(data);
                         });
                     },
-                    afterSelect: function (name) {
-                        const selected = users.find(user => user.name === name);
-                        if (selected) {
-                        $('#idcustomer').val(selected.id);
-                        selectedFromList = true;
-                        }
+                    afterSelect: function(item) {
+                        // tampilkan detail setelah pilih
+                        $('#detailcus').html(`<table>
+                            <tr><td>Nomor Anggota</td><td>: ${item.nomor_anggota}</td></tr>
+                            <tr><td>Sisa Limit Hutang</td><td>: ${formatRupiahWithDecimal(item.limit_hutang)}</td></tr>
+                            </table>
+                        `);
+                        $('#idcustomer').val(item.id);
+                        $('#detailcus').show();
                     }
                 });
+                // $('#customer').typeahead({
+                //     source: function (query, process) {
+                //         return $.ajax({
+                //         url: '{{ route('jual.getanggota') }}',       // Your backend endpoint
+                //         type: 'GET',
+                //         data: { query: query },
+                //         dataType: 'json',
+                //         success: function (data) {
+                //             users = data; // Save for lookup later
+                //             return process(data.map(user => user.name));
+                //         }
+                //         });
+                //     },
+                //     afterSelect: function (name) {
+                //         const selected = users.find(user => user.name === name);
+                //         if (selected) {
+                //         $('#idcustomer').val(selected.id);
+                //         selectedFromList = true;
+                //         }
+                //     }
+                // });
             }
             function destroyTypeahead() {
                 $('#customer').typeahead('destroy');
+                $('#detailcus').html('').hide();
                 typeaheadEnabled = false;
             }
             $('.fieldcicilan').hide();
@@ -447,6 +472,7 @@
                 $('#flexCheckDefault').on('change', function () {
                     if ($(this).is(':checked')) {
                         activateTypeahead();
+                        
                         $('#customer').val('').prop('readonly', false);
                         $('#idcustomer').val('');
                         //$('#customer').attr('required', true);

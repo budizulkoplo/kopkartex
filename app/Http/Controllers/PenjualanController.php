@@ -54,11 +54,35 @@ class PenjualanController extends Controller
     public function getAnggota(Request $request){
         $query = $request->get('query');
 
-        $users = User::where('name', 'LIKE', "%{$query}%")
-                    ->select('id', 'name')
-                    ->get();
+        $users = User::leftJoin('penjualan_cicilan', function($join) {
+            $join->on('penjualan_cicilan.anggota_id', '=', 'users.id')
+                ->where('penjualan_cicilan.status', '=', 'hutang');
+        })
+        ->where(function ($q) use ($query) {
+            $q->where('users.name', 'LIKE', "%{$query}%")
+            ->orWhere('users.nomor_anggota', 'LIKE', "%{$query}%");
+        })
+        ->select(
+            'users.id',
+            'users.name',
+            'users.nomor_anggota',
+            'users.limit_hutang',
+            DB::raw('SUM(penjualan_cicilan.pokok) as total_pokok')
+        )
+        ->groupBy('users.id', 'users.name', 'users.nomor_anggota', 'users.limit_hutang')
+        ->get();
+        // format data sesuai kebutuhan typeahead
+        $formatted = $users->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'nomor_anggota' => $user->nomor_anggota,
+                'limit_hutang' => $user->limit_hutang - $user->total_pokok,
+            ];
+        });
 
-        return response()->json($users);
+        return response()->json($formatted);
+       // return response()->json($users);
     }
     public function getBarang(Request $request){
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
