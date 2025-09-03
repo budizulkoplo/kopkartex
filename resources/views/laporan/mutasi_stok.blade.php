@@ -25,10 +25,10 @@
                                 <th>Tanggal</th>
                                 <th>Dari Unit</th>
                                 <th>Ke Unit</th>
-                                <th>Note</th>
                                 <th>Kode Barang</th>
                                 <th>Nama Barang</th>
                                 <th class="text-end">Qty</th>
+                                <th>Note</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -64,10 +64,10 @@
                                     tanggal: h.tanggal || '',
                                     dari_unit: h.dari_unit || '',
                                     ke_unit: h.ke_unit || '',
-                                    note: h.note || '',
                                     kode_barang: d.kode_barang || '',
                                     nama_barang: d.nama_barang || '',
-                                    qty: d.qty || 0
+                                    qty: d.qty || 0,
+                                    note: h.note || ''
                                 });
                             });
                         });
@@ -78,10 +78,10 @@
                     { data: "tanggal" },
                     { data: "dari_unit" },
                     { data: "ke_unit" },
-                    { data: "note" },
                     { data: "kode_barang" },
                     { data: "nama_barang" },
-                    { data: "qty", className: "text-end" }
+                    { data: "qty", className: "text-end" },
+                    { data: "note" }
                 ],
                 dom:
                 "<'row mb-2'<'col-md-6 d-flex align-items-center'B><'col-md-6 d-flex justify-content-end'f>>" +
