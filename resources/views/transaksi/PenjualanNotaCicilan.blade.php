@@ -47,10 +47,7 @@
         <?php
             echo '<table cellpadding="0" cellspacing="0">
                     <tr>
-                        <td>'.$hdr->nomor_invoice.'</td>
-                    </tr>
-                    <tr>
-                        <td>'.$hdr->name.'</td>
+                        <td>NOTA PENJUALAN KREDIT</td>
                     </tr>
                 </table>';
             echo(str_repeat("=", 40)."<br/>");
@@ -107,14 +104,14 @@
 
                     echo '<tr>';
                     $qty        = $v->qty;
-                    $qty        = $qty. str_repeat("&nbsp;", max(0, 8 - strlen($qty)) );
+                    $qty        = $qty. str_repeat("&nbsp;", max(0,  8 - strlen($qty)) );
     
                     $price      = format_rupiah($v->harga);
-                    $price      = str_repeat("&nbsp;", max(0, 9 - strlen($price)) ). $price;
+                    $price      = str_repeat("&nbsp;", max(0, 9 - strlen($price))) . $price;
 
                     $total      = format_rupiah($v->harga*$v->qty);
                     $lentotal   = strlen($total);
-                    $total      = str_repeat("&nbsp;", max(0, 15 - $lentotal) ). $total;
+                    $total      = str_repeat("&nbsp;", max(0,  15 - $lentotal) ). $total;
                         echo'<td class="txt-left" align="left">'.$qty. $price. $total .'</td>';
                     
                     echo '</tr>';
@@ -141,24 +138,16 @@
                 $GT      = format_rupiah($hdr->grandtotal);
                 $GT      = str_repeat("&nbsp;", ( 23 - strlen($GT)) ). $GT;
                 echo '<tr><td>'. $titleGT. $GT.'</td></tr>';
-                
-                //Bayar
-                $titlePy = 'BAYAR';
-                $titlePy = $titlePy. str_repeat("&nbsp;", ( 15 - strlen($titlePy)) );
-                $Py      = format_rupiah($hdr->dibayar);
-                $Py      = str_repeat("&nbsp;", ( 23 - strlen($Py)) ). $Py;
-                echo '<tr><td>'. $titlePy. $Py.'</td></tr>';
 
-                //Kembali
-                $titleK = 'KEMBALI';
-                $titleK = $titleK. str_repeat("&nbsp;", ( 15 - strlen($titleK)) );
-                $Kb     = format_rupiah($hdr->kembali);
-                $Kb      = str_repeat("&nbsp;", ( 23 - strlen($Kb)) ). $Kb;
-                echo '<tr><td>'. $titleK. $Kb.'</td></tr>';
-                echo '<tr><td>&nbsp;</td></tr>';
+                //Cicilan Awal
+                $titleCA = 'Cicilan&nbspAwal';
+                $titleCA = $titleCA. str_repeat("&nbsp;", ( 19 - strlen($titleCA)) );
+                $CA      = format_rupiah($cicilan->total_cicilan);
+                $CA      = str_repeat("&nbsp;", ( 23 - strlen($CA)) ). $CA;
+                echo '<tr><td>'. $titleCA. $CA.'</td></tr>';
 
             }
-            echo '</table>';
+            echo '</table><br>';
 
             $footer = 'Terima kasih atas kunjungan anda';
             $starSpace = ( 32 - strlen($footer) ) / 2;

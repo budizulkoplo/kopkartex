@@ -379,7 +379,7 @@
                 $('#customer').typeahead({
                     minLength: 2,
                     displayText: function(item) {
-                        return item.name + " (" + item.nomor_anggota + ")";
+                        return item.name;
                     },
                     source: function(query, process) {
                         return $.get('{{ route('jual.getanggota') }}', { query: query }, function(data) {

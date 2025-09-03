@@ -34,6 +34,7 @@ use App\Http\Controllers\Mobile\BelanjaController;
 use App\Http\Controllers\Mobile\MobileProfileController;
 use App\Http\Controllers\Mobile\MobilePinjamanController;
 use App\Http\Controllers\Mobile\MobileStokOpnameController;
+use App\Http\Controllers\MobileController;
 
 Route::get('/login', [AuthenticatedSessionController::class, 'create']);
 
