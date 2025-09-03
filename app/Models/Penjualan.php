@@ -11,5 +11,10 @@ class Penjualan extends Model
     use HasFactory,SoftDeletes;
     protected $table = 'penjualan';
     protected $primaryKey = 'id';
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'created_user', 'id');
+    }
     
 }

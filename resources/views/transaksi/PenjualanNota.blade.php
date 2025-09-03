@@ -77,7 +77,9 @@
                         <td align="left" class="txt-left">&nbsp;'. $hdr->tanggal.'</td>
                     </tr>
                     <tr>
-                        <td align="left" colspan="3" class="txt-left">'.$hdr->customer.'</td>
+                        <td align="left" class="txt-left">Customer&nbsp;</td>
+                        <td align="left" class="txt-left">:</td>
+                        <td align="left" colspan="3" class="txt-left">&nbsp;'.$hdr->nomor_anggota." - ".$hdr->customer.'</td>
                     </tr>
                 </table>';
             echo '<br/>';
