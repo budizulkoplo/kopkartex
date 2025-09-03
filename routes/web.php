@@ -85,13 +85,18 @@ Route::prefix('ambilbarang')->middleware(['auth', 'verified', 'role:superadmin|a
     Route::delete('/delitem', [AmbilBarangController::class, 'DeleteItem'])->name('ambil.delitem');
 });
 Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
-    Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.index'); // <- tampilan daftar barang
-    Route::get('/form', [StockOpnameController::class, 'form'])->name('stockopname.form'); // <- tampilkan form opname
+    Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.index'); // daftar barang
+    Route::get('/form', [StockOpnameController::class, 'form'])->name('stockopname.form'); // form opname
     Route::get('/getbarang', [StockOpnameController::class, 'getBarang'])->name('stockopname.getbarang');
     Route::get('/getbarangbycode', [StockOpnameController::class, 'getBarangByCode'])->name('stockopname.getbarangbycode');
     Route::post('/store', [StockOpnameController::class, 'store'])->name('stockopname.store');
-    Route::post('/stockopname/mulai', [StockOpnameController::class, 'mulaiOpname'])->name('stockopname.mulai');
+    Route::post('/mulai', [StockOpnameController::class, 'mulaiOpname'])->name('stockopname.mulai');
+
+    // tambahan
+    Route::post('/scan', [StockOpnameController::class, 'scanBarang'])->name('stockopname.scan');
+    Route::post('/insert-old', [StockOpnameController::class, 'insertFromOld'])->name('stockopname.insertOld');
 });
+
 
 Route::prefix('master/jasabengkel')
     ->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])
@@ -133,6 +138,7 @@ Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|adm
     Route::post('/store', [PenjualanController::class, 'Store'])->name('jual.store');
     Route::get('/nota/{invoice}', [PenjualanController::class, 'nota'])->name('jual.nota');
     Route::post('/cektanggungan', [PenjualanController::class, 'CekTanggungan'])->name('jual.cektanggungan');
+    Route::get('/riwayat', [PenjualanController::class, 'RiwayatPenjualan'])->name('jual.riwayat');
 });
 Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus', 'global.app'])->group(function () {
     Route::get('/', [ApprovalController::class, 'index'])->name('app.list');
@@ -251,18 +257,16 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin',
 Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/stok-barang', [LaporanController::class, 'stokBarang'])->name('laporan.stokbarang');
     Route::get('/stok-barang/data', [LaporanController::class, 'stokBarangData'])->name('laporan.stokbarang.data');
-
     Route::get('/penjualan', [LaporanController::class, 'penjualan'])->name('laporan.penjualan');
     Route::get('/penjualan/data', [LaporanController::class, 'penjualanData'])->name('laporan.penjualan.data');
-
     Route::get('/penerimaan', [LaporanController::class, 'penerimaanLaporan'])->name('laporan.penerimaan');
     Route::get('/penerimaan/data', [LaporanController::class, 'penerimaanData'])->name('laporan.penerimaan.data');
-
     Route::get('/retur', [LaporanController::class, 'retur'])->name('laporan.retur');
     Route::get('/retur/data', [LaporanController::class, 'returData'])->name('laporan.retur.data');
-
     Route::get('/stok-opname', [LaporanController::class, 'stokOpname'])->name('laporan.stokopname');
     Route::get('/stok-opname/data', [LaporanController::class, 'stokOpnameData'])->name('laporan.stokopname.data');
+    Route::get('/mutasi-stok', [LaporanController::class, 'mutasiStok'])->name('laporan.mutasi_stok');
+    Route::get('/mutasi-stok/data', [LaporanController::class, 'mutasiStokData'])->name('laporan.mutasi_stok.data');
 
 });
 

@@ -189,4 +189,31 @@ class PenjualanController extends Controller
             ], 500);
         }
     }
+
+    public function RiwayatPenjualan(Request $request): View
+    {
+        $tanggalAwal = $request->tanggal_awal ?? date('Y-m-d');
+        $tanggalAkhir = $request->tanggal_akhir ?? date('Y-m-d');
+
+        $query = Penjualan::with('user')
+            ->join('users', 'users.id', '=', 'penjualan.created_user')
+            ->select('penjualan.*', 'users.name as kasir')
+            ->whereDate('penjualan.tanggal', '>=', $tanggalAwal)
+            ->whereDate('penjualan.tanggal', '<=', $tanggalAkhir)
+            ->orderBy('penjualan.tanggal', 'desc');
+
+        if($request->anggota){
+            $query->where('anggota_id', $request->anggota);
+        }
+
+        $penjualan = $query->get();
+
+        return view('transaksi.RiwayatPenjualan', [
+            'penjualan' => $penjualan,
+            'tanggal_awal' => $tanggalAwal,
+            'tanggal_akhir' => $tanggalAkhir,
+            'anggota' => $request->anggota ?? ''
+        ]);
+    }
+
 }
