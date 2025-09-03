@@ -311,4 +311,62 @@ class LaporanController extends Controller
         return response()->json(['data' => $data]);
     }
 
+    // Laporan Mutasi Stok
+    public function mutasiStok(Request $request)
+    {
+        $tanggal = $request->input('tanggal', date('Y-m-d'));
+
+        return view('laporan.mutasi_stok', [
+            'tanggal' => $tanggal,
+        ]);
+    }
+
+    public function mutasiStokData(Request $request)
+    {
+        $tanggal = $request->input('tanggal', date('Y-m-d'));
+
+        $mutasi = DB::table('mutasi_stok as m')
+            ->join('mutasi_stok_detail as d', 'm.id', '=', 'd.mutasi_id')
+            ->join('barang as b', 'd.barang_id', '=', 'b.id')
+            ->join('unit as u_from', 'm.dari_unit', '=', 'u_from.id')
+            ->join('unit as u_to', 'm.ke_unit', '=', 'u_to.id')
+            ->select(
+                'm.id as idmutasi',
+                'm.tanggal',
+                'm.status',
+                'm.note',
+                'u_from.nama_unit as dari_unit',
+                'u_to.nama_unit as ke_unit',
+                'b.kode_barang',
+                'b.nama_barang',
+                'd.qty'
+            )
+            ->whereDate('m.tanggal', $tanggal)
+            ->whereNull('m.deleted_at')
+            ->whereNull('d.deleted_at')
+            ->orderBy('m.tanggal')
+            ->orderBy('m.id')
+            ->get();
+
+        // Grouping untuk rowspan mirip Retur
+        $grouped = [];
+        foreach ($mutasi as $row) {
+            $grouped[$row->idmutasi]['header'] = [
+                'tanggal'    => $row->tanggal,
+                'dari_unit'  => $row->dari_unit,
+                'ke_unit'    => $row->ke_unit,
+                'status'     => $row->status,
+                'note'       => $row->note,
+            ];
+            $grouped[$row->idmutasi]['details'][] = [
+                'kode_barang' => $row->kode_barang,
+                'nama_barang' => $row->nama_barang,
+                'qty'         => $row->qty,
+            ];
+        }
+
+        return response()->json(['data' => array_values($grouped)]);
+    }
+
+
 }
