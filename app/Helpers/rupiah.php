@@ -1,7 +1,8 @@
 <?php
 if (! function_exists('format_rupiah')) {
-    function format_rupiah($angka)
+    function format_rupiah($angka, $prefix = 'Rp ')
     {
-        return 'Rp ' . number_format($angka, 0, ',', '.');
+        $angka = (float) $angka ?: 0;
+        return $prefix . number_format($angka, 0, ',', '.');
     }
 }

@@ -32,15 +32,26 @@ class PenjualanController extends Controller
     public function nota($invoice): View
     {   
         $hdr=Penjualan::join('users','users.id','penjualan.created_user')
-        ->select('penjualan.*','users.name as kasir')
+        ->leftjoin('users as anggota','anggota.id','penjualan.anggota_id')
+        ->select('penjualan.*','users.name as kasir','anggota.nomor_anggota')
         ->where('penjualan.nomor_invoice',$invoice)->first();
         $dtl=PenjualanDetail::join('barang','barang.id','penjualan_detail.barang_id')
-        ->select('barang.nama_barang','barang.kode_barang','penjualan_detail.qty','penjualan_detail.harga')
-        ->where('penjualan_id',$hdr->id)->get();
-        return view('transaksi.PenjualanNota', [
-            'hdr' => $hdr,
-            'dtl' => $dtl,
-        ]);
+            ->select('barang.nama_barang','barang.kode_barang','penjualan_detail.qty','penjualan_detail.harga')
+            ->where('penjualan_id',$hdr->id)->get();
+        if($hdr->metode_bayar == 'cicilan'){
+            $cicilan = PenjualanCicil::where(['penjualan_id'=>$hdr->id,'cicilan'=>1])->first();
+
+             return view('transaksi.PenjualanNotaCicilan', [
+                'hdr' => $hdr,
+                'dtl' => $dtl,
+                'cicilan' => $cicilan
+            ]);
+        }else{
+            return view('transaksi.PenjualanNota', [
+                'hdr' => $hdr,
+                'dtl' => $dtl,
+            ]);
+        }
     }
     function genCode(){
         $total = Penjualan::withTrashed()->whereDate('created_at', date("Y-m-d"))->count();
@@ -158,6 +169,7 @@ class PenjualanController extends Controller
                 $batas = 0.35 * $user->gaji; // 35% dari gaji
                 if (($totalcicilan+$cicilanpertama) > $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
                     return response()->json('Tidak dapat diproses, Melebihi batas limit',500);
+                    //return response()->json([$request->idcustomer,$totalcicilan,$cicilanpertama],500);
                 }
 
                 $penjualan->bunga_barang = $bunga->bunga_barang;
