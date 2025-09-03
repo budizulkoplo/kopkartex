@@ -75,13 +75,13 @@
                     }
                 },
                 columns: [
-                    { data: "tanggal" },
-                    { data: "dari_unit" },
-                    { data: "ke_unit" },
-                    { data: "kode_barang" },
-                    { data: "nama_barang" },
-                    { data: "qty", className: "text-end" },
-                    { data: "note" }
+                    { data: "tanggal", className: "text-start" },
+                    { data: "dari_unit", className: "text-start" },
+                    { data: "ke_unit", className: "text-start" },
+                    { data: "kode_barang", className: "text-start" },
+                    { data: "nama_barang", className: "text-start" },
+                    { data: "qty", className: "text-center" },
+                    { data: "note", className: "text-start" }
                 ],
                 dom:
                 "<'row mb-2'<'col-md-6 d-flex align-items-center'B><'col-md-6 d-flex justify-content-end'f>>" +
