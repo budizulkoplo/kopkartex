@@ -85,13 +85,18 @@ Route::prefix('ambilbarang')->middleware(['auth', 'verified', 'role:superadmin|a
     Route::delete('/delitem', [AmbilBarangController::class, 'DeleteItem'])->name('ambil.delitem');
 });
 Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
-    Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.index'); // <- tampilan daftar barang
-    Route::get('/form', [StockOpnameController::class, 'form'])->name('stockopname.form'); // <- tampilkan form opname
+    Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.index'); // daftar barang
+    Route::get('/form', [StockOpnameController::class, 'form'])->name('stockopname.form'); // form opname
     Route::get('/getbarang', [StockOpnameController::class, 'getBarang'])->name('stockopname.getbarang');
     Route::get('/getbarangbycode', [StockOpnameController::class, 'getBarangByCode'])->name('stockopname.getbarangbycode');
     Route::post('/store', [StockOpnameController::class, 'store'])->name('stockopname.store');
-    Route::post('/stockopname/mulai', [StockOpnameController::class, 'mulaiOpname'])->name('stockopname.mulai');
+    Route::post('/mulai', [StockOpnameController::class, 'mulaiOpname'])->name('stockopname.mulai');
+
+    // tambahan
+    Route::post('/scan', [StockOpnameController::class, 'scanBarang'])->name('stockopname.scan');
+    Route::post('/insert-old', [StockOpnameController::class, 'insertFromOld'])->name('stockopname.insertOld');
 });
+
 
 Route::prefix('master/jasabengkel')
     ->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])

@@ -58,6 +58,18 @@
                         </a>
                     </div>
 
+                    <div class="card p-2 mb-3 border border-info" style="background-color:#e9f7ff;">
+                        <form id="formScan" class="d-flex gap-2">
+                            <input type="text" id="kodeScan" name="kode" 
+                                class="form-control form-control-sm"
+                                placeholder="🔍 Scan / Input Kode Barang"
+                                style="font-size:0.9rem;">
+                            <button type="submit" class="btn btn-info btn-sm">
+                                <i class="bi bi-upc-scan me-1"></i> Scan
+                            </button>
+                        </form>
+                    </div>
+
                     {{-- Tabel Barang --}}
                     <table class="table table-sm table-bordered table-striped text-center" id="tbbarang" style="width: 100%; font-size: small;">
                         <thead class="table-light">
@@ -122,6 +134,46 @@
                         }
                     });
                 });
+            });
+
+            $('#formScan').on('submit', function(e) {
+                e.preventDefault();
+                let kode = $('#kodeScan').val();
+
+                if (!kode) return;
+
+                $.post("{{ route('stockopname.scan') }}", { kode: kode, _token: "{{ csrf_token() }}" })
+                .done(function(res) {
+                    if (res.status === 'found') {
+                        window.location.href = "{{ url('/stock/form') }}" + "?barang_id=" + res.data.id;
+                    } else if (res.status === 'old') {
+                        Swal.fire({
+                            title: 'Barang tidak ada di master!',
+                            text: "Barang ditemukan di master lama. Apakah mau ditambahkan ke master baru?",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Ya, Tambahkan',
+                            cancelButtonText: 'Batal'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                $.post("{{ route('stockopname.insertOld') }}", { kode: kode, _token: "{{ csrf_token() }}" })
+                                .done(function(res2) {
+                                    window.location.href = "{{ url('/stock/form') }}" + "?barang_id=" + res2.data.id;
+                                });
+                            }
+                        });
+                    }
+                })
+                .fail(function(err) {
+                    Swal.fire('Error', err.responseJSON.message ?? 'Barang tidak ditemukan', 'error');
+                });
+            });
+
+        </script>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                document.getElementById("kodeScan")?.focus();
             });
         </script>
     </x-slot>

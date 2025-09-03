@@ -166,96 +166,208 @@ class StockOpnameController extends Controller
         
     }
     public function Store(Request $request)
-{
-    DB::beginTransaction();
-    try {
-        // Validasi sederhana
-        if (!$request->filled('tgl_opname') || 
-            !is_array($request->id) || count($request->id) === 0 ||
-            !is_array($request->qty) || count($request->qty) === 0 ||
-            !is_array($request->exp) || count($request->exp) === 0 ||
-            !is_array($request->code) || count($request->code) === 0) {
-            return response()->json(['error' => 'Incomplete data'], 400);
+    {
+        DB::beginTransaction();
+        try {
+            // Validasi sederhana
+            if (!$request->filled('tgl_opname') || 
+                !is_array($request->id) || count($request->id) === 0 ||
+                !is_array($request->qty) || count($request->qty) === 0 ||
+                !is_array($request->exp) || count($request->exp) === 0 ||
+                !is_array($request->code) || count($request->code) === 0) {
+                return response()->json(['error' => 'Incomplete data'], 400);
+            }
+
+            $date = Carbon::parse($request->tgl_opname);
+            $unitId = Auth::user()->unit_kerja;
+            $userId = Auth::user()->id;
+
+            $dataGrouped = [];
+
+            foreach ($request->id as $index => $idBarang) {
+                $dataGrouped[$idBarang]['code'] = $request->code[$index] ?? null;
+                $dataGrouped[$idBarang]['items'][] = [
+                    'qty' => $request->qty[$index] ?? 0,
+                    'exp' => $request->exp[$index] ?? null,
+                ];
+            }
+
+            foreach ($dataGrouped as $idBarang => $group) {
+                $totalQty = array_sum(array_column($group['items'], 'qty'));
+
+                $stoksys = StokUnit::where([
+                    'barang_id' => $idBarang,
+                    'unit_id' => $unitId
+                ])->first();
+
+                if (!$stoksys) {
+                    throw new Exception("Stok untuk barang ID {$idBarang} tidak ditemukan.");
+                }
+
+                // 🔑 Cek apakah sudah ada HDR opname pada tanggal yg sama
+                $hdr = StockOpnameHDR::where([
+                    'id_unit' => $unitId,
+                    'id_barang' => $idBarang,
+                    'tgl_opname' => $date->format('Y-m-d'),
+                ])->first();
+
+                if (!$hdr) {
+                    $hdr = new StockOpnameHDR();
+                    $hdr->id_unit = $unitId;
+                    $hdr->id_barang = $idBarang;
+                    $hdr->kode_barang = $group['code'];
+                    $hdr->tgl_opname = $date->format('Y-m-d');
+                    $hdr->user = $userId;
+                }
+
+                $hdr->stock_sistem = $stoksys->stok;
+                $hdr->stock_fisik = $totalQty;
+                $hdr->status = "sukses";
+                $hdr->save();
+
+                // 🔑 Hapus DTL lama kalau ada, biar tidak duplikat
+                StockOpnameDTL::where('opnameid', $hdr->id)->delete();
+
+                foreach ($group['items'] as $item) {
+                    $dtl = new StockOpnameDTL();
+                    $dtl->opnameid = $hdr->id;
+                    $dtl->id_barang = $idBarang;
+                    $dtl->qty = $item['qty'];
+                    $dtl->expired_date = $item['exp'];
+                    $dtl->save();
+                }
+
+                // Update stok sistem
+                $stoksys->stok = $totalQty;
+                $stoksys->save();
+            }
+
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'redirect' => url('/stock'),
+                'message' => 'Stock opname berhasil disimpan.'
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Gagal menyimpan stok opname',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function scanBarang(Request $request)
+    {
+        $kode = $request->kode;
+        $unitId = Auth::user()->unit_kerja;
+
+        // Cari di tabel barang utama
+        $barang = DB::table('barang')
+            ->where('kode_barang', $kode)
+            ->first();
+
+        if ($barang) {
+            return response()->json([
+                'status' => 'found',
+                'data' => $barang
+            ]);
         }
 
-        $date = Carbon::parse($request->tgl_opname);
+        // Cari di barang_ori
+        $barangOld = DB::table('barang_ori')
+            ->where('kode_barang', $kode)
+            ->first();
+
+        if ($barangOld) {
+            return response()->json([
+                'status' => 'old',
+                'data' => $barangOld
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'notfound',
+            'message' => "Barang dengan kode {$kode} tidak ditemukan."
+        ], 404);
+    }
+
+    public function insertFromOld(Request $request)
+    {
+        $kode = $request->kode;
         $unitId = Auth::user()->unit_kerja;
         $userId = Auth::user()->id;
+        $tglOpname = $request->tgl_opname ?? now()->format('Y-m-d');
 
-        $dataGrouped = [];
+        $barangOld = DB::table('barang_ori')
+            ->where('kode_barang', $kode)
+            ->first();
 
-        foreach ($request->id as $index => $idBarang) {
-            $dataGrouped[$idBarang]['code'] = $request->code[$index] ?? null;
-            $dataGrouped[$idBarang]['items'][] = [
-                'qty' => $request->qty[$index] ?? 0,
-                'exp' => $request->exp[$index] ?? null,
-            ];
+        if (!$barangOld) {
+            return response()->json(['error' => 'Barang lama tidak ditemukan'], 404);
         }
 
-        foreach ($dataGrouped as $idBarang => $group) {
-            $totalQty = array_sum(array_column($group['items'], 'qty'));
+        DB::beginTransaction();
+        try {
+            // 1. Insert ke tabel barang baru
+            $idBarang = DB::table('barang')->insertGetId([
+                'kode_barang'   => $barangOld->kode_barang,
+                'nama_barang'   => $barangOld->nama_barang,
+                'kategori'      => $barangOld->kategori,
+                'satuan'        => $barangOld->satuan,
+                'harga_beli'    => $barangOld->harga_beli,
+                'harga_jual'    => $barangOld->harga_jual,
+                'kelompok_unit' => $barangOld->kelompok_unit,
+                'img'           => $barangOld->img,
+                'created_at'    => now(),
+                'updated_at'    => now()
+            ]);
 
-            $stoksys = StokUnit::where([
-                'barang_id' => $idBarang,
-                'unit_id' => $unitId
-            ])->first();
-
-            if (!$stoksys) {
-                throw new Exception("Stok untuk barang ID {$idBarang} tidak ditemukan.");
+            // 2. Insert stok_unit untuk SEMUA unit dengan stok awal = 0
+            $allUnits = DB::table('unit')->pluck('id'); // ambil semua id unit
+            $stokUnitData = [];
+            foreach ($allUnits as $uId) {
+                $stokUnitData[] = [
+                    'barang_id'  => $idBarang,
+                    'unit_id'    => $uId,
+                    'stok'       => 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
             }
+            DB::table('stok_unit')->insert($stokUnitData);
 
-            // 🔑 Cek apakah sudah ada HDR opname pada tanggal yg sama
-            $hdr = StockOpnameHDR::where([
-                'id_unit' => $unitId,
-                'id_barang' => $idBarang,
-                'tgl_opname' => $date->format('Y-m-d'),
-            ])->first();
+            // 3. Insert juga ke tabel stock_opname (hanya untuk unit user aktif)
+            DB::table('stock_opname')->insert([
+                'tgl_opname'   => $tglOpname,
+                'id_unit'      => $unitId,
+                'id_barang'    => $idBarang,
+                'kode_barang'  => $barangOld->kode_barang,
+                'stock_sistem' => 0,
+                'stock_fisik'  => 0,
+                'keterangan'   => 'Barang baru dari master lama',
+                'user'         => $userId, // kalau kolom user varchar, ganti Auth::user()->name
+                'status'       => 'pending',
+                'created_at'   => now(),
+                'updated_at'   => now(),
+            ]);
 
-            if (!$hdr) {
-                $hdr = new StockOpnameHDR();
-                $hdr->id_unit = $unitId;
-                $hdr->id_barang = $idBarang;
-                $hdr->kode_barang = $group['code'];
-                $hdr->tgl_opname = $date->format('Y-m-d');
-                $hdr->user = $userId;
-            }
+            DB::commit();
 
-            $hdr->stock_sistem = $stoksys->stok;
-            $hdr->stock_fisik = $totalQty;
-            $hdr->status = "sukses";
-            $hdr->save();
+            $barang = DB::table('barang')->find($idBarang);
 
-            // 🔑 Hapus DTL lama kalau ada, biar tidak duplikat
-            StockOpnameDTL::where('opnameid', $hdr->id)->delete();
+            return response()->json([
+                'status' => 'inserted',
+                'data'   => $barang
+            ]);
 
-            foreach ($group['items'] as $item) {
-                $dtl = new StockOpnameDTL();
-                $dtl->opnameid = $hdr->id;
-                $dtl->id_barang = $idBarang;
-                $dtl->qty = $item['qty'];
-                $dtl->expired_date = $item['exp'];
-                $dtl->save();
-            }
-
-            // Update stok sistem
-            $stoksys->stok = $totalQty;
-            $stoksys->save();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'error'   => 'Gagal insert barang dari master lama',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        DB::commit();
-        return response()->json([
-            'success' => true,
-            'redirect' => url('/stock'),
-            'message' => 'Stock opname berhasil disimpan.'
-        ]);
-    } catch (Exception $e) {
-        DB::rollBack();
-        return response()->json([
-            'error' => 'Gagal menyimpan stok opname',
-            'message' => $e->getMessage()
-        ], 500);
     }
-}
-
 
 }
