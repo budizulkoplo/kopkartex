@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Hash;
 
 class StockOpnameController extends Controller
 {
@@ -369,5 +370,18 @@ class StockOpnameController extends Controller
             ], 500);
         }
     }
+
+public function verifyPassword(Request $request)
+{
+    $request->validate([
+        'password' => 'required'
+    ]);
+
+    if (Hash::check($request->password, Auth::user()->password)) {
+        return response()->json(['valid' => true]);
+    }
+
+    return response()->json(['valid' => false]);
+}
 
 }

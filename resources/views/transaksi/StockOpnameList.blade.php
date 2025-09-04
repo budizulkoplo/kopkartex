@@ -114,65 +114,85 @@
                     responsive: true
                 });
 
-                // SweetAlert konfirmasi mulai opname
+                // Verifikasi password sebelum mulai opname
                 $('#formMulaiOpname').on('submit', function(e) {
-                    e.preventDefault();
-                    let form = this;
+    e.preventDefault();
+    let form = this;
 
-                    Swal.fire({
-                        title: 'Mulai Stock Opname?',
-                        text: "Jika bulan ini sudah ada data, data lama akan dihapus!",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#3085d6',
-                        cancelButtonColor: '#d33',
-                        confirmButtonText: 'Ya, Lanjutkan!',
-                        cancelButtonText: 'Batal'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            form.submit();
+    Swal.fire({
+        title: 'Mulai Stock Opname?',
+        text: "Jika bulan ini sudah ada data, data lama akan dihapus!",
+        icon: 'warning',
+        input: 'password',
+        inputLabel: 'Masukkan password Anda',
+        inputPlaceholder: 'Password',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Lanjutkan!',
+        cancelButtonText: 'Batal',
+        inputAttributes: {
+            autocapitalize: 'off',
+            autocorrect: 'off'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            let password = result.value;
+            if (!password) {
+                Swal.fire('Error', 'Password wajib diisi', 'error');
+                return;
+            }
+
+            $.post("{{ route('stockopname.verifyPassword') }}", { _token: "{{ csrf_token() }}", password: password })
+            .done(function(res) {
+                if(res.valid){
+                    form.submit();
+                } else {
+                    Swal.fire('Error', 'Password salah', 'error');
+                }
+            })
+            .fail(function(){
+                Swal.fire('Error', 'Terjadi kesalahan', 'error');
+            });
+        }
+    });
+});
+
+
+                // Scan barang
+                $('#formScan').on('submit', function(e) {
+                    e.preventDefault();
+                    let kode = $('#kodeScan').val();
+                    if (!kode) return;
+
+                    $.post("{{ route('stockopname.scan') }}", { kode: kode, _token: "{{ csrf_token() }}" })
+                    .done(function(res) {
+                        if (res.status === 'found') {
+                            window.location.href = "{{ url('/stock/form') }}" + "?barang_id=" + res.data.id;
+                        } else if (res.status === 'old') {
+                            Swal.fire({
+                                title: 'Barang tidak ada di master!',
+                                text: "Barang ditemukan di master lama. Apakah mau ditambahkan ke master baru?",
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Ya, Tambahkan',
+                                cancelButtonText: 'Batal'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    $.post("{{ route('stockopname.insertOld') }}", { kode: kode, _token: "{{ csrf_token() }}" })
+                                    .done(function(res2) {
+                                        window.location.href = "{{ url('/stock/form') }}" + "?barang_id=" + res2.data.id;
+                                    });
+                                }
+                            });
                         }
+                    })
+                    .fail(function(err) {
+                        Swal.fire('Error', err.responseJSON?.message ?? 'Barang tidak ditemukan', 'error');
                     });
                 });
-            });
 
-            $('#formScan').on('submit', function(e) {
-                e.preventDefault();
-                let kode = $('#kodeScan').val();
-
-                if (!kode) return;
-
-                $.post("{{ route('stockopname.scan') }}", { kode: kode, _token: "{{ csrf_token() }}" })
-                .done(function(res) {
-                    if (res.status === 'found') {
-                        window.location.href = "{{ url('/stock/form') }}" + "?barang_id=" + res.data.id;
-                    } else if (res.status === 'old') {
-                        Swal.fire({
-                            title: 'Barang tidak ada di master!',
-                            text: "Barang ditemukan di master lama. Apakah mau ditambahkan ke master baru?",
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonText: 'Ya, Tambahkan',
-                            cancelButtonText: 'Batal'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                $.post("{{ route('stockopname.insertOld') }}", { kode: kode, _token: "{{ csrf_token() }}" })
-                                .done(function(res2) {
-                                    window.location.href = "{{ url('/stock/form') }}" + "?barang_id=" + res2.data.id;
-                                });
-                            }
-                        });
-                    }
-                })
-                .fail(function(err) {
-                    Swal.fire('Error', err.responseJSON.message ?? 'Barang tidak ditemukan', 'error');
-                });
-            });
-
-        </script>
-
-        <script>
-            document.addEventListener("DOMContentLoaded", function() {
+                // Fokus input scan
                 document.getElementById("kodeScan")?.focus();
             });
         </script>
