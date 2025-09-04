@@ -21,7 +21,7 @@
             <form class="needs-validation" novalidate id="frmterima" autocomplete="off">
                 <div class="card card-success card-outline mb-4">
                     <div class="card-header p-2">
-                        <div class="alert alert-warning ps-2 p-0 mb-0" role="alert" id="detailcus" style="display: none"></div>
+                        <div class="alert alert-success ps-2 p-0 mb-0" role="alert" id="detailcus" style="display: none"></div>
                     </div>
                     <div class="card-body p-3">
                         <div class="row mb-3">
@@ -36,7 +36,8 @@
                                         <input class="form-check-input mt-0 me-2" type="checkbox" value="" id="flexCheckDefault" checked>
                                         <label for="flexCheckDefault" class="mb-0">Anggota</label>
                                     </div>
-                                    <input type="text" class="form-control" id="customer" name="customer" required autocomplete="off">
+                                    <input type="text" class="form-control" id="nonamecustomer" name="nonamecustomer" required autocomplete="off">
+                                    <input type="hidden" id="customer" name="customer">
                                     <input type="hidden" id="idcustomer" name="idcustomer">
                                 </div>
                             </div>
@@ -356,11 +357,13 @@
                 $('#barcode-search').val('');
             }
             function clearform(){
-                $('input[name="supplier"]').val('');
-                $('textarea[name="note"]').val('');
+                $('#nonamecustomer').val(''); // reset input anggota
                 $('#idcustomer').val('');
-                $('#barcode-id').val('');
                 $('#customer').val('');
+                $('#barcode-id').val('');
+                $('#detailcus').html('').hide(); // sembunyikan alert
+
+                $('textarea[name="note"]').val('');
                 $('.topgrandtotal').text('Rp.0');
                 $('#subtotal').val(0);
                 $('#diskon').val(0);
@@ -369,6 +372,9 @@
                 $('#kembali').val(0);
                 $('#tbterima tbody tr').remove();
                 $('#metodebayar').val('tunai').trigger('change');
+
+                // Reset tanggal ke hari ini lagi
+                $('.datepicker').datepicker('setDate', new Date());
             }
             let users = [];
                 let selectedFromList = false;
@@ -376,10 +382,10 @@
 
             function activateTypeahead() {
                 $('#detailcus').html('');
-                $('#customer').typeahead({
+                $('#nonamecustomer').typeahead({
                     minLength: 2,
                     displayText: function(item) {
-                        return item.name;
+                        return item.nomor_anggota + ' - ' + item.name;
                     },
                     source: function(query, process) {
                         return $.get('{{ route('jual.getanggota') }}', { query: query }, function(data) {
@@ -387,14 +393,36 @@
                         });
                     },
                     afterSelect: function(item) {
-                        // tampilkan detail setelah pilih
-                        $('#detailcus').html(`<table>
-                            <tr><td>Nomor Anggota</td><td>: ${item.nomor_anggota}</td></tr>
-                            <tr><td>Sisa Limit Hutang</td><td>: ${formatRupiahWithDecimal(item.limit_hutang)}</td></tr>
-                            </table>
-                        `);
+                        // hitung persentase hutang
+                        let persentase = 0;
+                        if (item.limit_hutang > 0) {
+                            persentase = (item.total_pokok / (item.limit_hutang+item.total_pokok)) * 100;
+                        }
+
+                        // tentukan warna alert
+                        let alertClass = 'alert-success'; // default hijau
+                        if (persentase >= 50 && persentase <= 75) {
+                            alertClass = 'alert-warning'; // kuning
+                        } else if (persentase > 75) {
+                            alertClass = 'alert-danger'; // merah
+                        }
+
+                        // tampilkan detail dengan bold text
+                        $('#detailcus')
+                            .removeClass('alert-success alert-warning alert-danger')
+                            .addClass(alertClass + ' text-dark')
+                            .addClass(alertClass)
+                            .html(`
+                                <table>
+                                    <tr><td>Nomor Anggota</td><td>:<b> ${item.nomor_anggota} - ${item.name}</b></td></tr>
+                                    <tr><td>Jumlah Hutang</td><td>: ${formatRupiahWithDecimal(item.total_pokok)}</td></tr>
+                                    <tr><td>Sisa Limit Hutang</td><td>: ${formatRupiahWithDecimal(item.limit_hutang)}</td></tr>
+                                </table>
+                            `)
+                            .show();
                         $('#idcustomer').val(item.id);
-                        $('#detailcus').show();
+                        $('#customer').val(item.name);
+                        // $('#detailcus').show();
                     }
                 });
                 // $('#customer').typeahead({
@@ -454,7 +482,7 @@
                         .off('click.prevent') // hapus event lama kalau ada
                         .on('click.prevent', function(e) {
                             e.preventDefault(); // kunci
-                        }).change();
+                        });
                         // if($('#customer').val() === '' || $('#idcustomer').val() === '' ){
                         //     $('#flexCheckDefault')
                         // }
@@ -464,7 +492,7 @@
 
                         // Tampilkan & aktifkan kembali input dibayar/kembali
                         $('.clmetode').show().find('input, select').prop('required', true);
-                        $('#flexCheckDefault').off('click.prevent').change();
+                        $('#flexCheckDefault').off('click.prevent');
                     }
                 });
 
@@ -472,17 +500,17 @@
                 $('#flexCheckDefault').on('change', function () {
                     if ($(this).is(':checked')) {
                         activateTypeahead();
-                        
-                        $('#customer').val('').prop('readonly', false);
-                        $('#idcustomer').val('');
-                        //$('#customer').attr('required', true);
+                        if($('#idcustomer').val() === '') {
+                            $('#customer').val('').prop('readonly', false);
+                        }
                     } else {
                         destroyTypeahead();
-                        $('#customer').val('').prop('readonly', false);
-                        $('#idcustomer').val('');
-                        //$('#customer').removeAttr('required');
+                        if($('#idcustomer').val() === '') {
+                            $('#customer').val('').prop('readonly', false);
+                        }
                     }
                 });
+
                 $(window).keydown(function (event) {
                     if (event.key === "Enter") {
                         event.preventDefault();
@@ -556,14 +584,14 @@
                     }
                 });
                 $('#frmterima').on('submit', function(e) {
-                    e.preventDefault(); // Prevent default form submit
+                    e.preventDefault(); 
                     if (!this.checkValidity()) {
                         e.stopPropagation();
                     } else {
                         let checked = $('#flexCheckDefault').is(':checked');
                         if ($('#metodebayar').val() === 'cicilan' && $('#idcustomer').val() == '') {
                             Swal.fire({
-                                position: "top-end",
+                               
                                 icon: "warning",
                                 title: "Anggota harus terisi",
                                 showConfirmButton: false,

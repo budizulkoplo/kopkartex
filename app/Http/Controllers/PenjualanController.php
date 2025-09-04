@@ -70,8 +70,8 @@ class PenjualanController extends Controller
                 ->where('penjualan_cicilan.status', '=', 'hutang');
         })
         ->where(function ($q) use ($query) {
-            $q->where('users.name', 'LIKE', "%{$query}%")
-            ->orWhere('users.nomor_anggota', 'LIKE', "%{$query}%");
+            $q->where('users.nomor_anggota', 'LIKE', "%{$query}%")
+            ->orWhere('users.name', 'LIKE', "%{$query}%");
         })
         ->select(
             'users.id',
@@ -89,6 +89,7 @@ class PenjualanController extends Controller
                 'name' => $user->name,
                 'nomor_anggota' => $user->nomor_anggota,
                 'limit_hutang' => $user->limit_hutang - $user->total_pokok,
+                'total_pokok' => $user->total_pokok,
             ];
         });
 
