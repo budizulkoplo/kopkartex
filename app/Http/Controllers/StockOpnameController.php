@@ -373,17 +373,17 @@ class StockOpnameController extends Controller
         }
     }
 
-public function verifyPassword(Request $request)
-{
-    $request->validate([
-        'password' => 'required'
-    ]);
+    public function verifyPassword(Request $request)
+    {
+        $request->validate([
+            'password' => 'required'
+        ]);
 
-    if (Hash::check($request->password, Auth::user()->password)) {
-        return response()->json(['valid' => true]);
+        if (Hash::check($request->password, Auth::user()->password)) {
+            return response()->json(['valid' => true]);
+        }
+
+        return response()->json(['valid' => false]);
     }
-
-    return response()->json(['valid' => false]);
-}
 
 }

@@ -97,7 +97,9 @@ Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::post('/scan', [StockOpnameController::class, 'scanBarang'])->name('stockopname.scan');
     Route::post('/insert-old', [StockOpnameController::class, 'insertFromOld'])->name('stockopname.insertOld');
     // 🔑 route verifikasi password
+    
     Route::post('/verify-password', [StockOpnameController::class, 'verifyPassword'])->name('stockopname.verifyPassword');
+    
 });
 
 

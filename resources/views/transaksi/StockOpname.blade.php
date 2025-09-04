@@ -25,7 +25,7 @@
                                 <div class="alert alert-secondary py-2 mb-1">
                                     <strong>Petugas:</strong> {{ auth()->user()->name }}<br>
                                     <strong>Tanggal:</strong> <span id="opname-date"></span>
-                                    <input type="text" name="tgl_opname" id="tgl_opname_input">
+                                    <input type="hidden" name="tgl_opname" id="tgl_opname_input">
                                 </div>
                             </div>
                         </div>
