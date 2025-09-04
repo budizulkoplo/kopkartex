@@ -166,7 +166,7 @@ class StockOpnameController extends Controller
         }
         
     }
-    public function Store(Request $request)
+    public function store(Request $request)
     {
         DB::beginTransaction();
         try {
@@ -182,6 +182,8 @@ class StockOpnameController extends Controller
             $date = Carbon::parse($request->tgl_opname);
             $unitId = Auth::user()->unit_kerja;
             $userId = Auth::user()->id;
+
+            $month = $date->format('Y-m'); // periode bulan: YYYY-MM
 
             $dataGrouped = [];
 
@@ -205,19 +207,18 @@ class StockOpnameController extends Controller
                     throw new Exception("Stok untuk barang ID {$idBarang} tidak ditemukan.");
                 }
 
-                // 🔑 Cek apakah sudah ada HDR opname pada tanggal yg sama
-                $hdr = StockOpnameHDR::where([
-                    'id_unit' => $unitId,
-                    'id_barang' => $idBarang,
-                    'tgl_opname' => $date->format('Y-m-d'),
-                ])->first();
+                // 🔑 Cari HDR berdasarkan bulan, bukan tgl lengkap
+                $hdr = StockOpnameHDR::where('id_unit', $unitId)
+                    ->where('id_barang', $idBarang)
+                    ->whereRaw("DATE_FORMAT(tgl_opname, '%Y-%m') = ?", [$month])
+                    ->first();
 
                 if (!$hdr) {
                     $hdr = new StockOpnameHDR();
                     $hdr->id_unit = $unitId;
                     $hdr->id_barang = $idBarang;
                     $hdr->kode_barang = $group['code'];
-                    $hdr->tgl_opname = $date->format('Y-m-d');
+                    $hdr->tgl_opname = $date->format('Y-m-d'); // simpan tgl pertama input bulan ini
                     $hdr->user = $userId;
                 }
 
@@ -226,7 +227,7 @@ class StockOpnameController extends Controller
                 $hdr->status = "sukses";
                 $hdr->save();
 
-                // 🔑 Hapus DTL lama kalau ada, biar tidak duplikat
+                // Hapus DTL lama untuk bulan ini
                 StockOpnameDTL::where('opnameid', $hdr->id)->delete();
 
                 foreach ($group['items'] as $item) {
@@ -249,6 +250,7 @@ class StockOpnameController extends Controller
                 'redirect' => url('/stock'),
                 'message' => 'Stock opname berhasil disimpan.'
             ]);
+
         } catch (Exception $e) {
             DB::rollBack();
             return response()->json([

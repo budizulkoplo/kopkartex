@@ -116,48 +116,47 @@
 
                 // Verifikasi password sebelum mulai opname
                 $('#formMulaiOpname').on('submit', function(e) {
-    e.preventDefault();
-    let form = this;
+                    e.preventDefault();
+                    let form = this;
 
-    Swal.fire({
-        title: 'Mulai Stock Opname?',
-        text: "Jika bulan ini sudah ada data, data lama akan dihapus!",
-        icon: 'warning',
-        input: 'password',
-        inputLabel: 'Masukkan password Anda',
-        inputPlaceholder: 'Password',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Ya, Lanjutkan!',
-        cancelButtonText: 'Batal',
-        inputAttributes: {
-            autocapitalize: 'off',
-            autocorrect: 'off'
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            let password = result.value;
-            if (!password) {
-                Swal.fire('Error', 'Password wajib diisi', 'error');
-                return;
-            }
+                    Swal.fire({
+                        title: 'Mulai Stock Opname?',
+                        text: "Jika bulan ini sudah ada data, data lama akan dihapus!",
+                        icon: 'warning',
+                        input: 'password',
+                        inputLabel: 'Masukkan password Anda',
+                        inputPlaceholder: 'Password',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Ya, Lanjutkan!',
+                        cancelButtonText: 'Batal',
+                        inputAttributes: {
+                            autocapitalize: 'off',
+                            autocorrect: 'off'
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            let password = result.value;
+                            if (!password) {
+                                Swal.fire('Error', 'Password wajib diisi', 'error');
+                                return;
+                            }
 
-            $.post("{{ route('stockopname.verifyPassword') }}", { _token: "{{ csrf_token() }}", password: password })
-            .done(function(res) {
-                if(res.valid){
-                    form.submit();
-                } else {
-                    Swal.fire('Error', 'Password salah', 'error');
-                }
-            })
-            .fail(function(){
-                Swal.fire('Error', 'Terjadi kesalahan', 'error');
-            });
-        }
-    });
-});
-
+                            $.post("{{ route('stockopname.verifyPassword') }}", { _token: "{{ csrf_token() }}", password: password })
+                            .done(function(res) {
+                                if(res.valid){
+                                    form.submit();
+                                } else {
+                                    Swal.fire('Error', 'Password salah', 'error');
+                                }
+                            })
+                            .fail(function(){
+                                Swal.fire('Error', 'Terjadi kesalahan', 'error');
+                            });
+                        }
+                    });
+                });
 
                 // Scan barang
                 $('#formScan').on('submit', function(e) {
