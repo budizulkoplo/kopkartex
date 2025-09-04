@@ -250,12 +250,16 @@
                 $.each(grouped, function(index, item) {
                     subtotal += (item.hargajual*item.barangqty);
                 });
-                if(obj){
-                    var cekbarang = grouped.find(item => item.idbarang === parseInt($(obj).data('id')));
-                    
-                    if(cekbarang.barangqty > cekbarang.stok){
-                        $(obj).val(0);
-                        kalkulasi();
+                if (obj) {
+                    let idbarangObj = $(obj).closest('tr').find('.idbarang').val(); // ambil id barang dari row
+                    var cekbarang = grouped.find(item => item.idbarang === parseInt(idbarangObj));
+                    let qty = parseInt($(obj).val() || 0);
+
+                    if (cekbarang && qty > cekbarang.stok) {
+                        // reset qty ke stok maksimal
+                        $(obj).val(cekbarang.stok);
+                        qty = cekbarang.stok;
+
                         Swal.fire({
                         position: 'top-end', // kanan atas
                         icon: 'warning',
