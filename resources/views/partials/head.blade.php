@@ -27,7 +27,7 @@
 <link rel="stylesheet" href="{{ asset('css/tippy.css') }}">
 <link rel="stylesheet" href="{{ asset('plugins/quill/quill.snow.css') }}">
 <link rel="stylesheet" href="{{ asset('plugins/webdatarocks-1.4.19/webdatarocks.min.css') }}">
-<link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
+{{-- <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}"> --}}
 <link rel="stylesheet" href="{{ asset('plugins/jstree/themes/default/style.min.css') }}">
 <style>
     .submenu {
