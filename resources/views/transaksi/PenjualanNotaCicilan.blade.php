@@ -1,170 +1,147 @@
 <html>
-    <head>
-        <title>Cetak Nota <?= $hdr->nomor_invoice ?></title>
-        <style>
-            @page { margin: 0 }
-            body { margin: 0; font-size:10px;font-family: monospace;}
-            td { font-size:10px; }
-            .sheet {
+<head>
+    <title>Cetak Nota <?= $hdr->nomor_invoice ?></title>
+    <style>
+        @page { margin: 0 }
+        body { margin: 0; font-size:10px; font-family: monospace; }
+        td { font-size:10px; }
+        .sheet {
             margin: 0;
             overflow: hidden;
             position: relative;
             box-sizing: border-box;
             page-break-after: always;
-            }
+        }
 
-            /** Paper sizes **/
-            body.struk        .sheet { width: 58mm; }
-            body.struk .sheet        { padding: 2mm; }
+        /* Lebar kertas 12cm (120mm) */
+        body.struk .sheet { width: 120mm; padding: 5mm; }
 
-            .txt-left { text-align: left;}
-            .txt-center { text-align: center;}
-            .txt-right { text-align: right;}
+        /* Area cetak full 100% */
+        .print-area { width: 100%; margin: 0 auto; }
 
-            /** For screen preview **/
-            @media screen {
-            body { background: #e0e0e0;font-family: monospace; }
+        .txt-left   { text-align: left; }
+        .txt-center { text-align: center; }
+        .txt-right  { text-align: right; }
+
+        @media screen {
+            body { background: #e0e0e0; }
             .sheet {
                 background: white;
                 box-shadow: 0 .5mm 2mm rgba(0,0,0,.3);
                 margin: 5mm;
             }
-            }
+        }
 
-            /** Fix for Chrome issue #273306 **/
-            @media print {
-                body { font-family: monospace; }
-                body.struk                 { width: 58mm; text-align: left;}
-                body.struk .sheet          { padding: 2mm; }
-                .txt-left { text-align: left;}
-                .txt-center { text-align: center;}
-                .txt-right { text-align: right;}
-            }
-        </style>
-    </head>
-    <body class="struk" onload="printOut()">
-        <section class="sheet">
-        <?php
-            echo '<table cellpadding="0" cellspacing="0">
-                    <tr>
-                        <td>NOTA PENJUALAN KREDIT</td>
-                    </tr>
-                </table>';
-            echo(str_repeat("=", 40)."<br/>");
-            $invoice = $hdr->nomor_invoice. str_repeat("&nbsp;", (40 - (strlen($hdr->nomor_invoice))));
-            $kasir = $hdr->name. str_repeat("&nbsp;", (40 - (strlen($hdr->name))));
-            $tgl = date('d-m-Y H:i:s', strtotime($hdr->created_at)). str_repeat("&nbsp;", (40 - (strlen(date('d-m-Y H:i:s', strtotime($hdr->created_at))))));
-            $customer = $hdr->customer;
-            $customer = $customer. str_repeat("&nbsp;", (48 - (strlen($customer))));
+        @media print {
+            body.struk { width: 120mm; }
+        }
 
-            echo '<table cellpadding="0" cellspacing="0" style="width:100%">
-                    <tr>
-                        <td align="left" class="txt-left">Nota&nbsp;</td>
-                        <td align="left" class="txt-left">:</td>
-                        <td align="left" class="txt-left">&nbsp;'. $hdr->nomor_invoice. '.</td>
-                    </tr>
-                    <tr>
-                        <td align="left" class="txt-left">Kasir</td>
-                        <td align="left" class="txt-left">:</td>
-                        <td align="left" class="txt-left">&nbsp;'. $hdr->kasir.'</td>
-                    </tr>
-                    <tr>
-                        <td align="left" class="txt-left">Tgl.&nbsp;</td>
-                        <td align="left" class="txt-left">:</td>
-                        <td align="left" class="txt-left">&nbsp;'. $hdr->tanggal.'</td>
-                    </tr>
-                    <tr>
-                        <td align="left" class="txt-left">Customer&nbsp;</td>
-                        <td align="left" class="txt-left">:</td>
-                        <td align="left" colspan="3" class="txt-left">&nbsp;'.($hdr->nomor_anggota ? $hdr->nomor_anggota." - ".$hdr->customer:$hdr->customer).'</td>
-                    </tr>
-                </table>';
-            echo '<br/>';
-            $tItem = 'Item'. str_repeat("&nbsp;", (13 - strlen('Item')));
-            $tQty  = 'Qty'. str_repeat("&nbsp;", (6 - strlen('Qty')));
-            $tHarga= str_repeat("&nbsp;", (9 - strlen('Harga'))).'Harga';
-            $tTotal= str_repeat("&nbsp;", (10 - strlen('Total'))).'Total';
-            $caption = $tItem. $tQty. $tHarga. $tTotal;
+        hr {
+            border: none;
+            border-top: 1px dashed #000;
+            margin: 4px 0;
+        }
+    </style>
+</head>
+<body class="struk" onload="printOut()">
+<section class="sheet">
+<div class="print-area">
 
-            echo    '<table cellpadding="0" cellspacing="0" style="width:100%">
-                        <tr>
-                            <td align="left" class="txt-left">'. $caption . '</td>
-                        </tr>
-                        <tr>
-                            <td align="left" class="txt-left">'. str_repeat("=", 38) . '</td>
-                        </tr>';
-            if(!empty( $dtl ))
-            {
-                foreach($dtl as $k=>$v)
-                {
-                    $item = $v->nama_barang. str_repeat("&nbsp;", (38 - (strlen($v->nama_barang))));
-                    echo '<tr>';
-                        echo'<td align="left" class="txt-left">'.$item.'</td>';
-                    echo '</tr>';
+    <!-- Header -->
+    <table style="width:100%; border-collapse:collapse;">
+        <tr><td class="txt-center" colspan="3"><b>NOTA PENJUALAN KREDIT</b></td></tr>
+    </table>
+    <hr>
+    <table style="width:100%; border-collapse:collapse;">
+        <tr><td class="txt-left" style="width:25%">Nota</td><td>:</td><td class="txt-left"><?= $hdr->nomor_invoice ?></td></tr>
+        <tr><td class="txt-left">Kasir</td><td>:</td><td class="txt-left"><?= $hdr->kasir ?></td></tr>
+        <tr><td class="txt-left">Tgl</td><td>:</td><td class="txt-left"><?= $hdr->tanggal ?></td></tr>
+        <tr><td class="txt-left">Customer</td><td>:</td>
+            <td class="txt-left">
+                <?= $hdr->nomor_anggota ? $hdr->nomor_anggota." - ".$hdr->customer : $hdr->customer ?>
+            </td>
+        </tr>
+    </table>
+    <hr>
 
-                    echo '<tr>';
-                    $qty        = $v->qty;
-                    $qty        = $qty. str_repeat("&nbsp;", max(0,  8 - strlen($qty)) );
-    
-                    $price      = format_rupiah($v->harga);
-                    $price      = str_repeat("&nbsp;", max(0, 9 - strlen($price))) . $price;
+    <!-- Detail Item -->
+    <table style="width:100%; border-collapse:collapse;">
+        <tr>
+            <th class="txt-left">Item</th>
+            <th class="txt-center" style="width:10%">Qty</th>
+            <th class="txt-right" style="width:20%">Harga</th>
+            <th class="txt-right" style="width:20%">Total</th>
+        </tr>
+        <tr><td colspan="4"><hr></td></tr>
 
-                    $total      = format_rupiah($v->harga*$v->qty);
-                    $lentotal   = strlen($total);
-                    $total      = str_repeat("&nbsp;", max(0,  15 - $lentotal) ). $total;
-                        echo'<td class="txt-left" align="left">'.$qty. $price. $total .'</td>';
-                    
-                    echo '</tr>';
-                }
+        <?php if(!empty($dtl)): ?>
+            <?php foreach($dtl as $v): ?>
+                <tr>
+                    <td class="txt-left"><?= $v->nama_barang ?></td>
+                    <td class="txt-center"><?= $v->qty ?></td>
+                    <td class="txt-right"><?= format_rupiah($v->harga) ?></td>
+                    <td class="txt-right"><?= format_rupiah($v->harga * $v->qty) ?></td>
+                </tr>
+            <?php endforeach; ?>
+        <?php endif; ?>
 
-                echo '<tr><td>'. str_repeat('-', 38).'</td></tr>';
+        <tr><td colspan="4"><hr></td></tr>
 
-                //Sub Total
-                $titleST = 'Sub&nbspTotal';
-                $titleST = $titleST. str_repeat("&nbsp;", ( 19 - strlen($titleST)) );
-                $ST      = format_rupiah($hdr->subtotal);
-                $ST      = str_repeat("&nbsp;", ( 23 - strlen($ST)) ). $ST;
-                echo '<tr><td>'. $titleST. $ST.'</td></tr>';
-                //Diskon
-                $titleDs = 'Diskon';
-                $titleDs = $titleDs. str_repeat("&nbsp;", ( 15 - strlen($titleDs)) );
-                $Ds      = $hdr->diskon.'%';
-                $Ds      = str_repeat("&nbsp;", ( 23 - strlen($Ds)) ). $Ds;
-                echo '<tr><td>'. $titleDs. $Ds.'</td></tr>';
+        <tr>
+            <td colspan="3" class="txt-right">Sub Total</td>
+            <td class="txt-right"><?= format_rupiah($hdr->subtotal) ?></td>
+        </tr>
+        <tr>
+            <td colspan="3" class="txt-right">Diskon</td>
+            <td class="txt-right"><?= $hdr->diskon ?>%</td>
+        </tr>
+        <tr>
+            <td colspan="3" class="txt-right"><b>Grand Total</b></td>
+            <td class="txt-right"><b><?= format_rupiah($hdr->grandtotal) ?></b></td>
+        </tr>
+        {{-- Rincian Cicilan --}}
+        <tr><td colspan="4"><hr></td></tr>
+        <tr>
+            <td class="txt-left" colspan="4">
+                Cicilan:
+                @foreach($cicilan as $c)
+                    Ke-{{ $c->cicilan }} Rp.{{ number_format($c->total_cicilan,0,',','.') }}
+                    @if(!$loop->last) | @endif
+                @endforeach
+            </td>
+        </tr>
+        <tr><td colspan="4"><hr></td></tr>
+    </table>
 
-                //Grand Total
-                $titleGT = 'Grand&nbspTotal';
-                $titleGT = $titleGT. str_repeat("&nbsp;", ( 19 - strlen($titleGT)) );
-                $GT      = format_rupiah($hdr->grandtotal);
-                $GT      = str_repeat("&nbsp;", ( 23 - strlen($GT)) ). $GT;
-                echo '<tr><td>'. $titleGT. $GT.'</td></tr>';
+    <br>
+    <!-- Footer -->
+    <div class="txt-center">
+        * Barang yang sudah dibeli tidak bisa dikembalikan *
+    </div>
 
-                //Cicilan Awal
-                $titleCA = 'Cicilan&nbspAwal';
-                $titleCA = $titleCA. str_repeat("&nbsp;", ( 19 - strlen($titleCA)) );
-                $CA      = format_rupiah($cicilan->total_cicilan);
-                $CA      = str_repeat("&nbsp;", ( 23 - strlen($CA)) ). $CA;
-                echo '<tr><td>'. $titleCA. $CA.'</td></tr>';
+    <!-- Tanda tangan -->
+    <br><br><br>
+    <table style="width:100%; border-collapse:collapse; margin-top:20px;">
+        <tr>
+            <td class="txt-center" style="width:50%">Kasir</td>
+            <td class="txt-center" style="width:50%">Pembeli</td>
+        </tr>
+        <tr><td colspan="2" style="height:50px"></td></tr>
+        <tr>
+            <td class="txt-center">(.........................)</td>
+            <td class="txt-center">(.........................)</td>
+        </tr>
+    </table>
 
-            }
-            echo '</table><br>';
+</div>
+</section>
 
-            $footer = 'Terima kasih atas kunjungan anda';
-            $starSpace = ( 32 - strlen($footer) ) / 2;
-            $starFooter = str_repeat('*', $starSpace+1);
-            echo($starFooter. '&nbsp;'.$footer . '&nbsp;'. $starFooter."<br/><br/><br/><br/>");
-            echo '<p>&nbsp;</p>';  
-            
-        ?>
-        </section>
-        
-    </body>
-    <script>
-            var lama = 1000;
-            t = null;
-            function printOut(){
-                window.print();
-                t = setTimeout("self.close()",lama);
-            }
+<script>
+    var lama = 1000;
+    function printOut(){
+        window.print();
+        setTimeout("self.close()", lama);
+    }
 </script>
+</body>
 </html>

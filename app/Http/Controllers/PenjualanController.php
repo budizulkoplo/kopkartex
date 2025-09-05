@@ -31,28 +31,36 @@ class PenjualanController extends Controller
     }
     public function nota($invoice): View
     {   
-        $hdr=Penjualan::join('users','users.id','penjualan.created_user')
-        ->leftjoin('users as anggota','anggota.id','penjualan.anggota_id')
-        ->select('penjualan.*','users.name as kasir','anggota.nomor_anggota')
-        ->where('penjualan.nomor_invoice',$invoice)->first();
-        $dtl=PenjualanDetail::join('barang','barang.id','penjualan_detail.barang_id')
-            ->select('barang.nama_barang','barang.kode_barang','penjualan_detail.qty','penjualan_detail.harga')
-            ->where('penjualan_id',$hdr->id)->get();
-        if($hdr->metode_bayar == 'cicilan'){
-            $cicilan = PenjualanCicil::where(['penjualan_id'=>$hdr->id,'cicilan'=>1])->first();
+        $hdr = Penjualan::join('users','users.id','penjualan.created_user')
+            ->leftJoin('users as anggota','anggota.id','penjualan.anggota_id')
+            ->select('penjualan.*','users.name as kasir','anggota.nomor_anggota')
+            ->where('penjualan.nomor_invoice',$invoice)
+            ->first();
 
-             return view('transaksi.PenjualanNotaCicilan', [
-                'hdr' => $hdr,
-                'dtl' => $dtl,
-                'cicilan' => $cicilan
-            ]);
-        }else{
+        $dtl = PenjualanDetail::join('barang','barang.id','penjualan_detail.barang_id')
+            ->select('barang.nama_barang','barang.kode_barang','penjualan_detail.qty','penjualan_detail.harga')
+            ->where('penjualan_id',$hdr->id)
+            ->get();
+
+        if ($hdr->metode_bayar == 'cicilan') {
+        // Ambil semua cicilan untuk transaksi ini
+        $cicilan = PenjualanCicil::where('penjualan_id', $hdr->id)
+                    ->orderBy('cicilan','asc')
+                    ->get();
+
+        return view('transaksi.PenjualanNotaCicilan', [
+            'hdr'     => $hdr,
+            'dtl'     => $dtl,
+            'cicilan' => $cicilan
+        ]);
+    } else {
             return view('transaksi.PenjualanNota', [
                 'hdr' => $hdr,
                 'dtl' => $dtl,
             ]);
         }
     }
+
     function genCode(){
         $total = Penjualan::withTrashed()->whereDate('created_at', date("Y-m-d"))->count();
         $nomorUrut = $total + 1;
@@ -70,8 +78,8 @@ class PenjualanController extends Controller
                 ->where('penjualan_cicilan.status', '=', 'hutang');
         })
         ->where(function ($q) use ($query) {
-            $q->where('users.name', 'LIKE', "%{$query}%")
-            ->orWhere('users.nomor_anggota', 'LIKE', "%{$query}%");
+            $q->where('users.nomor_anggota', 'LIKE', "%{$query}%")
+            ->orWhere('users.name', 'LIKE', "%{$query}%");
         })
         ->select(
             'users.id',
@@ -89,6 +97,7 @@ class PenjualanController extends Controller
                 'name' => $user->name,
                 'nomor_anggota' => $user->nomor_anggota,
                 'limit_hutang' => $user->limit_hutang - $user->total_pokok,
+                'total_pokok' => $user->total_pokok,
             ];
         });
 
