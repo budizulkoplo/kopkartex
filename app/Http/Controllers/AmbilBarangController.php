@@ -52,7 +52,6 @@ class AmbilBarangController extends Controller
             $jual = Penjualan::find($request->id);
             $jual->status_ambil = $request->status;
             if($request->status == 'finish'){
-                $jual->status = 'lunas';
                 $jual->ambil_at = now();
                 $jual->metode_bayar = $request->metode;
                 if($request->metode == 'cicilan'){
@@ -76,7 +75,22 @@ class AmbilBarangController extends Controller
                     $jual->bunga_barang = $bunga->bunga_barang;
                     $jual->kembali = 0;
                     $jual->dibayar = 0;
+
+                    for ($i = 1; $i <= $request->jmlcicilan; $i++) {
+                        $pokoktotal = DB::select("SELECT hitung_pokok(?, ?) AS jumlah", [$jual->grandtotal, $request->jmlcicilan]);
+                        $bungatotal = DB::select("SELECT hitung_bunga(?, ?, ?, ?) AS jumlah", [$jual->grandtotal, $bunga->bunga_barang, $request->jmlcicilan, $i]);
+                        $cicilan = new PenjualanCicil();
+                        $cicilan->penjualan_id = $jual->id;
+                        $cicilan->cicilan = $i;
+                        $cicilan->anggota_id = $jual->anggota_id;
+                        $cicilan->pokok = $pokoktotal[0]->jumlah;
+                        $cicilan->bunga = $bungatotal[0]->jumlah;
+                        $cicilan->total_cicilan = $pokoktotal[0]->jumlah+$bungatotal[0]->jumlah;
+                        $cicilan->status = 'hutang';
+                        $cicilan->save();
+                    }
                 }else{
+                    $jual->status = 'lunas';
                     $jual->kembali = $request->kembalian;
                     $jual->dibayar = $request->dibayar;
                 }
