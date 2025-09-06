@@ -120,7 +120,11 @@
                         },
                         { "data": "tanggal","orderable": false},
                         { "data": "customer","orderable": false},
-                        { "data": "grandtotal","orderable": false},
+                        { "data": "grandtotal","orderable": false, 
+                            render: function(data, type, row, meta){
+                                return formatRupiah(data);
+                            }
+                        },
                         { "data": "status_ambil","orderable": false},
                         { "data": null,"orderable": false,
                             render: function (data, type, row, meta) {
@@ -331,7 +335,7 @@
                     });
                 }
             }
-            function delitem(iddtl,idpenjualan){
+            function delitem(iddtl,idpenjualan,retur=false){
                 Swal.fire({
                     title: "Are you sure?",
                     text: "You won't be able to revert this!",
@@ -342,7 +346,7 @@
                     confirmButtonText: "Yes, delete it!"
                     }).then((result) => {
                     if (result.isConfirmed) {
-                        axios.delete('{{ route('ambil.delitem') }}', {data: { id: iddtl,penjualan: idpenjualan }})
+                        axios.delete('{{ route('ambil.delitem') }}', {data: { id: iddtl,penjualan: idpenjualan,retur: retur }})
                         .then(response => {
                             Swal.fire({title: "Deleted!",text: "Your file has been deleted.",icon: "success"});
                             dtl(idpenjualan);
@@ -369,8 +373,12 @@
                                 <td>${value.qty}</td>
                                 <td>${formatRupiah(value.harga)}</td>
                                 <td>${formatRupiah(value.qty*value.harga)}</td>
-                                <td><button type="button" class="btn btn-sm btn-danger" onclick="delitem(${value.id},${value.penjualan_id})" ${response.hdr.status_ambil == 'finish' ? 'style="display:none"':'' }><i class="fa-solid fa-trash"></i></button></td>
-                                </tr>`;
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="delitem(${value.id},${value.penjualan_id})" ${response.hdr.status_ambil == 'finish' ? 'style="display:none"':'' }><i class="fa-solid fa-trash"></i></button>`;
+                            if(((response.hdr.metode_bayar == 'cicilan' && response.cicilanlunas == 0) || response.hdr.metode_bayar == 'tunai') && response.hdr.status_ambil == 'finish'){
+                                str += `<button type="button" class="btn btn-sm btn-danger" onclick="delitem(${value.id},${value.penjualan_id},true)"><i class="fa-solid fa-box"></i> Retur</button>`;
+                            }
+                            str += `</td></tr>`;
                             cn++;
                             grand +=value.qty*value.harga;
                         });

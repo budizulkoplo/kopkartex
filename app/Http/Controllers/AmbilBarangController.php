@@ -31,17 +31,41 @@ class AmbilBarangController extends Controller
         
     }
     public function DeleteItem(Request $request){
-        PenjualanDetail::find($request->id)->delete();
-        DB::statement("CALL RecalcPenjualan(?)", [$request->penjualan]);
+        $dtl = PenjualanDetail::find($request->id);
+        $dtl->delete();
+        DB::statement("CALL RecalcPenjualan(?)", [$dtl->penjualan_id]);
+        if($request->retur){
+            $jual = Penjualan::find($dtl->penjualan_id);
+            StokUnit::where('unit_id', $jual->unit_id)
+            ->where('barang_id', $dtl->barang_id)
+            ->increment('stok', $dtl->qty);
+            if($jual->metode_bayar=='cicilan'){
+                PenjualanCicil::where('penjualan_id', $jual->id)->forceDelete();
+                for ($i = 1; $i <= $jual->tenor; $i++) {
+                    $pokoktotal = DB::select("SELECT hitung_pokok(?, ?) AS jumlah", [$jual->grandtotal, $jual->tenor]);
+                    $bungatotal = DB::select("SELECT hitung_bunga(?, ?, ?, ?) AS jumlah", [$jual->grandtotal, $jual->bunga_barang, $jual->tenor, $i]);
+                    $cicilan = new PenjualanCicil();
+                    $cicilan->penjualan_id = $jual->id;
+                    $cicilan->cicilan = $i;
+                    $cicilan->anggota_id = $jual->anggota_id;
+                    $cicilan->pokok = $pokoktotal[0]->jumlah;
+                    $cicilan->bunga = $bungatotal[0]->jumlah;
+                    $cicilan->total_cicilan = $pokoktotal[0]->jumlah+$bungatotal[0]->jumlah;
+                    $cicilan->status = 'hutang';
+                    $cicilan->save();
+                }
+            }
+        }
         return response()->json('success', 200);
     }
     public function getPenjualanDtl($idjual)
     {
         $hdr = Penjualan::find($idjual);
+        $cicilan = PenjualanCicil::where(['penjualan_id'=>$hdr->id,'status'=>'linas'])->count();
         $dtl = PenjualanDetail::join('barang','barang.id','penjualan_detail.barang_id')
         ->where(['penjualan_detail.penjualan_id'=>$idjual])
         ->select('penjualan_detail.*', 'barang.nama_barang', 'barang.kode_barang')->get();
-        return response()->json(['hdr'=>$hdr,'dtl'=>$dtl], 200);
+        return response()->json(['hdr'=>$hdr,'dtl'=>$dtl,'cicilanlunas'=> $cicilan], 200);
         
     }
     public function AmbilBarang(Request $request)
