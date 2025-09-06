@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KonfigBunga;
 use App\Models\Penjualan;
+use App\Models\PenjualanCicil;
 use App\Models\PenjualanDetail;
 use App\Models\StokUnit;
+use App\Models\User;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -27,39 +31,114 @@ class AmbilBarangController extends Controller
         
     }
     public function DeleteItem(Request $request){
-        PenjualanDetail::find($request->id)->delete();
-        DB::statement("CALL RecalcPenjualan(?)", [$request->penjualan]);
+        $dtl = PenjualanDetail::find($request->id);
+        $dtl->delete();
+        DB::statement("CALL RecalcPenjualan(?)", [$dtl->penjualan_id]);
+        if($request->retur){
+            $jual = Penjualan::find($dtl->penjualan_id);
+            StokUnit::where('unit_id', $jual->unit_id)
+            ->where('barang_id', $dtl->barang_id)
+            ->increment('stok', $dtl->qty);
+            if($jual->metode_bayar=='cicilan'){
+                PenjualanCicil::where('penjualan_id', $jual->id)->forceDelete();
+                for ($i = 1; $i <= $jual->tenor; $i++) {
+                    $pokoktotal = DB::select("SELECT hitung_pokok(?, ?) AS jumlah", [$jual->grandtotal, $jual->tenor]);
+                    $bungatotal = DB::select("SELECT hitung_bunga(?, ?, ?, ?) AS jumlah", [$jual->grandtotal, $jual->bunga_barang, $jual->tenor, $i]);
+                    $cicilan = new PenjualanCicil();
+                    $cicilan->penjualan_id = $jual->id;
+                    $cicilan->cicilan = $i;
+                    $cicilan->anggota_id = $jual->anggota_id;
+                    $cicilan->pokok = $pokoktotal[0]->jumlah;
+                    $cicilan->bunga = $bungatotal[0]->jumlah;
+                    $cicilan->total_cicilan = $pokoktotal[0]->jumlah+$bungatotal[0]->jumlah;
+                    $cicilan->status = 'hutang';
+                    $cicilan->save();
+                }
+            }
+        }
         return response()->json('success', 200);
     }
     public function getPenjualanDtl($idjual)
     {
         $hdr = Penjualan::find($idjual);
+        $cicilan = PenjualanCicil::where(['penjualan_id'=>$hdr->id,'status'=>'linas'])->count();
         $dtl = PenjualanDetail::join('barang','barang.id','penjualan_detail.barang_id')
         ->where(['penjualan_detail.penjualan_id'=>$idjual])
         ->select('penjualan_detail.*', 'barang.nama_barang', 'barang.kode_barang')->get();
-        return response()->json(['hdr'=>$hdr,'dtl'=>$dtl], 200);
+        return response()->json(['hdr'=>$hdr,'dtl'=>$dtl,'cicilanlunas'=> $cicilan], 200);
         
     }
     public function AmbilBarang(Request $request)
     {
         $request->validate(['id' => 'required']);
-        
-        $jual = Penjualan::find($request->id);
-        $jual->status_ambil = $request->status;
-        if($request->status == 'finish'){
-            $jual->ambil_at = now();
-        }
-        $jual->save();      
-        
-        $detail = PenjualanDetail::where('penjualan_id',$request->id)->get();
-        foreach ($detail as $value) {
-            StokUnit::where('unit_id',$jual->unit_id)
-                ->where('barang_id',$value->barang_id)
-                ->decrement('stok', $value->qty);
-        }
+        DB::beginTransaction();
+        try {
+            $jual = Penjualan::find($request->id);
+            $jual->status_ambil = $request->status;
+            if($request->status == 'finish'){
+                $jual->ambil_at = now();
+                $jual->metode_bayar = $request->metode;
+                if($request->metode == 'cicilan'){
+                    $bunga = KonfigBunga::select('bunga_barang')->first();
+                    $jual->status = 'hutang';
+                    $jual->tenor = $request->jmlcicilan;
+                    $user = User::find($jual->anggota_id);
+                    $result = DB::select("SELECT hitung_cicilan(?, ?, ?, ?) AS jumlah", [$jual->grandtotal, $bunga->bunga_barang, $request->jmlcicilan, 1]);
+                    $cicilanpertama = $result[0]->jumlah;
 
-        // Kembalikan nomor invoice untuk cetak nota
-        return response()->json(['invoice' => $jual->nomor_invoice], 200);
+                    $totalcicilan = PenjualanCicil::where(['anggota_id'=>$jual->anggota_id,'status'=>'hutang'])
+                    ->sum('total_cicilan');
+
+                    $batas = 0.35 * $user->gaji; // 35% dari gaji
+                    if (($totalcicilan+$cicilanpertama) > $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
+                        DB::rollBack();
+                        return response()->json('Tidak dapat diproses, Melebihi batas limit',500);
+                        //return response()->json([$request->idcustomer,$totalcicilan,$cicilanpertama],500);
+                    }
+
+                    $jual->bunga_barang = $bunga->bunga_barang;
+                    $jual->kembali = 0;
+                    $jual->dibayar = 0;
+
+                    for ($i = 1; $i <= $request->jmlcicilan; $i++) {
+                        $pokoktotal = DB::select("SELECT hitung_pokok(?, ?) AS jumlah", [$jual->grandtotal, $request->jmlcicilan]);
+                        $bungatotal = DB::select("SELECT hitung_bunga(?, ?, ?, ?) AS jumlah", [$jual->grandtotal, $bunga->bunga_barang, $request->jmlcicilan, $i]);
+                        $cicilan = new PenjualanCicil();
+                        $cicilan->penjualan_id = $jual->id;
+                        $cicilan->cicilan = $i;
+                        $cicilan->anggota_id = $jual->anggota_id;
+                        $cicilan->pokok = $pokoktotal[0]->jumlah;
+                        $cicilan->bunga = $bungatotal[0]->jumlah;
+                        $cicilan->total_cicilan = $pokoktotal[0]->jumlah+$bungatotal[0]->jumlah;
+                        $cicilan->status = 'hutang';
+                        $cicilan->save();
+                    }
+                }else{
+                    $jual->status = 'lunas';
+                    $jual->kembali = $request->kembalian;
+                    $jual->dibayar = $request->dibayar;
+                }
+            }
+            $jual->save();      
+            
+            $detail = PenjualanDetail::where('penjualan_id',$request->id)->get();
+            foreach ($detail as $value) {
+                StokUnit::where('unit_id',$jual->unit_id)
+                    ->where('barang_id',$value->barang_id)
+                    ->decrement('stok', $value->qty);
+            }
+            DB::commit();
+            // Kembalikan nomor invoice untuk cetak nota
+            return response()->json(['invoice' => $jual->nomor_invoice], 200);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'error'   => 'Failed to save order',
+                'message' => $e->getMessage(),
+                'file'    => $e->getFile(),
+                'line'    => $e->getLine(),
+            ], 500);
+        }
     }
 
 }
