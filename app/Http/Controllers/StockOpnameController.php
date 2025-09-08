@@ -17,32 +17,8 @@ class StockOpnameController extends Controller
 {
     public function index(Request $request): View
     {
-        $unitId = Auth::user()->unit_kerja;
-
-        // Filter bulan (default bulan ini)
         $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
-        $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth()->format('Y-m-d');
-        $endDate   = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth()->format('Y-m-d');
-
-        $barang = DB::table('stock_opname')
-            ->join('barang', 'barang.id', '=', 'stock_opname.id_barang')
-            ->where('stock_opname.id_unit', $unitId)
-            ->whereBetween('stock_opname.tgl_opname', [$startDate, $endDate])
-            ->whereNull('stock_opname.deleted_at')
-            ->select(
-                'stock_opname.id as opname_id',
-                'barang.id',
-                'barang.kode_barang',
-                'barang.nama_barang',
-                'stock_opname.stock_sistem',
-                'stock_opname.stock_fisik',
-                'stock_opname.status',
-                'stock_opname.keterangan'
-            )
-            ->orderBy('barang.nama_barang')
-            ->get();
-
-        return view('transaksi.StockOpnameList', compact('barang', 'bulan'));
+        return view('transaksi.StockOpnameList', compact('bulan'));
     }
 
     public function mulaiOpname(Request $request)
@@ -385,5 +361,40 @@ class StockOpnameController extends Controller
 
         return response()->json(['valid' => false]);
     }
+
+    public function getBarangAjax(Request $request)
+    {
+        $unitId = Auth::user()->unit_kerja;
+        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
+        $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth()->format('Y-m-d');
+        $endDate   = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth()->format('Y-m-d');
+
+        $query = DB::table('stock_opname')
+            ->join('barang', 'barang.id', '=', 'stock_opname.id_barang')
+            ->where('stock_opname.id_unit', $unitId)
+            ->whereBetween('stock_opname.tgl_opname', [$startDate, $endDate])
+            ->whereNull('stock_opname.deleted_at')
+            ->select(
+                'stock_opname.id as opname_id',
+                'barang.id',
+                'barang.kode_barang',
+                'barang.nama_barang',
+                'stock_opname.stock_sistem',
+                'stock_opname.stock_fisik',
+                'stock_opname.status'
+            )
+            ->orderBy('barang.nama_barang');
+
+        return datatables()->of($query)
+            ->addIndexColumn()
+            ->addColumn('aksi', function ($row) {
+                return '<a href="'.route('stockopname.form',['barang_id'=>$row->id]).'" class="btn btn-sm btn-primary">
+                            <i class="bi bi-pencil-square"></i> Input
+                        </a>';
+            })
+            ->rawColumns(['aksi'])
+            ->make(true);
+    }
+
 
 }

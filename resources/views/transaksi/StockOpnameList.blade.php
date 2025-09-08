@@ -72,33 +72,18 @@
 
                     {{-- Tabel Barang --}}
                     <table class="table table-sm table-bordered table-striped text-center" id="tbbarang" style="width: 100%; font-size: small;">
-                        <thead class="table-light">
-                            <tr>
-                                <th>#</th>
-                                <th>Kode Barang</th>
-                                <th>Nama Barang</th>
-                                <th>Stok Sistem</th>
-                                <th>Stok Fisik</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($barang as $index => $item)
-                                <tr class="{{ $item->status === 'sukses' ? 'table-warning' : '' }}">
-                                    <td>{{ $index + 1 }}</td>
-                                    <td>{{ $item->kode_barang }}</td>
-                                    <td class="text-start">{{ $item->nama_barang }}</td>
-                                    <td>{{ $item->stock_sistem ?? $item->stok_unit ?? '-' }}</td>
-                                    <td>{{ $item->stock_fisik ?? '-' }}</td>
-                                    <td>
-                                        <a href="{{ route('stockopname.form', ['barang_id' => $item->id]) }}" class="btn btn-sm btn-primary">
-                                            <i class="bi bi-pencil-square"></i> Input Opname
-                                        </a>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+    <thead class="table-light">
+        <tr>
+            <th>#</th>
+            <th>Kode Barang</th>
+            <th>Nama Barang</th>
+            <th>Stok Sistem</th>
+            <th>Stok Fisik</th>
+            <th>Aksi</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
 
                 </div>
             </div>
@@ -110,8 +95,27 @@
         <script>
             $(document).ready(function () {
                 $('#tbbarang').DataTable({
-                    pageLength: 50,
-                    responsive: true
+                    processing: true,
+                    serverSide: true,
+                    ajax: {
+                        url: "{{ route('stockopname.barangajax') }}",
+                        data: { bulan: "{{ $bulan }}" }
+                    },
+                    columns: [
+                        { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                        { data: 'kode_barang', name: 'kode_barang' },
+                        { data: 'nama_barang', name: 'nama_barang' },
+                        { data: 'stock_sistem', name: 'stock_sistem' },
+                        { data: 'stock_fisik', name: 'stock_fisik' },
+                        { data: 'aksi', name: 'aksi', orderable: false, searchable: false }
+                    ],
+                    pageLength: 25,
+                    responsive: true,
+                    createdRow: function(row, data, dataIndex) {
+                        if (data.status === 'sukses') {
+                            $(row).addClass('table-warning'); // tambahin class kuning
+                        }
+                    }
                 });
 
                 // Verifikasi password sebelum mulai opname

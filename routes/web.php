@@ -99,7 +99,7 @@ Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin',
     // 🔑 route verifikasi password
     
     Route::post('/verify-password', [StockOpnameController::class, 'verifyPassword'])->name('stockopname.verifyPassword');
-    
+    Route::get('/barang-ajax', [StockOpnameController::class, 'getBarangAjax'])->name('stockopname.barangajax');
 });
 
 
