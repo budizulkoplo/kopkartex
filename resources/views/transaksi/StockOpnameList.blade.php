@@ -72,18 +72,18 @@
 
                     {{-- Tabel Barang --}}
                     <table class="table table-sm table-bordered table-striped text-center" id="tbbarang" style="width: 100%; font-size: small;">
-    <thead class="table-light">
-        <tr>
-            <th>#</th>
-            <th>Kode Barang</th>
-            <th>Nama Barang</th>
-            <th>Stok Sistem</th>
-            <th>Stok Fisik</th>
-            <th>Aksi</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+                            <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Kode Barang</th>
+                                <th>Nama Barang</th>
+                                <th>Stok Sistem</th>
+                                <th>Stok Fisik</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
 
                 </div>
             </div>
