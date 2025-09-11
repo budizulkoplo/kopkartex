@@ -272,6 +272,8 @@ Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin
     Route::get('/stok-opname/data', [LaporanController::class, 'stokOpnameData'])->name('laporan.stokopname.data');
     Route::get('/mutasi-stok', [LaporanController::class, 'mutasiStok'])->name('laporan.mutasi_stok');
     Route::get('/mutasi-stok/data', [LaporanController::class, 'mutasiStokData'])->name('laporan.mutasi_stok.data');
+    Route::get('/penjualan-detail', [LaporanController::class, 'penjualanDetail'])->name('laporan.penjualan_detail');
+    Route::get('/penjualan-detail/data', [LaporanController::class, 'penjualanDetailData'])->name('laporan.penjualan_detail.data');
 
 });
 

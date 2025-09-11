@@ -368,5 +368,71 @@ class LaporanController extends Controller
         return response()->json(['data' => array_values($grouped)]);
     }
 
+    public function penjualanDetail(Request $request)
+    {
+        // default filter
+        $start_date   = $request->get('start_date', date('Y-m-01'));
+        $end_date     = $request->get('end_date', date('Y-m-d'));
+        $unit_id      = $request->get('unit', 'all');
+        $metode_bayar = $request->get('metode', 'all');
+
+        // list unit untuk filter dropdown
+        $units = DB::table('unit')->whereNull('deleted_at')->pluck('nama_unit', 'id');
+
+        return view('laporan.penjualan_detail', compact(
+            'start_date', 'end_date', 'unit_id', 'metode_bayar', 'units'
+        ));
+    }
+
+    public function penjualanDetailData(Request $request)
+    {
+        $start_date   = $request->input('start_date', date('Y-m-01'));
+        $end_date     = $request->input('end_date', date('Y-m-d'));
+        $unit_id      = $request->input('unit', 'all');
+        $metode_bayar = $request->input('metode', 'all');
+
+        $query = DB::table('penjualan as p')
+            ->join('penjualan_detail as d', 'p.id', '=', 'd.penjualan_id')
+            ->join('barang as b', 'd.barang_id', '=', 'b.id')
+            ->join('unit as u', 'p.unit_id', '=', 'u.id')
+            ->select(
+                'p.tanggal',
+                'p.nomor_invoice',
+                'p.customer',
+                'p.metode_bayar',
+                'u.nama_unit',
+                'b.kode_barang',
+                'b.nama_barang',
+                'd.qty',
+                'd.harga',
+                DB::raw('(d.qty * d.harga) as total')
+            )
+            ->whereBetween(DB::raw('DATE(p.tanggal)'), [$start_date, $end_date])
+            ->whereNull('p.deleted_at')
+            ->whereNull('d.deleted_at');
+
+        // filter unit
+        if ($unit_id != 'all') {
+            $query->where('p.unit_id', $unit_id);
+        }
+
+        // filter metode bayar
+        if ($metode_bayar != 'all') {
+            $query->where('p.metode_bayar', $metode_bayar);
+        }
+
+        // kondisi offline vs mobile
+        $query->where(function ($q) {
+            $q->where('p.type_order', 'offline')
+            ->orWhere(function ($q2) {
+                $q2->where('p.type_order', 'mobile')
+                    ->where('p.status_ambil', 'finish');
+            });
+        });
+
+        $data = $query->orderBy('p.tanggal')->get();
+
+        return DataTables::of($data)->make(true);
+    }
 
 }
