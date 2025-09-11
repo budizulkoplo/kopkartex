@@ -262,4 +262,113 @@ class PenjualanController extends Controller
         ]);
     }
 
+    public function getDetail($id)
+    {
+        try {
+            $penjualan = Penjualan::findOrFail($id);
+            
+            // Pastikan hanya bisa mengakses data dari unit yang sama
+            if ($penjualan->unit_id != Auth::user()->unit_kerja) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            
+            $detail = PenjualanDetail::join('barang', 'barang.id', 'penjualan_detail.barang_id')
+                ->where('penjualan_id', $id)
+                ->select(
+                    'penjualan_detail.id',
+                    'penjualan_detail.barang_id',
+                    'barang.kode_barang',
+                    'barang.nama_barang',
+                    'penjualan_detail.qty',
+                    'penjualan_detail.harga'
+                )
+                ->get();
+            
+            return response()->json([
+                'success' => true,
+                'detail' => $detail
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat detail penjualan'
+            ], 500);
+        }
+    }
+    
+    /**
+     * Proses retur penjualan
+     */
+    public function prosesRetur(Request $request)
+    {
+        DB::beginTransaction();
+        try {
+            $penjualanId = $request->penjualan_id;
+            $items = $request->items;
+            
+            $penjualan = Penjualan::findOrFail($penjualanId);
+            
+            // Pastikan hanya bisa mengakses data dari unit yang sama
+            if ($penjualan->unit_id != Auth::user()->unit_kerja) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            
+            foreach ($items as $item) {
+                $detail = PenjualanDetail::findOrFail($item['id']);
+                
+                // Kembalikan stok
+                StokUnit::where('unit_id', $penjualan->unit_id)
+                    ->where('barang_id', $item['barang_id'])
+                    ->increment('stok', $item['qty']);
+                
+                // Hapus item dari penjualan
+                $detail->delete();
+                
+                // Catat retur dalam log atau tabel khusus retur
+                // Anda bisa membuat tabel retur_penjualan untuk mencatat history retur
+                DB::table('retur_penjualan')->insert([
+                    'penjualan_id' => $penjualanId,
+                    'barang_id' => $item['barang_id'],
+                    'qty' => $item['qty'],
+                    'harga' => $detail->harga,
+                    'created_at' => now(),
+                    'created_user' => Auth::id()
+                ]);
+            }
+            
+            // Recalculate grand total
+            $newTotal = PenjualanDetail::where('penjualan_id', $penjualanId)
+                ->select(DB::raw('SUM(qty * harga) as total'))
+                ->value('total');
+            
+            // Update penjualan
+            $penjualan->grandtotal = $newTotal;
+            $penjualan->subtotal = $newTotal;
+            
+            // Jika semua item di-retur, ubah status penjualan
+            $remainingItems = PenjualanDetail::where('penjualan_id', $penjualanId)->count();
+            if ($remainingItems === 0) {
+                $penjualan->status = 'diretur';
+            }
+            
+            $penjualan->save();
+            
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Retur berhasil diproses'
+            ]);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses retur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

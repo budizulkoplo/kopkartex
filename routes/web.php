@@ -144,7 +144,13 @@ Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|adm
     Route::get('/nota/{invoice}', [PenjualanController::class, 'nota'])->name('jual.nota');
     Route::post('/cektanggungan', [PenjualanController::class, 'CekTanggungan'])->name('jual.cektanggungan');
     Route::get('/riwayat', [PenjualanController::class, 'RiwayatPenjualan'])->name('jual.riwayat');
+
+    Route::get('detail/{id}', [PenjualanController::class, 'getDetail'])->name('penjualan.detail');
+
+    // Route untuk proses retur
+    Route::post('retur', [PenjualanController::class, 'prosesRetur'])->name('penjualan.retur');
 });
+
 Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus', 'global.app'])->group(function () {
     Route::get('/', [ApprovalController::class, 'index'])->name('app.list');
     Route::get('/gethutang', [ApprovalController::class, 'getHutang'])->name('app.gethutang');
@@ -295,6 +301,8 @@ Route::middleware(['auth'])->prefix('mobile/belanja')->name('mobile.belanja.')->
     Route::get('/history', [BelanjaController::class, 'history'])->name('history');
     Route::get('/history/{id}', [BelanjaController::class, 'historyDetail'])->name('history.detail');
     Route::delete('/cancel/{id}', [BelanjaController::class, 'cancelOrder'])->name('cancel');
+    // Route untuk mendapatkan detail penjualan
+
 
 });
 
