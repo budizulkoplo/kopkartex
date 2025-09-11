@@ -245,6 +245,7 @@ class PenjualanController extends Controller
             ->select('penjualan.*', 'users.name as kasir')
             ->whereDate('penjualan.tanggal', '>=', $tanggalAwal)
             ->whereDate('penjualan.tanggal', '<=', $tanggalAkhir)
+            ->whereIn('penjualan.status', ['lunas', 'hutang'])
             ->orderBy('penjualan.tanggal', 'desc');
 
         if($request->anggota){
