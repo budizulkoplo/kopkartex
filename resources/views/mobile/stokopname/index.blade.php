@@ -18,6 +18,13 @@
 
     <div id="reader" style="width: 100%; max-width: 400px; margin:auto; border:1px solid #ccc;"></div>
 
+    {{-- Tombol kembali ke halaman stok opname --}}
+    <div class="text-center mt-3">
+        <a href="{{ route('mobile.stokopname.index') }}" class="btn btn-secondary btn-sm">
+            ⬅️ Kembali ke Stok Opname
+        </a>
+    </div>
+
     <form id="scanForm" action="{{ route('mobile.stokopname.scan') }}" method="POST">
         @csrf
         <input type="hidden" name="barcode" id="barcode">
