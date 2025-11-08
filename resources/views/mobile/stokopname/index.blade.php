@@ -20,7 +20,7 @@
 
     {{-- Tombol kembali ke halaman stok opname --}}
     <div class="text-center mt-3">
-        <a href="{{ route('mobile.stokopname.index') }}" class="btn btn-secondary btn-sm">
+        <a href="{{ route('stokopname.index') }}" class="btn btn-secondary btn-sm">
             ⬅️ Kembali ke Stok Opname
         </a>
     </div>
