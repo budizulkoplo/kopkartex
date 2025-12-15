@@ -25,6 +25,7 @@
                         <h5 class="card-title mb-0">Form Penerimaan</h5>
                     </div>
                     <div class="card-body p-3">
+                        {{-- Header Form --}}
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <div class="input-group input-group-sm mb-2"> 
@@ -44,7 +45,7 @@
                                 </div>
                                 <div class="input-group input-group-sm mb-2"> 
                                     <span class="input-group-text label-fixed-width">Supplier</span>
-                                    <input type="text" class="form-control" name="supplier" required>
+                                    <input type="text" class="form-control typeahead" id="supplier-search" name="supplier">
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -57,6 +58,7 @@
                             </div>
                         </div>
 
+                        {{-- Table Penerimaan --}}
                         <div class="row mb-3">
                             <div class="col-md-12">
                                 <table id="tbterima" class="table table-sm table-striped table-bordered" style="width: 100%; font-size: small;">
@@ -67,15 +69,24 @@
                                             <th>Nama Barang</th>
                                             <th>Qty</th>
                                             <th>Harga Beli</th>
+                                            <th>Total Harga Beli</th>
                                             <th>Harga Jual</th>
                                             <th></th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <th colspan="5" class="text-end">Grand Total:</th>
+                                            <th id="grandtotal">0</th>
+                                            <th colspan="2"></th>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         </div>
 
+                        {{-- Catatan dan Tombol --}}
                         <div class="row align-items-start">
                             <div class="col-md-8">
                                 <div class="input-group input-group-sm mb-3"> 
@@ -98,7 +109,6 @@
         </div>
     </div>
 
-    {{-- Custom CSS --}}
     <x-slot name="csscustom">
         <style>
             .tt-menu {
@@ -120,69 +130,78 @@
         </style>
     </x-slot>
 
-    {{-- Custom JS --}}
     <x-slot name="jscustom">
         <script>
+            let barang = [];
+
             function numbering(){
                 $('#tbterima tbody tr').each(function(index) {
                     $(this).find('td:first').text(index + 1);
                 });
             }
 
-            function addRow(datarow){
-    let str = '', boleh = true;
-    $('#tbterima tbody tr').each(function(index, element) {
-        if(datarow.id == $(this).data('id')) {
-            boleh=false;return false;
-        }
-    });
-    if(boleh){
-        str +=`<tr data-id="`+datarow.id+`" class="align-middle">
-            <td></td>
-            <td>`+datarow.code+`</td>
-            <td>`+datarow.text+`</td>
-            <td>
-                <input type="number" value="1" class="form-control form-control-sm w-auto" 
-                    min="1" name="qty[]" required>
-                <input type="hidden" name="id[]" value="`+datarow.id+`">
-            </td>
-            <td>
-                <input type="number" value="`+(datarow.harga_beli ?? 0)+`" step="0.01" 
-                    class="form-control form-control-sm w-auto" 
-                    name="harga_beli[]" required>
-            </td>
-            <td>
-                <input type="number" value="`+(datarow.harga_jual ?? 0)+`" step="0.01" 
-                    class="form-control form-control-sm w-auto" 
-                    name="harga_jual[]" required>
-            </td>
-            <td>
-                <span class="badge bg-danger dellist" onclick="$(this).closest('tr').remove();numbering();">
-                    <i class="bi bi-trash3-fill"></i>
-                </span>
-            </td>
-        </tr>`;
-        $('#tbterima tbody').append(str);
-    }
-    numbering();
-    $('#barcode-search').val('');
-}
+            function updateTotals() {
+                let grandTotal = 0;
+                $('#tbterima tbody tr').each(function() {
+                    const qty = parseFloat($(this).find('input[name="qty[]"]').val()) || 0;
+                    const hargaBeli = parseFloat($(this).find('input[name="harga_beli[]"]').val()) || 0;
+                    const total = qty * hargaBeli;
+                    $(this).find('.total-beli').text(total.toLocaleString('id-ID', {minimumFractionDigits:2}));
+                    grandTotal += total;
+                });
+                $('#grandtotal').text(grandTotal.toLocaleString('id-ID', {minimumFractionDigits:2}));
+            }
 
+            function addRow(datarow){
+                let boleh = true;
+                $('#tbterima tbody tr').each(function() {
+                    if(datarow.id == $(this).data('id')) {
+                        boleh=false; return false;
+                    }
+                });
+                if(boleh){
+                    const str = `<tr data-id="${datarow.id}" class="align-middle">
+                        <td></td>
+                        <td>${datarow.code}</td>
+                        <td>${datarow.text}</td>
+                        <td>
+                            <input type="number" value="1" class="form-control form-control-sm w-auto qty" min="1" name="qty[]" required>
+                            <input type="hidden" name="id[]" value="${datarow.id}">
+                        </td>
+                        <td>
+                            <input type="number" value="${datarow.harga_beli ?? 0}" step="0.01" class="form-control form-control-sm w-auto harga_beli" name="harga_beli[]" required>
+                        </td>
+                        <td class="total-beli">${datarow.harga_beli ?? 0}</td>
+                        <td>
+                            <input type="number" value="${datarow.harga_jual ?? 0}" step="0.01" class="form-control form-control-sm w-auto" name="harga_jual[]" required>
+                        </td>
+                        <td>
+                            <span class="badge bg-danger dellist" onclick="$(this).closest('tr').remove();numbering();updateTotals();">
+                                <i class="bi bi-trash3-fill"></i>
+                            </span>
+                        </td>
+                    </tr>`;
+                    $('#tbterima tbody').append(str);
+                    numbering();
+                    updateTotals();
+                }
+                $('#barcode-search').val('');
+            }
 
             function clearform(){
                 $('input[name="invoice"]').val('');
                 $('input[name="supplier"]').val('');
                 $('textarea[name="note"]').val('');
                 $('#tbterima tbody tr').remove();
+                updateTotals();
             }
 
             $(document).ready(function () {
                 let currentRequest = null;
+
                 $('#barcode-search').typeahead({
                     source: function (query, process) {
-                        if (currentRequest !== null) {
-                            currentRequest.abort();
-                        }
+                        if (currentRequest !== null) currentRequest.abort();
                         currentRequest = $.ajax({
                             url: '{{ route('penerimaan.getbarang') }}',
                             type: 'GET',
@@ -190,17 +209,14 @@
                             dataType: 'json',
                             success: function (data) {
                                 barang = data;
-                                return process(data.map(barang => barang.text));
+                                return process(data.map(b => b.text));
                             }
                         });
                         return currentRequest;
                     },
                     afterSelect: function (text) {
-                        const selected = barang.find(barang => barang.text === text);
-                        if (selected) {
-                            $('#barcode-id').val(selected.code);
-                            addRow(selected);
-                        }
+                        const selected = barang.find(b => b.text === text);
+                        if (selected) addRow(selected);
                     }
                 });
 
@@ -218,50 +234,62 @@
                             method: 'GET',
                             data: { kode: $(this).val() },
                             dataType: 'json',
-                            success: function(response) {
-                                addRow(response);
-                            },
+                            success: function(response) { addRow(response); },
                             error: function() {
-                                Swal.fire({
-                                    title: "Barang tidak ditemukan!",
-                                    icon: "error",
-                                    draggable: true
-                                });
+                                Swal.fire({title:"Barang tidak ditemukan!",icon:"error",draggable:true});
                             }
                         });
                     }
                 });
 
+                // Update totals on change Qty / Harga Beli
+                $('#tbterima').on('input', '.qty, .harga_beli', function() {
+                    updateTotals();
+                });
+
                 $('#frmterima').on('submit', function(e) {
                     e.preventDefault();
-                    if (!this.checkValidity()) {
-                        e.stopPropagation();
-                    } else {
-                        $.ajax({
-                            type: 'POST',
-                            url: '{{ route('penerimaan.store') }}',
-                            data: $(this).serialize(),
-                            success: function(response) {
-                                Swal.fire({
-                                    position: "top-end",
-                                    icon: "success",
-                                    title: "Data berhasil disimpan",
-                                    showConfirmButton: false,
-                                    timer: 2500
-                                });
-                                clearform();
-                            },
-                            error: function() {
-                                Swal.fire({
-                                    icon: "error",
-                                    title: "Oops...",
-                                    text: "Terjadi kesalahan saat menyimpan!"
-                                });
-                            }
-                        });
-                    }
+                    if (!this.checkValidity()) { e.stopPropagation(); return; }
+
+                    $.ajax({
+                        type: 'POST',
+                        url: '{{ route('penerimaan.store') }}',
+                        data: $(this).serialize(),
+                        success: function() {
+                            Swal.fire({position:"top-end", icon:"success", title:"Data berhasil disimpan", showConfirmButton:false, timer:2500});
+                            clearform();
+                        },
+                        error: function() {
+                            Swal.fire({icon:"error", title:"Oops...", text:"Terjadi kesalahan saat menyimpan!"});
+                        }
+                    });
                 });
             });
+
+            let supplierList = [];
+            $('#supplier-search').typeahead({
+                source: function(query, process){
+                    $.ajax({
+                        url: '{{ route('penerimaan.getsupplier') }}',
+                        type: 'GET',
+                        data: { q: query },
+                        dataType: 'json',
+                        success: function(data){
+                            supplierList = data;
+                            return process(data.map(s => s.text));
+                        }
+                    });
+                },
+                afterSelect: function(text){
+                    // Optional: bisa simpan ID supplier jika dibutuhkan
+                    const selected = supplierList.find(s => s.text === text);
+                    if(selected){
+                        // misal simpan id hidden
+                        // $('#supplier-id').val(selected.id);
+                    }
+                }
+            });
+                
         </script>
     </x-slot>
 </x-app-layout>

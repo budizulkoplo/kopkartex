@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\StockOpnameController;
 use App\Http\Controllers\JasaBengkelController;
 use App\Http\Controllers\TransaksiBengkelController;
+use App\Http\Controllers\SupplierController;
 
 //LAPORAN
 use App\Http\Controllers\LaporanController;
@@ -131,7 +132,11 @@ Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|ad
     Route::get('/getbarang', [PenerimaanController::class, 'getBarang'])->name('penerimaan.getbarang');
     Route::get('/getbarangbycode', [PenerimaanController::class, 'getBarangByCode'])->name('penerimaan.getbarangbycode');
     Route::post('/store', [PenerimaanController::class, 'store'])->name('penerimaan.store');
-    
+    Route::get('/getsupplier', [PenerimaanController::class, 'getSupplier'])->name('penerimaan.getsupplier');
+    Route::get('/riwayat', [PenerimaanController::class, 'Riwayat'])->name('penerimaan.riwayat');
+    Route::get('/detail/{id}', [PenerimaanController::class, 'getDetail'])->name('penerimaan.getdetail');
+
+
 });
 
 Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
@@ -223,6 +228,16 @@ Route::prefix('barang')->middleware(['auth', 'verified', 'role:superadmin|admin'
     Route::get('/cekcode', [BarangController::class, 'CekCode'])->name('barang.cekcode');
     Route::delete('/hapus', [BarangController::class, 'Hapus'])->name('barang.hapus');
 });
+
+Route::prefix('supplier')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/', [SupplierController::class, 'index'])->name('supplier.list');
+    Route::get('/getdata', [SupplierController::class, 'getdata'])->name('supplier.getdata');
+    Route::post('/store', [SupplierController::class, 'Store'])->name('supplier.store');
+    Route::get('/getcode', [SupplierController::class, 'getCode'])->name('supplier.getcode');
+    Route::get('/cekcode', [SupplierController::class, 'CekCode'])->name('supplier.cekcode');
+    Route::delete('/hapus', [SupplierController::class, 'Hapus'])->name('supplier.hapus');
+});
+
 Route::get('/ss', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified', 'global.app']);
