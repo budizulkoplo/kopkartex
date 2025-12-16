@@ -2,29 +2,32 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PenerimaanDtl extends Model
 {
-    use HasFactory, SoftDeletes;
-
     protected $table = 'penerimaan_detail';
     protected $primaryKey = 'id';
-    public $incrementing = true;
-    protected $keyType = 'int';
-
-    protected $dates = [
-        'expired_date',
+    
+    protected $fillable = [
+        'idpenerimaan',
+        'barang_id',
+        'jumlah',
+        'harga_beli',
+        'harga_jual',
+        'subtotal',
         'created_at',
         'updated_at',
         'deleted_at'
     ];
-
+    
+    public function penerimaan()
+    {
+        return $this->belongsTo(Penerimaan::class, 'idpenerimaan', 'idpenerimaan');
+    }
+    
     public function barang()
     {
         return $this->belongsTo(Barang::class, 'barang_id', 'id');
     }
 }
-

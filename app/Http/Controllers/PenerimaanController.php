@@ -6,22 +6,35 @@ use App\Models\Barang;
 use App\Models\Penerimaan;
 use App\Models\PenerimaanDtl;
 use App\Models\StokUnit;
+use App\Models\Supplier;
+use App\Models\User;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
-use App\Models\Supplier;
 
 class PenerimaanController extends Controller
 {
     public function index(Request $request): View
     {
         return view('transaksi.penerimaan', [
-            // 'roles' => Role::with('permissions')->get(),
-            // 'allroles' => Role::all(),
-            // 'unit' => Unit::all(),
+            'invoice' => $this->genCode(),
         ]);
+    }
+
+    // Fungsi generate kode invoice otomatis
+    private function genCode()
+    {
+        $total = Penerimaan::withTrashed()->whereDate('created_at', date("Y-m-d"))->count();
+        $nomorUrut = $total + 1;
+        return 'RCV-' . date("ymd") . str_pad($nomorUrut, 3, '0', STR_PAD_LEFT);
+    }
+
+    // Method untuk mendapatkan invoice baru
+    public function getInvoice()
+    {
+        return response()->json($this->genCode());
     }
     
     public function getBarang(Request $request){
@@ -42,60 +55,153 @@ class PenerimaanController extends Controller
         }
     }
 
-    public function store(Request $request){
-        DB::beginTransaction();
-        try {
-            $formattedDate = Carbon::parse($request->date)->format('Y-m-d');
+    public function store(Request $request)
+{
+    DB::beginTransaction();
+    try {
+        $formattedDate = Carbon::parse($request->date)->format('Y-m-d H:i:s');
+        
+        // Validasi jika metode bayar tempo
+        if ($request->metode_bayar == 'tempo') {
+            if (!$request->tgl_tempo) {
+                throw new Exception('Tanggal tempo harus diisi untuk pembayaran tempo.');
+            }
+            $tglTempo = Carbon::parse($request->tgl_tempo)->format('Y-m-d');
+            $statusBayar = 'pending';
+        } else {
+            $tglTempo = null;
+            $statusBayar = 'paid';
+        }
 
-            $hdr=new Penerimaan;
-            $hdr->nomor_invoice = $request->invoice;
-            $hdr->tgl_penerimaan = $formattedDate;
-            $hdr->nama_supplier = $request->supplier;
-            $hdr->note = $request->note;
-            $hdr->user_id = auth()->user()->id;
-            $hdr->save();
-            $idhdr = $hdr->id;
+        // Validasi ada barang yang ditambahkan
+        $quantities = $request->input('qty', []);
+        $barang = $request->input('id', []);
+        
+        if (empty($barang) || empty($quantities)) {
+            throw new Exception('Minimal ada 1 barang yang harus ditambahkan.');
+        }
 
-            $quantities   = $request->input('qty');
-            $barang       = $request->input('id');
-            $hargaBeliArr = $request->input('harga_beli');
-            $hargaJualArr = $request->input('harga_jual');
+        $hdr = new Penerimaan;
+        $hdr->nomor_invoice = $request->invoice ?? $this->genCode();
+        $hdr->tgl_penerimaan = $formattedDate;
+        $hdr->nama_supplier = $request->supplier;
+        $hdr->note = $request->note;
+        $hdr->user_id = auth()->user()->id;
+        $hdr->metode_bayar = $request->metode_bayar;
+        $hdr->tgl_tempo = $tglTempo;
+        $hdr->status_bayar = $statusBayar;
+        $hdr->save();
+        
+        // DAPATKAN idpenerimaan YANG BARU DIBUAT
+        $idhdr = $hdr->idpenerimaan; // <-- INI YANG BENAR
+        
+        $hargaBeliArr = $request->input('harga_beli', []);
+        $hargaJualArr = $request->input('harga_jual', []);
+        $kodeBarangArr = $request->input('kode_barang', []);
+        $namaBarangArr = $request->input('nama_barang', []);
 
-            foreach ($barang as $index => $id) {
-                // insert detail penerimaan
-                $dtl = new PenerimaanDtl;
-                $dtl->idpenerimaan = $idhdr;
-                $dtl->barang_id    = $barang[$index];
-                $dtl->jumlah       = $quantities[$index];
-                $dtl->harga_beli   = $hargaBeliArr[$index] ?? 0;
-                $dtl->harga_jual   = $hargaJualArr[$index] ?? 0;
-                $dtl->save();
+        $grandTotal = 0;
 
-                // update stok
-                DB::statement("
-                    INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at,created_at) 
-                    VALUES (?, ?, ?, NOW(), NOW())
-                    ON DUPLICATE KEY UPDATE 
-                        stok = stok + VALUES(stok),
-                        updated_at=VALUES(updated_at)",
-                    [$barang[$index], 1, $quantities[$index]]
-                );
-
-                // update harga di master barang
-                Barang::where('id', $barang[$index])->update([
-                    'harga_beli' => $hargaBeliArr[$index],
-                    'harga_jual' => $hargaJualArr[$index],
-                    'updated_at' => now(),
-                ]);
+        foreach ($barang as $index => $id) {
+            // Validasi quantity
+            if (empty($quantities[$index]) || $quantities[$index] <= 0) {
+                throw new Exception("Quantity barang ke-" . ($index + 1) . " harus lebih dari 0.");
+            }
+            
+            // Validasi harga beli
+            if (empty($hargaBeliArr[$index]) || $hargaBeliArr[$index] < 0) {
+                throw new Exception("Harga beli barang ke-" . ($index + 1) . " tidak valid.");
             }
 
-            DB::commit();
-            return response()->json($hdr);
-        } catch (Exception $e) {
-            DB::rollBack();
-            return response()->json($e->getMessage(), 500);
+            $barangId = $id;
+            $kodeBarang = $kodeBarangArr[$index] ?? '';
+            $namaBarang = $namaBarangArr[$index] ?? '';
+            
+            // Cek apakah ini barang baru (dimulai dengan 'quick-')
+            if (str_starts_with($id, 'quick-')) {
+                // Barang baru, perlu dibuat dulu
+                if (empty($kodeBarang) || empty($namaBarang)) {
+                    throw new Exception('Kode dan nama barang harus diisi untuk barang baru.');
+                }
+                
+                // Cek apakah kode barang sudah ada
+                $existingBarang = Barang::where('kode_barang', $kodeBarang)->first();
+                if ($existingBarang) {
+                    // Gunakan barang yang sudah ada
+                    $barangId = $existingBarang->id;
+                } else {
+                    // Buat barang baru
+                    $newBarang = new Barang();
+                    $newBarang->kode_barang = $kodeBarang;
+                    $newBarang->nama_barang = $namaBarang;
+                    $newBarang->harga_beli = $hargaBeliArr[$index] ?? 0;
+                    $newBarang->harga_jual = $hargaJualArr[$index] ?? 0;
+                    $newBarang->satuan = 'PCS';
+                    $newBarang->save();
+                    
+                    $barangId = $newBarang->id;
+                    
+                    // Tambahkan stok awal 0
+                    DB::statement("
+                        INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at, created_at) 
+                        VALUES (?, ?, ?, NOW(), NOW())
+                        ON DUPLICATE KEY UPDATE 
+                            updated_at = VALUES(updated_at)",
+                        [$barangId, 1, 0]
+                    );
+                }
+            }
+            
+            $subtotal = $quantities[$index] * ($hargaBeliArr[$index] ?? 0);
+            $grandTotal += $subtotal;
+
+            // insert detail penerimaan - PASTIKAN idpenerimaan TERSET
+            $dtl = new PenerimaanDtl;
+            $dtl->idpenerimaan = $idhdr; // <-- GUNAKAN idpenerimaan, BUKAN $hdr->id
+            $dtl->barang_id    = $barangId;
+            $dtl->jumlah       = $quantities[$index];
+            $dtl->harga_beli   = $hargaBeliArr[$index] ?? 0;
+            $dtl->harga_jual   = $hargaJualArr[$index] ?? 0;
+            $dtl->subtotal     = $subtotal;
+            $dtl->save();
+
+            // update stok
+            DB::statement("
+                INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at, created_at) 
+                VALUES (?, ?, ?, NOW(), NOW())
+                ON DUPLICATE KEY UPDATE 
+                    stok = stok + VALUES(stok),
+                    updated_at = VALUES(updated_at)",
+                [$barangId, 1, $quantities[$index]]
+            );
+
+            // update harga di master barang
+            Barang::where('id', $barangId)->update([
+                'harga_beli' => $hargaBeliArr[$index] ?? 0,
+                'harga_jual' => $hargaJualArr[$index] ?? 0,
+                'updated_at' => now(),
+            ]);
         }
+
+        // Update grand total di header
+        $hdr->grandtotal = $grandTotal;
+        $hdr->save();
+
+        DB::commit();
+        return response()->json([
+            'success' => true,
+            'message' => 'Penerimaan berhasil disimpan',
+            'invoice' => $hdr->nomor_invoice,
+            'id' => $hdr->idpenerimaan // <-- KIRIM idpenerimaan KE FRONTEND
+        ]);
+    } catch (Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
 
     public function getSupplier(Request $request)
     {
@@ -105,6 +211,41 @@ class PenerimaanController extends Controller
             ->get();
 
         return response()->json($supplier);
+    }
+
+    public function storeSupplier(Request $request)
+    {
+        try {
+            $request->validate([
+                'nama_supplier' => 'required|string|max:255',
+            ]);
+
+            // Generate kode supplier otomatis
+            $kodeSupplier = 'SUP-' . date('ymd') . str_pad(Supplier::count() + 1, 3, '0', STR_PAD_LEFT);
+
+            $supplier = new Supplier();
+            $supplier->kode_supplier = $kodeSupplier;
+            $supplier->nama_supplier = $request->nama_supplier;
+            $supplier->alamat = $request->alamat ?? null;
+            $supplier->telp = $request->telp ?? null;
+            $supplier->kontak_person = $request->kontak_person ?? null;
+            $supplier->email = $request->email ?? null;
+            $supplier->save();
+
+            return response()->json([
+                'success' => true,
+                'supplier' => [
+                    'id' => $supplier->id,
+                    'text' => $supplier->nama_supplier,
+                    'kode_supplier' => $supplier->kode_supplier
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan supplier: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function Riwayat(Request $request)
@@ -121,7 +262,7 @@ class PenerimaanController extends Controller
             $query->where('nama_supplier', 'LIKE', "%{$request->supplier}%");
         }
 
-        $penerimaan = $query->get();
+        $penerimaan = $query->paginate(25)->withQueryString();
 
         return view('transaksi.riwayatpenerimaan', [
             'penerimaan' => $penerimaan,
@@ -132,51 +273,61 @@ class PenerimaanController extends Controller
     }
 
     public function getDetail($id)
-    {
-        try {
-            $penerimaan = Penerimaan::with(['details.barang'])->findOrFail($id);
-
-            $detail = $penerimaan->details->map(function ($d) {
-                return [
-                    'id'               => $d->id,
-                    'barang_id'        => $d->barang_id,
-                    'kode_barang'      => $d->barang->kode_barang ?? '',
-                    'nama_barang'      => $d->barang->nama_barang ?? '',
-                    'jumlah'           => $d->jumlah,
-                    'harga_beli'       => $d->harga_beli,
-                    'harga_jual'       => $d->harga_jual,
-                    'expired_date'     => $d->expired_date ? $d->expired_date->format('Y-m-d') : null,
-                    'total_harga_beli' => $d->jumlah * $d->harga_beli,
-                ];
-            });
-
-            $grandTotal = $detail->sum('total_harga_beli');
-
-            return response()->json([
-                'success'     => true,
-                'penerimaan'  => [
-                    'idpenerimaan'   => $penerimaan->idpenerimaan,
-                    'nomor_invoice'  => $penerimaan->nomor_invoice,
-                    'tgl_penerimaan' => $penerimaan->tgl_penerimaan->format('Y-m-d'),
-                    'nama_supplier'  => $penerimaan->nama_supplier,
-                    'note'           => $penerimaan->note,
-                ],
-                'detail'      => $detail,
-                'grand_total' => $grandTotal
-            ]);
-
-        } catch (\Exception $e) {
+{
+    try {
+        // Cari penerimaan berdasarkan idpenerimaan
+        $penerimaan = Penerimaan::with(['details.barang', 'user'])
+            ->where('idpenerimaan', $id) // <-- GUNAKAN idpenerimaan
+            ->first();
+        
+        if (!$penerimaan) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memuat detail penerimaan',
-                'error'   => $e->getMessage()
-            ], 500);
+                'message' => 'Penerimaan tidak ditemukan'
+            ], 404);
         }
-    }
 
-    /**
-     * Proses revisi penerimaan
-     */
+        // Format detail
+        $detail = $penerimaan->details->map(function ($d) {
+            return [
+                'id'               => $d->id,
+                'barang_id'        => $d->barang_id,
+                'kode_barang'      => $d->barang->kode_barang ?? 'N/A',
+                'nama_barang'      => $d->barang->nama_barang ?? 'Tidak ditemukan',
+                'jumlah'           => $d->jumlah,
+                'harga_beli'       => $d->harga_beli,
+                'harga_jual'       => $d->harga_jual,
+                'subtotal'         => $d->subtotal ?? ($d->jumlah * $d->harga_beli),
+                'created_at'       => $d->created_at,
+            ];
+        });
+
+        return response()->json([
+            'success'     => true,
+            'penerimaan'  => [
+                'idpenerimaan'   => $penerimaan->idpenerimaan, // <-- idpenerimaan
+                'nomor_invoice'  => $penerimaan->nomor_invoice,
+                'tgl_penerimaan' => $penerimaan->tgl_penerimaan->format('d-m-Y H:i'),
+                'nama_supplier'  => $penerimaan->nama_supplier,
+                'note'           => $penerimaan->note ?? '',
+                'metode_bayar'   => $penerimaan->metode_bayar,
+                'tgl_tempo'      => $penerimaan->tgl_tempo ? $penerimaan->tgl_tempo->format('d-m-Y') : null,
+                'status_bayar'   => $penerimaan->status_bayar,
+                'grandtotal'     => $penerimaan->grandtotal,
+                'user_name'      => $penerimaan->user->name ?? '-'
+            ],
+            'detail'      => $detail,
+            'grand_total' => $penerimaan->grandtotal
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal memuat detail penerimaan: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
     public function prosesRevisi(Request $request)
     {
         DB::beginTransaction();
@@ -196,12 +347,11 @@ class PenerimaanController extends Controller
                     
                     // Update detail penerimaan
                     $detail->jumlah = $newQty;
+                    $detail->subtotal = $newQty * $detail->harga_beli;
                     $detail->save();
                     
                     // Adjust stok
                     if ($selisih != 0) {
-                        // Untuk revisi penerimaan, selisih positif artinya tambah stok
-                        // selisih negatif artinya kurangi stok
                         DB::statement("
                             INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at, created_at) 
                             VALUES (?, ?, ?, NOW(), NOW())
@@ -258,11 +408,12 @@ class PenerimaanController extends Controller
             
             // Recalculate grand total
             $newTotal = PenerimaanDtl::where('idpenerimaan', $penerimaanId)
-                ->select(DB::raw('SUM(jumlah * harga_beli) as total'))
+                ->select(DB::raw('SUM(subtotal) as total'))
                 ->value('total');
             
-            // Update penerimaan jika diperlukan
-            // (bisa tambah field total_revisi jika perlu)
+            // Update penerimaan
+            $penerimaan->grandtotal = $newTotal;
+            $penerimaan->save();
             
             DB::commit();
             
@@ -281,9 +432,6 @@ class PenerimaanController extends Controller
         }
     }
 
-    /**
-     * Batalkan penerimaan (jika diperlukan)
-     */
     public function batalkanPenerimaan($id)
     {
         DB::beginTransaction();
@@ -325,4 +473,114 @@ class PenerimaanController extends Controller
         }
     }
 
+    public function nota($invoice): View
+    {   
+        $hdr = Penerimaan::join('users','users.id','penerimaan.user_id')
+            ->select('penerimaan.*','users.name as petugas')
+            ->where('penerimaan.nomor_invoice',$invoice)
+            ->firstOrFail();
+
+        $dtl = PenerimaanDtl::join('barang','barang.id','penerimaan_detail.barang_id')
+            ->select(
+                'barang.nama_barang',
+                'barang.kode_barang',
+                'penerimaan_detail.jumlah',
+                'penerimaan_detail.harga_beli',
+                'penerimaan_detail.harga_jual',
+                'penerimaan_detail.subtotal'
+            )
+            ->where('idpenerimaan',$hdr->idpenerimaan)
+            ->get();
+
+        return view('transaksi.penerimaan-nota', [
+            'hdr' => $hdr,
+            'dtl' => $dtl,
+        ]);
+    }
+
+    public function updateStatusBayar(Request $request, $id)
+    {
+        try {
+            $penerimaan = Penerimaan::findOrFail($id);
+            
+            $penerimaan->status_bayar = $request->status_bayar;
+            
+            if ($request->status_bayar == 'paid') {
+                $penerimaan->tgl_lunas = now();
+            }
+            
+            $penerimaan->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Status pembayaran berhasil diperbarui'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function edit($id)
+    {
+        try {
+            $penerimaan = Penerimaan::with(['details.barang', 'user'])->findOrFail($id);
+            
+            return view('transaksi.edit-penerimaan', [
+                'penerimaan' => $penerimaan,
+                'invoice' => $this->genCode(),
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->route('penerimaan.riwayat')
+                ->with('error', 'Data penerimaan tidak ditemukan');
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        DB::beginTransaction();
+        try {
+            $penerimaan = Penerimaan::findOrFail($id);
+            
+            $formattedDate = Carbon::parse($request->date)->format('Y-m-d H:i:s');
+            
+            if ($request->metode_bayar == 'tempo') {
+                if (!$request->tgl_tempo) {
+                    throw new Exception('Tanggal tempo harus diisi untuk pembayaran tempo.');
+                }
+                $tglTempo = Carbon::parse($request->tgl_tempo)->format('Y-m-d');
+                $statusBayar = $request->status_bayar ?? 'pending';
+            } else {
+                $tglTempo = null;
+                $statusBayar = 'paid';
+            }
+
+            // Update header
+            $penerimaan->tgl_penerimaan = $formattedDate;
+            $penerimaan->nama_supplier = $request->supplier;
+            $penerimaan->note = $request->note;
+            $penerimaan->metode_bayar = $request->metode_bayar;
+            $penerimaan->tgl_tempo = $tglTempo;
+            $penerimaan->status_bayar = $statusBayar;
+            $penerimaan->save();
+
+            // TODO: Handle update details jika diperlukan
+            
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Penerimaan berhasil diperbarui',
+                'invoice' => $penerimaan->nomor_invoice
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

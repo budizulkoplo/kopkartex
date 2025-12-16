@@ -31,7 +31,8 @@
     },
     "autoload": {
         "files": [
-            "app/Helpers/rupiah.php"
+            "app/Helpers/rupiah.php",
+            "app/Helpers/TerbilangHelper.php"
         ],
         "psr-4": {
             "App\\": "app/",
@@ -85,4 +86,6 @@
     },
     "minimum-stability": "stable",
     "prefer-stable": true
+
+    
 }

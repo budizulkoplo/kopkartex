@@ -125,18 +125,29 @@ Route::prefix('master/jasabengkel')
 //     // Route::get('/list', [ReturController::class, 'ListData'])->name('retur.list');
 // });
 Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
-    Route::get('ss',function(){
-        dd(Hash::make('12345678'));
-    });
     Route::get('/', [PenerimaanController::class, 'index'])->name('penerimaan.form');
     Route::get('/getbarang', [PenerimaanController::class, 'getBarang'])->name('penerimaan.getbarang');
     Route::get('/getbarangbycode', [PenerimaanController::class, 'getBarangByCode'])->name('penerimaan.getbarangbycode');
     Route::post('/store', [PenerimaanController::class, 'store'])->name('penerimaan.store');
     Route::get('/getsupplier', [PenerimaanController::class, 'getSupplier'])->name('penerimaan.getsupplier');
+    Route::post('/store-supplier', [PenerimaanController::class, 'storeSupplier'])->name('penerimaan.store-supplier');
+    Route::get('/getinvoice', [PenerimaanController::class, 'getInvoice'])->name('penerimaan.getinvoice');
     Route::get('/riwayat', [PenerimaanController::class, 'Riwayat'])->name('penerimaan.riwayat');
     Route::get('/detail/{id}', [PenerimaanController::class, 'getDetail'])->name('penerimaan.getdetail');
+    Route::get('/nota/{invoice}', [PenerimaanController::class, 'nota'])->name('penerimaan.nota');
+    Route::post('/revisi', [PenerimaanController::class, 'prosesRevisi'])->name('penerimaan.revisi');
+    Route::post('/batalkan/{id}', [PenerimaanController::class, 'batalkanPenerimaan'])->name('penerimaan.batalkan');
+    Route::post('/update-status/{id}', [PenerimaanController::class, 'updateStatusBayar'])->name('penerimaan.update-status');
+    // Tambahkan route edit jika diperlukan
+    Route::get('/edit/{id}', [PenerimaanController::class, 'edit'])->name('penerimaan.edit');
+    Route::post('/update/{id}', [PenerimaanController::class, 'update'])->name('penerimaan.update');
+});
 
-
+// routes/web.php atau di grup route penerimaan
+Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    // ... route yang sudah ada
+    
+    Route::post('/store-supplier', [PenerimaanController::class, 'storeSupplier'])->name('penerimaan.store-supplier');
 });
 
 Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {

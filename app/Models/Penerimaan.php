@@ -2,36 +2,49 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Penerimaan extends Model
 {
+    use SoftDeletes;
+    
     protected $table = 'penerimaan';
-
-    protected $primaryKey = 'idpenerimaan';
-
+    protected $primaryKey = 'idpenerimaan'; // <-- INI YANG PENTING
+    public $incrementing = true; // idpenerimaan adalah auto increment
+    
     protected $fillable = [
-        'nomor_invoice', 'tgl_penerimaan', 'nama_supplier', 'note', 'user_id'
+        'idpenerimaan', // <-- TAMBAHKAN INI
+        'nomor_invoice',
+        'tgl_penerimaan',
+        'nama_supplier',
+        'note',
+        'user_id',
+        'metode_bayar',
+        'tgl_tempo',
+        'status_bayar',
+        'grandtotal',
+        'created_at',
+        'updated_at',
+        'deleted_at'
     ];
-
-    protected $dates = ['tgl_penerimaan', 'created_at', 'updated_at', 'deleted_at'];
-
-    // atau Laravel 8+ gunakan $casts
+    
     protected $casts = [
         'tgl_penerimaan' => 'datetime',
+        'tgl_tempo' => 'date',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+        'grandtotal' => 'float'
     ];
-
+    
     public function details()
     {
-        return $this->hasMany(PenerimaanDtl::class, 'idpenerimaan');
+        return $this->hasMany(PenerimaanDtl::class, 'idpenerimaan', 'idpenerimaan');
     }
-
+    
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 }
-
-
