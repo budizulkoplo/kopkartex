@@ -175,7 +175,14 @@ class PenjualanController extends Controller
                 $totalcicilan = PenjualanCicil::where(['anggota_id'=>$request->idcustomer,'status'=>'hutang'])
                 ->sum('total_cicilan');
 
-                $batas = 0.35 * $user->gaji; // 35% dari gaji
+                // $batas = 0.35 * $user->gaji; // 35% dari gaji
+                if (!empty($user->limit_hutang) && $user->limit_hutang > 0) {
+                    // PAKAI LIMIT HUTANG
+                    $batas = $user->limit_hutang;
+                } else {
+                    // FALLBACK KE 35% GAJI
+                    $batas = 0.35 * $user->gaji;
+                }
                 if (($totalcicilan+$cicilanpertama) > $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
                     return response()->json('Tidak dapat diproses, Melebihi batas limit',500);
                     //return response()->json([$request->idcustomer,$totalcicilan,$cicilanpertama],500);
