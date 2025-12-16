@@ -25,6 +25,7 @@ use App\Http\Controllers\StockOpnameController;
 use App\Http\Controllers\JasaBengkelController;
 use App\Http\Controllers\TransaksiBengkelController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\BarangBengkelController;
 
 //LAPORAN
 use App\Http\Controllers\LaporanController;
@@ -234,6 +235,21 @@ Route::prefix('barang')->middleware(['auth', 'verified', 'role:superadmin|admin'
     Route::get('/cekcode', [BarangController::class, 'CekCode'])->name('barang.cekcode');
     Route::delete('/hapus', [BarangController::class, 'Hapus'])->name('barang.hapus');
 });
+
+    
+    // Barang Bengkel
+Route::prefix('barangbengkel')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+        Route::get('/', [BarangBengkelController::class, 'index'])->name('barangbengkel.index');
+        Route::get('/getdata', [BarangBengkelController::class, 'getdata'])->name('barangbengkel.getdata');
+        Route::get('/getcode', [BarangBengkelController::class, 'getCode'])->name('barangbengkel.getcode');
+        Route::post('/cekcode', [BarangBengkelController::class, 'CekCode'])->name('barangbengkel.cekcode');
+        Route::post('/store', [BarangBengkelController::class, 'Store'])->name('barangbengkel.store');
+        Route::post('/quickadd', [BarangBengkelController::class, 'quickAdd'])->name('barangbengkel.quickadd');
+        Route::delete('/hapus', [BarangBengkelController::class, 'Hapus'])->name('barangbengkel.hapus');
+        Route::get('/getsingledata', [BarangBengkelController::class, 'getSingleData'])->name('barangbengkel.getsingledata');
+    });
+
+    
 
 Route::prefix('supplier')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [SupplierController::class, 'index'])->name('supplier.list');

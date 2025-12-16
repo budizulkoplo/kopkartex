@@ -11,4 +11,28 @@ class Barang extends Model
     use HasFactory,SoftDeletes;
     protected $table = 'barang';
     protected $primaryKey = 'id';
+
+    // Scope untuk filter kelompok unit
+    public function scopeKelompok($query, $kelompok)
+    {
+        return $query->where('kelompok_unit', $kelompok);
+    }
+    
+    // Scope untuk bengkel
+    public function scopeBengkel($query)
+    {
+        return $query->where('kelompok_unit', 'bengkel');
+    }
+    
+    // Scope untuk toko
+    public function scopeToko($query)
+    {
+        return $query->where('kelompok_unit', 'toko');
+    }
+    
+    // Scope untuk air
+    public function scopeAir($query)
+    {
+        return $query->where('kelompok_unit', 'air');
+    }
 }
