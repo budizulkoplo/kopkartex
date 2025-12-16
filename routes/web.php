@@ -93,16 +93,11 @@ Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::get('/getbarangbycode', [StockOpnameController::class, 'getBarangByCode'])->name('stockopname.getbarangbycode');
     Route::post('/store', [StockOpnameController::class, 'store'])->name('stockopname.store');
     Route::post('/mulai', [StockOpnameController::class, 'mulaiOpname'])->name('stockopname.mulai');
-
-    // tambahan
     Route::post('/scan', [StockOpnameController::class, 'scanBarang'])->name('stockopname.scan');
     Route::post('/insert-old', [StockOpnameController::class, 'insertFromOld'])->name('stockopname.insertOld');
-    // 🔑 route verifikasi password
-    
     Route::post('/verify-password', [StockOpnameController::class, 'verifyPassword'])->name('stockopname.verifyPassword');
     Route::get('/barang-ajax', [StockOpnameController::class, 'getBarangAjax'])->name('stockopname.barangajax');
 });
-
 
 Route::prefix('master/jasabengkel')
     ->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])

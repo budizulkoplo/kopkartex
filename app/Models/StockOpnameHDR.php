@@ -8,8 +8,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class StockOpnameHDR extends Model
 {
-    use HasFactory,SoftDeletes;
+    use HasFactory, SoftDeletes;
+    
     protected $table = 'stock_opname';
+    protected $primaryKey = 'id';
+    public $incrementing = true;
+    
     protected $fillable = [
         'id_unit',
         'id_barang',
@@ -18,8 +22,37 @@ class StockOpnameHDR extends Model
         'user',
         'stock_sistem',
         'stock_fisik',
+        'keterangan',
         'status',
+        'created_at',
+        'updated_at',
+        'deleted_at'
     ];
-
-    protected $primaryKey = 'id';
+    
+    protected $casts = [
+        'tgl_opname' => 'date',
+        'stock_sistem' => 'integer',
+        'stock_fisik' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime'
+    ];
+    
+    // Relasi ke detail
+    public function details()
+    {
+        return $this->hasMany(StockOpnameDTL::class, 'opnameid', 'id');
+    }
+    
+    // Relasi ke barang
+    public function barang()
+    {
+        return $this->belongsTo(Barang::class, 'id_barang', 'id');
+    }
+    
+    // Relasi ke unit
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'id_unit', 'id');
+    }
 }

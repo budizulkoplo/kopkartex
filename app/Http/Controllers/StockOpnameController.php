@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\StockOpnameDTL;
 use App\Models\StockOpnameHDR;
 use App\Models\StokUnit;
+use App\Models\Barang;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -18,29 +19,49 @@ class StockOpnameController extends Controller
     public function index(Request $request): View
     {
         $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
-        return view('transaksi.StockOpnameList', compact('bulan'));
+        $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
+        $endDate = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
+        
+        $unitId = Auth::user()->unit_kerja;
+        
+        // Cek apakah sudah ada data opname untuk bulan ini
+        $hasData = StockOpnameHDR::where('id_unit', $unitId)
+            ->whereBetween('tgl_opname', [$startDate, $endDate])
+            ->exists();
+            
+        return view('transaksi.StockOpnameList', compact('bulan', 'hasData'));
     }
 
     public function mulaiOpname(Request $request)
     {
+        $request->validate([
+            'tgl_opname' => 'required|date'
+        ]);
+        
         $unitId = Auth::user()->unit_kerja;
         $userId = Auth::user()->id;
-        $tglOpname = $request->tgl_opname ?? Carbon::now()->format('Y-m-d');
+        $userName = Auth::user()->name;
+        $tglOpname = Carbon::parse($request->tgl_opname)->format('Y-m-d');
 
         $bulanOpname = Carbon::parse($tglOpname)->format('Y-m');
         $startDate = Carbon::createFromFormat('Y-m', $bulanOpname)->startOfMonth();
-        $endDate   = Carbon::createFromFormat('Y-m', $bulanOpname)->endOfMonth();
+        $endDate = Carbon::createFromFormat('Y-m', $bulanOpname)->endOfMonth();
 
         DB::beginTransaction();
         try {
-            // 1. Hapus data lama (lebih efisien)
-            DB::table('stock_opname')
-                ->where('id_unit', $unitId)
+            // 1. Hapus data lama jika ada
+            $existingOpnames = StockOpnameHDR::where('id_unit', $unitId)
                 ->whereBetween('tgl_opname', [$startDate, $endDate])
-                ->delete();
+                ->get();
+                
+            foreach ($existingOpnames as $opname) {
+                // Hapus detail terlebih dahulu
+                StockOpnameDTL::where('opnameid', $opname->id)->delete();
+                $opname->delete();
+            }
 
-            // 2. Query semua barang + stok unit
-            $barangQuery = DB::table('barang')
+            // 2. Ambil semua barang yang ada di unit
+            $barangList = DB::table('barang')
                 ->leftJoin('stok_unit', function ($join) use ($unitId) {
                     $join->on('barang.id', '=', 'stok_unit.barang_id')
                         ->where('stok_unit.unit_id', '=', $unitId)
@@ -49,211 +70,269 @@ class StockOpnameController extends Controller
                 ->select(
                     'barang.id as id_barang',
                     'barang.kode_barang',
-                    DB::raw('IFNULL(stok_unit.stok, 0) as stok_unit')
-                );
+                    DB::raw('IFNULL(stok_unit.stok, 0) as stok_sistem')
+                )
+                ->orderBy('barang.kode_barang')
+                ->get();
 
-            // 3. Proses per chunk agar hemat memory & lebih cepat
-            $barangQuery->orderBy('barang.id')->chunk(1000, function ($barangList) use ($tglOpname, $unitId, $userId) {
-                $dataInsert = [];
-                foreach ($barangList as $barang) {
-                    $dataInsert[] = [
-                        'tgl_opname'   => $tglOpname,
-                        'id_unit'      => $unitId,
-                        'id_barang'    => $barang->id_barang,
-                        'kode_barang'  => $barang->kode_barang,
-                        'stock_sistem' => $barang->stok_unit,
-                        'stock_fisik'  => null,
-                        'keterangan'   => null,
-                        'user'         => $userId,
-                        'status'       => 'pending',
-                        'created_at'   => now(),
-                        'updated_at'   => now(),
-                    ];
-                }
-
-                // Sekali insert 1000 row
-                if (!empty($dataInsert)) {
-                    DB::table('stock_opname')->insert($dataInsert);
-                }
-            });
+            // 3. Insert data baru
+            foreach ($barangList as $barang) {
+                $opnameHdr = new StockOpnameHDR();
+                $opnameHdr->tgl_opname = $tglOpname;
+                $opnameHdr->id_unit = $unitId;
+                $opnameHdr->id_barang = $barang->id_barang;
+                $opnameHdr->kode_barang = $barang->kode_barang;
+                $opnameHdr->stock_sistem = $barang->stok_sistem;
+                $opnameHdr->stock_fisik = 0; // Belum diisi
+                $opnameHdr->user = $userId;
+                $opnameHdr->status = 'pending';
+                $opnameHdr->save();
+            }
 
             DB::commit();
+            
             return redirect()->route('stockopname.index', ['bulan' => $bulanOpname])
-                ->with('success', 'Stock opname bulan ' . $bulanOpname . ' berhasil dimulai.');
+                ->with('success', 'Stock opname bulan ' . $bulanOpname . ' berhasil dimulai. Silakan mulai input stok fisik.');
+                
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->withErrors(['error' => $e->getMessage()]);
+            return redirect()->back()
+                ->withErrors(['error' => 'Gagal memulai stock opname: ' . $e->getMessage()]);
         }
-    }
-
-    public function updateOpname(Request $request, $id)
-    {
-        $request->validate([
-            'stock_fisik' => 'required|integer|min:0'
-        ]);
-
-        DB::table('stock_opname')->where('id', $id)->update([
-            'stock_fisik' => $request->stock_fisik,
-            'keterangan'  => $request->keterangan,
-            'status'      => 'sukses',
-            'updated_at'  => now()
-        ]);
-
-        return redirect()->route('stockopname.index')->with('success', 'Stock opname berhasil disimpan.');
     }
 
     public function form(Request $request): View
     {
         $selectedBarang = null;
+        $existingData = null;
+        $unitId = Auth::user()->unit_kerja;
+        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
 
         if ($request->has('barang_id')) {
-            $selectedBarang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
-                ->where('stok_unit.unit_id', Auth::user()->unit_kerja)
-                ->where('barang.id', $request->barang_id)
-                ->select('barang.id','barang.kode_barang as code','barang.nama_barang as text','stok_unit.stok','barang.harga_beli','barang.harga_jual')
+            $barangId = $request->barang_id;
+            
+            // Ambil data barang
+            $selectedBarang = DB::table('barang')
+                ->where('id', $barangId)
+                ->select('id', 'kode_barang as code', 'nama_barang as text')
                 ->first();
+                
+            if ($selectedBarang) {
+                // Cek apakah sudah ada data opname untuk bulan ini
+                $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
+                $endDate = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
+                
+                $existingData = StockOpnameHDR::with('details')
+                    ->where('id_unit', $unitId)
+                    ->where('id_barang', $barangId)
+                    ->whereBetween('tgl_opname', [$startDate, $endDate])
+                    ->first();
+                    
+                // Ambil stok sistem saat ini
+                $stokSistem = StokUnit::where('barang_id', $barangId)
+                    ->where('unit_id', $unitId)
+                    ->value('stok') ?? 0;
+                    
+                $selectedBarang->stok_sistem = $stokSistem;
+            }
         }
 
-        return view('transaksi.StockOpname', compact('selectedBarang'));
+        return view('transaksi.StockOpname', compact('selectedBarang', 'existingData', 'bulan'));
     }
 
-    public function indexold(Request $request): View
+    public function getBarang(Request $request)
     {
-        return view('transaksi.StockOpname');
-    }
-    public function getBarang(Request $request){
-        $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
-        ->where('stok_unit.unit_id',Auth::user()->unit_kerja)
-        ->whereRaw("CONCAT(barang.kode_barang, barang.nama_barang) LIKE ?", ["%{$request->q}%"])
-        ->select('barang.id','barang.kode_barang as code','barang.nama_barang as text','stok_unit.stok','barang.harga_beli','barang.harga_jual')
-        ->get();
+        $unitId = Auth::user()->unit_kerja;
+        $query = $request->q;
+        
+        $barang = DB::table('barang')
+            ->leftJoin('stok_unit', function($join) use ($unitId) {
+                $join->on('barang.id', '=', 'stok_unit.barang_id')
+                    ->where('stok_unit.unit_id', $unitId);
+            })
+            ->where(function($q) use ($query) {
+                $q->where('barang.kode_barang', 'like', "%{$query}%")
+                  ->orWhere('barang.nama_barang', 'like', "%{$query}%");
+            })
+            ->select(
+                'barang.id',
+                'barang.kode_barang as code',
+                'barang.nama_barang as text',
+                DB::raw('IFNULL(stok_unit.stok, 0) as stok')
+            )
+            ->limit(50)
+            ->get();
+            
         return response()->json($barang);
     }
-    public function getBarangByCode(Request $request){
-        $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
-        ->where("barang.kode_barang", "=",$request->kode)
-        ->where("stok_unit.unit_id", "=",Auth::user()->unit_kerja)
-        ->select('barang.id','barang.kode_barang as code','barang.nama_barang as text','stok_unit.stok','barang.harga_beli','barang.harga_jual')
-        ->first();
-        if($barang){
+
+    public function getBarangByCode(Request $request)
+    {
+        $unitId = Auth::user()->unit_kerja;
+        
+        $barang = DB::table('barang')
+            ->leftJoin('stok_unit', function($join) use ($unitId) {
+                $join->on('barang.id', '=', 'stok_unit.barang_id')
+                    ->where('stok_unit.unit_id', $unitId);
+            })
+            ->where('barang.kode_barang', $request->kode)
+            ->select(
+                'barang.id',
+                'barang.kode_barang as code',
+                'barang.nama_barang as text',
+                DB::raw('IFNULL(stok_unit.stok, 0) as stok')
+            )
+            ->first();
+            
+        if ($barang) {
             return response()->json($barang);
-        }else{
-            return response()->json('error',404);
         }
         
+        return response()->json(['error' => 'Barang tidak ditemukan'], 404);
     }
+
     public function store(Request $request)
     {
         DB::beginTransaction();
         try {
-            // Validasi sederhana
-            if (!$request->filled('tgl_opname') || 
-                !is_array($request->id) || count($request->id) === 0 ||
-                !is_array($request->qty) || count($request->qty) === 0 ||
-                !is_array($request->exp) || count($request->exp) === 0 ||
-                !is_array($request->code) || count($request->code) === 0) {
-                return response()->json(['error' => 'Incomplete data'], 400);
-            }
-
-            $date = Carbon::parse($request->tgl_opname);
-            $unitId = Auth::user()->unit_kerja;
-            $userId = Auth::user()->id;
-
-            $month = $date->format('Y-m'); // periode bulan: YYYY-MM
-
-            $dataGrouped = [];
-
-            foreach ($request->id as $index => $idBarang) {
-                $dataGrouped[$idBarang]['code'] = $request->code[$index] ?? null;
-                $dataGrouped[$idBarang]['items'][] = [
-                    'qty' => $request->qty[$index] ?? 0,
-                    'exp' => $request->exp[$index] ?? null,
-                ];
-            }
-
-            foreach ($dataGrouped as $idBarang => $group) {
-                $totalQty = array_sum(array_column($group['items'], 'qty'));
-
-                $stoksys = StokUnit::where([
-                    'barang_id' => $idBarang,
-                    'unit_id' => $unitId
-                ])->first();
-
-                if (!$stoksys) {
-                    throw new Exception("Stok untuk barang ID {$idBarang} tidak ditemukan.");
-                }
-
-                // 🔑 Cari HDR berdasarkan bulan, bukan tgl lengkap
-                $hdr = StockOpnameHDR::where('id_unit', $unitId)
-                    ->where('id_barang', $idBarang)
-                    ->whereRaw("DATE_FORMAT(tgl_opname, '%Y-%m') = ?", [$month])
-                    ->first();
-
-                if (!$hdr) {
-                    $hdr = new StockOpnameHDR();
-                    $hdr->id_unit = $unitId;
-                    $hdr->id_barang = $idBarang;
-                    $hdr->kode_barang = $group['code'];
-                    $hdr->tgl_opname = $date->format('Y-m-d'); // simpan tgl pertama input bulan ini
-                    $hdr->user = $userId;
-                }
-
-                $hdr->stock_sistem = $stoksys->stok;
-                $hdr->stock_fisik = $totalQty;
-                $hdr->status = "sukses";
-                $hdr->save();
-
-                // Hapus DTL lama untuk bulan ini
-                StockOpnameDTL::where('opnameid', $hdr->id)->delete();
-
-                foreach ($group['items'] as $item) {
-                    $dtl = new StockOpnameDTL();
-                    $dtl->opnameid = $hdr->id;
-                    $dtl->id_barang = $idBarang;
-                    $dtl->qty = $item['qty'];
-                    $dtl->expired_date = $item['exp'];
-                    $dtl->save();
-                }
-
-                // Update stok sistem
-                $stoksys->stok = $totalQty;
-                $stoksys->save();
-            }
-
-            DB::commit();
-            return response()->json([
-                'success' => true,
-                'redirect' => url('/stock'),
-                'message' => 'Stock opname berhasil disimpan.'
+            // Validasi
+            $request->validate([
+                'tgl_opname' => 'required|date',
+                'barang_id' => 'required|integer',
+                'qty' => 'required|array',
+                'qty.*' => 'required|integer|min:0',
+                'exp' => 'required|array',
+                'exp.*' => 'nullable|date'
             ]);
 
-        } catch (Exception $e) {
+            $unitId = Auth::user()->unit_kerja;
+            $userId = Auth::user()->id;
+            $userName = Auth::user()->name;
+            $barangId = $request->barang_id;
+            $tglOpname = $request->tgl_opname;
+            
+            // Ambil data barang
+            $barang = Barang::findOrFail($barangId);
+            
+            // Hitung total stok fisik
+            $totalFisik = array_sum($request->qty);
+            
+            // Ambil stok sistem
+            $stokSistem = StokUnit::where('barang_id', $barangId)
+                ->where('unit_id', $unitId)
+                ->value('stok') ?? 0;
+                
+            // Cek apakah sudah ada data opname untuk bulan ini
+            $bulan = Carbon::parse($tglOpname)->format('Y-m');
+            $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
+            $endDate = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
+            
+            $opnameHdr = StockOpnameHDR::where('id_unit', $unitId)
+                ->where('id_barang', $barangId)
+                ->whereBetween('tgl_opname', [$startDate, $endDate])
+                ->first();
+                
+            if (!$opnameHdr) {
+                // Buat baru
+                $opnameHdr = new StockOpnameHDR();
+                $opnameHdr->tgl_opname = $tglOpname;
+                $opnameHdr->id_unit = $unitId;
+                $opnameHdr->id_barang = $barangId;
+                $opnameHdr->kode_barang = $barang->kode_barang;
+            }
+            
+            // Update header
+            $opnameHdr->stock_sistem = $stokSistem;
+            $opnameHdr->stock_fisik = $totalFisik;
+            $opnameHdr->user = $userId;
+            $opnameHdr->status = 'sukses';
+            $opnameHdr->keterangan = $request->keterangan ?? null;
+            $opnameHdr->save();
+            
+            // Hapus detail lama
+            StockOpnameDTL::where('opnameid', $opnameHdr->id)->delete();
+            
+            // Simpan detail baru
+            foreach ($request->qty as $index => $qty) {
+                if ($qty > 0) {
+                    $detail = new StockOpnameDTL();
+                    $detail->opnameid = $opnameHdr->id;
+                    $detail->id_barang = $barangId;
+                    $detail->qty = $qty;
+                    $detail->expired_date = !empty($request->exp[$index]) ? $request->exp[$index] : null;
+                    $detail->save();
+                }
+            }
+            
+            // Update stok unit
+            $stokUnit = StokUnit::where('barang_id', $barangId)
+                ->where('unit_id', $unitId)
+                ->first();
+                
+            if (!$stokUnit) {
+                $stokUnit = new StokUnit();
+                $stokUnit->barang_id = $barangId;
+                $stokUnit->unit_id = $unitId;
+            }
+            
+            $stokUnit->stok = $totalFisik;
+            $stokUnit->save();
+
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock opname berhasil disimpan.',
+                'redirect' => route('stockopname.index', ['bulan' => $bulan])
+            ]);
+            
+        } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'error' => 'Gagal menyimpan stok opname',
-                'message' => $e->getMessage()
+                'success' => false,
+                'message' => 'Gagal menyimpan stock opname: ' . $e->getMessage()
             ], 500);
         }
     }
 
     public function scanBarang(Request $request)
     {
+        $request->validate([
+            'kode' => 'required|string'
+        ]);
+        
         $kode = $request->kode;
         $unitId = Auth::user()->unit_kerja;
+        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
 
-        // Cari di tabel barang utama
+        // Cari di barang
         $barang = DB::table('barang')
             ->where('kode_barang', $kode)
+            ->select('id', 'kode_barang', 'nama_barang')
             ->first();
 
         if ($barang) {
+            // Cek apakah sudah ada data opname untuk bulan ini
+            $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
+            $endDate = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
+            
+            $existingOpname = StockOpnameHDR::where('id_unit', $unitId)
+                ->where('id_barang', $barang->id)
+                ->whereBetween('tgl_opname', [$startDate, $endDate])
+                ->exists();
+                
             return response()->json([
                 'status' => 'found',
-                'data' => $barang
+                'data' => $barang,
+                'has_data' => $existingOpname,
+                'form_url' => route('stockopname.form', [
+                    'barang_id' => $barang->id,
+                    'bulan' => $bulan
+                ])
             ]);
         }
 
-        // Cari di barang_ori
+        // Cari di barang_ori (master lama)
         $barangOld = DB::table('barang_ori')
             ->where('kode_barang', $kode)
             ->first();
@@ -267,84 +346,75 @@ class StockOpnameController extends Controller
 
         return response()->json([
             'status' => 'notfound',
-            'message' => "Barang dengan kode {$kode} tidak ditemukan."
+            'message' => 'Barang tidak ditemukan'
         ], 404);
     }
 
     public function insertFromOld(Request $request)
     {
+        $request->validate([
+            'kode' => 'required|string'
+        ]);
+        
         $kode = $request->kode;
         $unitId = Auth::user()->unit_kerja;
-        $userId = Auth::user()->id;
-        $tglOpname = $request->tgl_opname ?? now()->format('Y-m-d');
 
         $barangOld = DB::table('barang_ori')
             ->where('kode_barang', $kode)
             ->first();
 
         if (!$barangOld) {
-            return response()->json(['error' => 'Barang lama tidak ditemukan'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Barang tidak ditemukan di master lama'
+            ], 404);
         }
 
         DB::beginTransaction();
         try {
-            // 1. Insert ke tabel barang baru
-            $idBarang = DB::table('barang')->insertGetId([
-                'kode_barang'   => $barangOld->kode_barang,
-                'nama_barang'   => $barangOld->nama_barang,
-                'kategori'      => $barangOld->kategori,
-                'satuan'        => $barangOld->satuan,
-                'harga_beli'    => $barangOld->harga_beli,
-                'harga_jual'    => $barangOld->harga_jual,
-                'kelompok_unit' => $barangOld->kelompok_unit,
-                'img'           => $barangOld->img,
-                'created_at'    => now(),
-                'updated_at'    => now()
+            // Insert ke barang
+            $barangId = DB::table('barang')->insertGetId([
+                'kode_barang' => $barangOld->kode_barang,
+                'nama_barang' => $barangOld->nama_barang,
+                'kategori' => $barangOld->kategori,
+                'satuan' => $barangOld->satuan,
+                'harga_beli' => $barangOld->harga_beli ?? 0,
+                'harga_jual' => $barangOld->harga_jual ?? 0,
+                'kelompok_unit' => $barangOld->kelompok_unit ?? 'toko',
+                'img' => $barangOld->img,
+                'created_at' => now(),
+                'updated_at' => now()
             ]);
 
-            // 2. Insert stok_unit untuk SEMUA unit dengan stok awal = 0
-            $allUnits = DB::table('unit')->pluck('id'); // ambil semua id unit
-            $stokUnitData = [];
-            foreach ($allUnits as $uId) {
-                $stokUnitData[] = [
-                    'barang_id'  => $idBarang,
-                    'unit_id'    => $uId,
-                    'stok'       => 0,
+            // Insert ke stok_unit untuk semua unit
+            $units = DB::table('unit')->pluck('id');
+            foreach ($units as $uId) {
+                DB::table('stok_unit')->insert([
+                    'barang_id' => $barangId,
+                    'unit_id' => $uId,
+                    'stok' => 0,
                     'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+                    'updated_at' => now()
+                ]);
             }
-            DB::table('stok_unit')->insert($stokUnitData);
-
-            // 3. Insert juga ke tabel stock_opname (hanya untuk unit user aktif)
-            DB::table('stock_opname')->insert([
-                'tgl_opname'   => $tglOpname,
-                'id_unit'      => $unitId,
-                'id_barang'    => $idBarang,
-                'kode_barang'  => $barangOld->kode_barang,
-                'stock_sistem' => 0,
-                'stock_fisik'  => 0,
-                'keterangan'   => 'Barang baru dari master lama',
-                'user'         => $userId, // kalau kolom user varchar, ganti Auth::user()->name
-                'status'       => 'pending',
-                'created_at'   => now(),
-                'updated_at'   => now(),
-            ]);
 
             DB::commit();
-
-            $barang = DB::table('barang')->find($idBarang);
-
+            
             return response()->json([
-                'status' => 'inserted',
-                'data'   => $barang
+                'success' => true,
+                'message' => 'Barang berhasil ditambahkan dari master lama',
+                'data' => [
+                    'id' => $barangId,
+                    'kode_barang' => $barangOld->kode_barang,
+                    'nama_barang' => $barangOld->nama_barang
+                ]
             ]);
-
+            
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'error'   => 'Gagal insert barang dari master lama',
-                'message' => $e->getMessage()
+                'success' => false,
+                'message' => 'Gagal menambahkan barang: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -352,49 +422,58 @@ class StockOpnameController extends Controller
     public function verifyPassword(Request $request)
     {
         $request->validate([
-            'password' => 'required'
+            'password' => 'required|string'
         ]);
 
         if (Hash::check($request->password, Auth::user()->password)) {
             return response()->json(['valid' => true]);
         }
 
-        return response()->json(['valid' => false]);
+        return response()->json(['valid' => false], 401);
     }
 
     public function getBarangAjax(Request $request)
     {
         $unitId = Auth::user()->unit_kerja;
         $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
-        $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth()->format('Y-m-d');
-        $endDate   = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth()->format('Y-m-d');
+        
+        $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
+        $endDate = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
 
-        $query = DB::table('stock_opname')
-            ->join('barang', 'barang.id', '=', 'stock_opname.id_barang')
-            ->where('stock_opname.id_unit', $unitId)
-            ->whereBetween('stock_opname.tgl_opname', [$startDate, $endDate])
-            ->whereNull('stock_opname.deleted_at')
-            ->select(
-                'stock_opname.id as opname_id',
-                'barang.id',
-                'barang.kode_barang',
-                'barang.nama_barang',
-                'stock_opname.stock_sistem',
-                'stock_opname.stock_fisik',
-                'stock_opname.status'
-            )
-            ->orderBy('barang.nama_barang');
+        $query = StockOpnameHDR::with(['barang'])
+            ->where('id_unit', $unitId)
+            ->whereBetween('tgl_opname', [$startDate, $endDate])
+            ->whereNull('deleted_at')
+            ->select([
+                'id as opname_id',
+                'id_barang',
+                'kode_barang',
+                'stock_sistem',
+                'stock_fisik',
+                'status',
+                'tgl_opname'
+            ]);
 
-        return datatables()->of($query)
+        return datatables()->eloquent($query)
             ->addIndexColumn()
-            ->addColumn('aksi', function ($row) {
-                return '<a href="'.route('stockopname.form',['barang_id'=>$row->id]).'" class="btn btn-sm btn-primary">
-                            <i class="bi bi-pencil-square"></i> Input
-                        </a>';
+            ->addColumn('nama_barang', function($row) {
+                return $row->barang->nama_barang ?? '-';
+            })
+            ->addColumn('aksi', function($row) use ($bulan) {
+                $url = route('stockopname.form', [
+                    'barang_id' => $row->id_barang,
+                    'bulan' => $bulan
+                ]);
+                
+                $btnClass = $row->status == 'sukses' ? 'btn-warning' : 'btn-primary';
+                $btnText = $row->status == 'sukses' ? 'Revisi' : 'Input';
+                $btnIcon = $row->status == 'sukses' ? 'bi-pencil-square' : 'bi-input-cursor';
+                
+                return '<a href="'.$url.'" class="btn btn-sm '.$btnClass.'">
+                    <i class="bi '.$btnIcon.'"></i> '.$btnText.'
+                </a>';
             })
             ->rawColumns(['aksi'])
             ->make(true);
     }
-
-
 }
