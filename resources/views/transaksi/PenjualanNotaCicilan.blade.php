@@ -3,8 +3,8 @@
     <title>Cetak Nota <?= $hdr->nomor_invoice ?></title>
     <style>
         @page { margin: 0 }
-        body { margin: 0; font-size:10pt; font-family: monospace; }
-        td { font-size:10pt; }
+        body { margin: 0; font-size:11pt; font-family: monospace; }
+        td { font-size:11pt; }
         .sheet {
             margin: 0;
             overflow: hidden;
