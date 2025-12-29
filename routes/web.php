@@ -137,6 +137,9 @@ Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|ad
     // Tambahkan route edit jika diperlukan
     Route::get('/edit/{id}', [PenerimaanController::class, 'edit'])->name('penerimaan.edit');
     Route::post('/update/{id}', [PenerimaanController::class, 'update'])->name('penerimaan.update');
+
+    Route::post('/store-barang', [PenerimaanController::class, 'storeBarang'])->name('penerimaan.store-barang');
+    Route::get('/kategori', [PenerimaanController::class, 'getKategori'])->name('penerimaan.kategori');
 });
 
 // routes/web.php atau di grup route penerimaan
@@ -161,6 +164,7 @@ Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|adm
 
     // Route untuk proses retur
     Route::post('retur', [PenjualanController::class, 'prosesRetur'])->name('penjualan.retur');
+    Route::get('/get-kategori-cicilan', [PenjualanController::class, 'getKategoriCicilan'])->name('jual.get-kategori-cicilan');
 });
 
 Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus', 'global.app'])->group(function () {
