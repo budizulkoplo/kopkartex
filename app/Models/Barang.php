@@ -35,4 +35,14 @@ class Barang extends Model
     {
         return $query->where('kelompok_unit', 'air');
     }
+
+    public function kategoriRelation()
+    {
+        return $this->belongsTo(Kategori::class, 'idkategori', 'id');
+    }
+
+    public function satuanRelation()
+    {
+        return $this->belongsTo(Satuan::class, 'idsatuan', 'id');
+    }
 }
