@@ -60,6 +60,7 @@
                                         <th>Satuan</th>
                                         <th>Harga Beli</th>
                                         <th>Harga Jual</th>
+                                        <th>Harga Umum</th>
                                         <th>Kelompok</th>
                                         <th>Foto</th>
                                         <th>Aksi</th>
@@ -145,6 +146,13 @@
                                     <input type="number" class="form-control" name="harga_jual" min="0" step="100">
                                 </div>
                             </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Harga Jual Umum</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">Rp</span>
+                                    <input type="number" class="form-control" name="harga_jual_umum" min="0" step="100">
+                                </div>
+                            </div>
                             <div class="col-md-12 mb-2">
                                 <label class="form-label">Foto Produk</label>
                                 <input type="file" class="form-control form-control-sm" name="img" accept="image/*" id="imgInput">
@@ -192,6 +200,7 @@
                         { data: "satuan_nama" },
                         { data: "harga_beli", },
                         { data: "harga_jual", },
+                        { data: "harga_jual_umum", },
                         { 
                             data: "kelompok_unit",
                             render: function(data) {
@@ -319,6 +328,7 @@
                     // Ambil harga beli dan harga jual (hilangkan format currency)
                     const hargaBeliCell = table.cell(row, 6).data();
                     const hargaJualCell = table.cell(row, 7).data();
+                    const hargaJualUmumCell = table.cell(row, 7).data();
                     
                     // Function untuk konversi format Indonesia ke angka
                     function parseIndonesianCurrency(currencyString) {
@@ -348,6 +358,7 @@
                     // Parse harga
                     const hargaBeli = parseIndonesianCurrency(hargaBeliCell);
                     const hargaJual = parseIndonesianCurrency(hargaJualCell);
+                    const hargaJualUmum = parseIndonesianCurrency(hargaJualUmumCell);
                     
                     console.log('hargaBeliCell:', hargaBeliCell, 'parsed:', hargaBeli);
                     console.log('hargaJualCell:', hargaJualCell, 'parsed:', hargaJual);
@@ -377,6 +388,7 @@
                     $('select[name="satuan"]').val(satuan);
                     $('input[name="harga_beli"]').val(hargaBeli);
                     $('input[name="harga_jual"]').val(hargaJual);
+                    $('input[name="harga_jual_umum"]').val(hargaJualUmum);
                     
                     // Tampilkan gambar preview jika ada
                     if (imgSrc) {

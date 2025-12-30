@@ -72,6 +72,10 @@ class BarangController extends Controller
                 // Kembalikan format string "Rp X.XXX"
                 return 'Rp ' . number_format($barang->harga_jual, 0, ',', '.');
             })
+            ->editColumn('harga_jual_umum', function ($barang) {
+                // Kembalikan format string "Rp X.XXX"
+                return 'Rp ' . number_format($barang->harga_jual_umum ?? 0, 0, ',', '.');
+            })
             ->editColumn('img', function ($barang) {
                 return $barang->img;
             })
@@ -106,7 +110,7 @@ class BarangController extends Controller
                 $query->where('kode_barang', 'like', "%{$searchTerm}%")
                       ->orWhere('nama_barang', 'like', "%{$searchTerm}%");
             })
-            ->select('id', 'kode_barang as code', 'nama_barang as text', 'harga_beli', 'harga_jual')
+            ->select('id', 'kode_barang as code', 'nama_barang as text', 'harga_beli', 'harga_jual', 'harga_jual_umum')
             ->limit(50)
             ->get();
         
@@ -117,7 +121,7 @@ class BarangController extends Controller
     {
         $kode = $request->kode;
         $barang = Barang::where('kode_barang', $kode)
-            ->select('id', 'kode_barang as code', 'nama_barang as text', 'harga_beli', 'harga_jual')
+            ->select('id', 'kode_barang as code', 'nama_barang as text', 'harga_beli', 'harga_jual', 'harga_jual_umum')
             ->first();
         
         if ($barang) {
@@ -140,6 +144,7 @@ class BarangController extends Controller
                 'nama_barang' => 'required|string|max:100',
                 'harga_beli' => 'required|numeric|min:0',
                 'harga_jual' => 'required|numeric|min:0',
+                'harga_jual_umum' => 'nullable|numeric|min:0',
                 'satuan' => 'nullable|string|max:20',
                 'kategori' => 'nullable|string|max:50',
             ]);
@@ -163,6 +168,7 @@ class BarangController extends Controller
             $barang->nama_barang = $request->nama_barang;
             $barang->harga_beli = $request->harga_beli;
             $barang->harga_jual = $request->harga_jual;
+            $barang->harga_jual_umum = $request->harga_jual_umum ?? $request->harga_jual; // Default sama dengan harga_jual jika kosong
             $barang->satuan = $request->satuan ?? 'PCS';
             $barang->idkategori = $kategoriId;
             $barang->idsatuan = $satuanId;
@@ -189,6 +195,7 @@ class BarangController extends Controller
                     'text' => $barang->nama_barang,
                     'harga_beli' => $barang->harga_beli,
                     'harga_jual' => $barang->harga_jual,
+                    'harga_jual_umum' => $barang->harga_jual_umum,
                 ],
                 'message' => 'Barang berhasil ditambahkan'
             ]);
@@ -210,6 +217,7 @@ class BarangController extends Controller
             'type'        => 'nullable|string|max:50',
             'harga_beli'  => 'nullable|numeric|min:0',
             'harga_jual'  => 'nullable|numeric|min:0',
+            'harga_jual_umum' => 'nullable|numeric|min:0',
             'kategori'    => 'required|string',
             'satuan'      => 'required|string',
             'kelompok_unit' => 'nullable|in:toko,bengkel,air',
@@ -251,6 +259,7 @@ class BarangController extends Controller
         $barang->type = $request->type;
         $barang->harga_beli = $request->harga_beli ?? 0;
         $barang->harga_jual = $request->harga_jual ?? 0;
+        $barang->harga_jual_umum = $request->harga_jual_umum ?? $request->harga_jual ?? 0;
         $barang->idkategori = $kategori->id;
         $barang->idsatuan = $satuan->id;
         $barang->kelompok_unit = $request->kelompok_unit ?? 'toko';
@@ -312,6 +321,7 @@ class BarangController extends Controller
                     'satuan' => $barang->satuanRelation ? $barang->satuanRelation->name : '',
                     'harga_beli' => $barang->harga_beli,
                     'harga_jual' => $barang->harga_jual,
+                    'harga_jual_umum' => $barang->harga_jual_umum,
                     'img' => $barang->img
                 ]
             ]);
