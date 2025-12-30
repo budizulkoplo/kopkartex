@@ -183,6 +183,7 @@
                     responsive: true,
                     processing: true,
                     serverSide: true,
+                    pageLength: 100,
                     ajax: {
                         url: "{{ route('barang.getdata') }}",
                         data: function(d) {
