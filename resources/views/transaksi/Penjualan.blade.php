@@ -120,7 +120,7 @@
                                 
                                 <div class="input-group input-group-sm mb-2 fieldcicilan" style="display: none">
                                     <span class="input-group-text label-fixed-width">Jml.Cicilan</span>
-                                    <select class="form-select form-select-sm" id="jmlcicilan" name="jmlcicilan"></select>
+                                    <input type="number" class="form-control form-control-sm" id="jmlcicilan" name="jmlcicilan" min="1" value="1" onfocus="this.select()" onkeyup="cekCicilan()">
                                 </div>
                                 <div class="input-group input-group-sm mb-2 clmetode">
                                     <span class="input-group-text label-fixed-width">Dibayar</span>
@@ -527,28 +527,47 @@
                     selectedFromList = false;
                     $('#idcustomer').val('');
                 });
+
+                let barang = [];
                 let currentRequest = null;
+
                 $('#barcode-search').typeahead({
+                    minLength: 1,
+                    autoSelect: true,
+
                     source: function (query, process) {
-                        if (currentRequest !== null) {
+                        if (currentRequest) {
                             currentRequest.abort();
                         }
+
                         currentRequest = $.ajax({
-                        url: '{{ route('jual.getbarang') }}',       // Your backend endpoint
-                        type: 'GET',
-                        data: { q: query },
-                        dataType: 'json',
-                        success: function (data) {
-                            barang = data; // Save for lookup later
-                            return process(data.map(barang => barang.text));
-                        }
+                            url: '{{ route('jual.getbarang') }}',
+                            type: 'GET',
+                            data: { q: query },
+                            dataType: 'json',
+                            success: function (data) {
+                                barang = data;
+
+                                process(
+                                    data.map(item => ({
+                                        id: item.id,
+                                        name: item.text   // dropdown tetap lengkap
+                                    }))
+                                );
+                            }
                         });
-                        return currentRequest;
                     },
-                    afterSelect: function (text) {
-                        const selected = barang.find(barang => barang.text === text);
+
+                    displayText: function (item) {
+                        return item.name; // dropdown
+                    },
+
+                    afterSelect: function (item) {
+                        const selected = barang.find(b => b.id === item.id);
                         if (selected) {
                             addRow(selected);
+
+                            $('#barcode-search').val(selected.nama_barang);
                         }
                     }
                 });
@@ -659,6 +678,7 @@
                     }
                 });
             });
+            
         </script>
     </x-slot>
 </x-app-layout>

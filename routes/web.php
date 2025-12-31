@@ -151,20 +151,28 @@ Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|ad
 
 Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [PenjualanController::class, 'index'])->name('jual.form');
+    Route::get('/umum', [PenjualanController::class, 'indexUmum'])->name('jual.umum.form');
+    
     Route::get('/getbarang', [PenjualanController::class, 'getBarang'])->name('jual.getbarang');
+    Route::get('/getbarang-umum', [PenjualanController::class, 'getBarangUmum'])->name('jual.umum.getbarang');
+    
     Route::get('/getanggota', [PenjualanController::class, 'getAnggota'])->name('jual.getanggota');
+    
     Route::get('/getinv', [PenjualanController::class, 'getInvoice'])->name('jual.getinv');
+    Route::get('/getinv-umum', [PenjualanController::class, 'getInvoiceUmum'])->name('jual.umum.getinv');
+    
     Route::get('/getbarangbycode', [PenjualanController::class, 'getBarangByCode'])->name('jual.getbarangbycode');
+    Route::get('/getbarangbycode-umum', [PenjualanController::class, 'getBarangByCodeUmum'])->name('jual.umum.getbarangbycode');
+    
     Route::post('/store', [PenjualanController::class, 'Store'])->name('jual.store');
+    Route::post('/store-umum', [PenjualanController::class, 'StoreUmum'])->name('jual.umum.store');
+    
     Route::get('/nota/{invoice}', [PenjualanController::class, 'nota'])->name('jual.nota');
     Route::post('/cektanggungan', [PenjualanController::class, 'CekTanggungan'])->name('jual.cektanggungan');
     Route::get('/riwayat', [PenjualanController::class, 'RiwayatPenjualan'])->name('jual.riwayat');
 
     Route::get('detail/{id}', [PenjualanController::class, 'getDetail'])->name('penjualan.detail');
-
-    // Route untuk proses retur
     Route::post('retur', [PenjualanController::class, 'prosesRetur'])->name('penjualan.retur');
-    Route::get('/get-kategori-cicilan', [PenjualanController::class, 'getKategoriCicilan'])->name('jual.get-kategori-cicilan');
 });
 
 Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus', 'global.app'])->group(function () {
