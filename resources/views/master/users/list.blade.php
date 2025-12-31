@@ -256,7 +256,8 @@
                         });
                     //}
                 });
-                
+
+            });
             function clearfrm(){
                 $('#fidusers').val('');
                 $('input[name="nomor_anggota"]').val('');
