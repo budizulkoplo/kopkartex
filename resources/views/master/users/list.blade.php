@@ -249,28 +249,14 @@
                         }).get();
                         $.ajax({
                             url: "{{ route('users.assignRole') }}",
-                            method:"GET",data: { iduser:selectedID,name:checkedValues },
+                            method:"POST",data: { iduser:selectedID,name:checkedValues },
                             success: function(response) {
                                 table.ajax.reload(null, false);
                             }
                         });
                     //}
                 });
-                // $('.chrole').on('change',function(){
-                //     if($(this).val() !=''){
-                //         var selectedID = $(this).data('id'); 
-                //         var selectedVal = $(this).val(); 
-                //         console.log(selectedID);
-                //         $.ajax({
-                //             url: "{{ route('users.assignRole') }}",
-                //             method:"GET",data: { iduser:selectedID,name : function() { return selectedVal}, },
-                //             success: function(response) {
-                //                 table.ajax.reload();
-                //             }
-                //         });
-                //     }
-                // });
-            });
+                
             function clearfrm(){
                 $('#fidusers').val('');
                 $('input[name="nomor_anggota"]').val('');
