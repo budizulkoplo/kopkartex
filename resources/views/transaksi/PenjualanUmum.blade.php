@@ -32,7 +32,7 @@
                                     <div class="input-group-text">
                                         <label class="mb-0">Customer</label>
                                     </div>
-                                    <input type="text" class="form-control" id="customer" name="customer" required autocomplete="off" placeholder="Nama customer umum">
+                                    <input type="text" class="form-control" id="customer" name="customer" required autocomplete="off" placeholder="Nama customer">
                                     <input type="hidden" id="idcustomer" name="idcustomer" value="0">
                                 </div>
                             </div>
@@ -237,10 +237,11 @@
             }
         }
         </style>
-    </x-slot>
-    
-    <x-slot name="jscustom">
+        </x-slot>
+        
+        <x-slot name="jscustom">
         <script src="{{ asset('plugins/loader/waitMe.js') }}"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-3-typeahead/4.0.2/bootstrap3-typeahead.min.js"></script>
         <script>
             var globtot = 0;
             var barang = [];
@@ -368,14 +369,14 @@
                         </td>
                         <td>
                             <input type="number" class="form-control form-control-sm w-auto barangqty" 
-                                   onfocus="this.select()" 
-                                   min="1" 
-                                   max="${datarow.stok}" 
-                                   name="qty[]" 
-                                   onkeyup="kalkulasi(this)" 
-                                   value="1" 
-                                   data-id="${datarow.id}" 
-                                   required>
+                                onfocus="this.select()" 
+                                min="1" 
+                                max="${datarow.stok}" 
+                                name="qty[]" 
+                                onkeyup="kalkulasi(this)" 
+                                value="1" 
+                                data-id="${datarow.id}" 
+                                required>
                             <input type="hidden" name="harga_beli[]" class="hargabeli" value="${datarow.harga_beli || 0}">
                             <input type="hidden" name="harga_jual[]" class="hargajual" value="${datarow.harga_jual || 0}">
                         </td>
@@ -528,12 +529,11 @@
                 
                 let currentRequest = null;
                 
-                // Typeahead untuk pencarian barcode/nama barang
+                // Typeahead yang benar untuk pencarian barcode/nama barang
                 $('#barcode-search').typeahead({
                     minLength: 1,
                     highlight: true,
-                    hint: false,
-                    source: function(query, syncResults, asyncResults) {
+                    source: function(query, process) {
                         if (currentRequest !== null) {
                             currentRequest.abort();
                         }
@@ -545,48 +545,55 @@
                             dataType: 'json',
                             success: function(data) {
                                 barang = data;
-                                asyncResults(data);
+                                // Format data untuk typeahead
+                                let suggestions = data.map(function(item) {
+                                    return {
+                                        id: item.id,
+                                        code: item.code,
+                                        text: item.text,
+                                        harga_jual: item.harga_jual,
+                                        stok: item.stok,
+                                        type: item.type,
+                                        display: `${item.code} - ${item.text}`
+                                    };
+                                });
+                                process(suggestions);
                             }
                         });
                     },
                     displayText: function(item) {
-                        return `${item.code} - ${item.text}`;
+                        return item.display || item.text;
                     },
-                    templates: {
-                        suggestion: function(data) {
-                            let stokInfo = data.stok > 0 ? 
-                                `<span class="text-success">Stok: ${data.stok}</span>` : 
-                                `<span class="text-danger">Stok: ${data.stok}</span>`;
-                            
-                            let harga = formatRupiahWithDecimal(data.harga_jual);
-                            
-                            return `
-                                <div class="d-flex justify-content-between align-items-center p-2">
-                                    <div>
-                                        <div><strong>${data.code}</strong> - ${data.text}</div>
-                                        <div class="text-muted small">${data.type || ''}</div>
-                                    </div>
-                                    <div class="text-end">
-                                        <div class="text-primary fw-bold">${harga}</div>
-                                        <div class="small">${stokInfo}</div>
-                                        <div class="small text-muted">Harga Umum</div>
-                                    </div>
-                                </div>
-                            `;
-                        },
-                        empty: function() {
-                            return '<div class="text-center p-2 text-muted">Tidak ada barang ditemukan</div>';
-                        }
-                    }
-                }).on('typeahead:select', function(event, selected) {
-                    if (selected) {
-                        addRow(selected);
-                    }
-                }).on('typeahead:autocomplete', function(event, selected) {
-                    if (selected) {
-                        addRow(selected);
+                    updater: function(item) {
+                        // Ketika item dipilih, tambahkan ke tabel
+                        addRow({
+                            id: item.id,
+                            code: item.code,
+                            text: item.text,
+                            harga_jual: item.harga_jual,
+                            stok: item.stok,
+                            type: item.type
+                        });
+                        return item.display;
                     }
                 });
+                
+                // Custom template untuk typeahead (jika didukung)
+                if ($.fn.typeahead.Constructor.prototype.render) {
+                    $.fn.typeahead.Constructor.prototype.render = function(items) {
+                        var that = this;
+                        items = $(items).map(function (i, item) {
+                            i = $(that.options.item).attr('data-value', item);
+                            i.find('a').html(that.highlighter(item));
+                            return i[0];
+                        });
+                        
+                        // Tambahkan template custom jika ada
+                        items.first().before('<li class="dropdown-header">Hasil Pencarian</li>');
+                        this.$menu.html(items);
+                        return this;
+                    };
+                }
                 
                 // Enter untuk barcode search
                 $('#barcode-search').on('keydown', function(e) {
