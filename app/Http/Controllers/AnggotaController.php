@@ -123,8 +123,7 @@ class AnggotaController extends Controller
     }
     public function getdata(Request $request)
     {
-        $user = User::where('status','aktif')
-        ->whereDoesntHave('roles', function ($query) {
+        $user = User::whereDoesntHave('roles', function ($query) {
             $query->where('name', 'superadmin');
         });
 
