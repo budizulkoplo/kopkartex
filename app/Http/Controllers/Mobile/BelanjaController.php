@@ -50,7 +50,7 @@ class BelanjaController extends BaseMobileController
             ->where('su.unit_id', $unitId)
             ->whereNull('b.deleted_at')
             ->whereNull('su.deleted_at')
-            ->select('b.id','b.kode_barang','b.nama_barang','b.kategori','b.satuan','b.harga_jual','su.stok','b.img');
+            ->select('b.id','b.kode_barang','b.nama_barang','b.idkategori','b.idsatuan','b.harga_jual','su.stok','b.img');
 
         // Filter pencarian jika ada parameter q
         if ($request->filled('q')) {
