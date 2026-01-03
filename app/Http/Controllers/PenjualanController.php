@@ -150,7 +150,7 @@ class PenjualanController extends Controller
             ->select(
                 'barang.id',
                 'barang.kode_barang as code',
-                DB::raw("CONCAT(barang.kode_barang, ' | ', barang.nama_barang , ' | ', barang.type) as text"),
+                'barang.nama_barang as text',
                 'barang.nama_barang',
                 'stok_unit.stok',
                 'barang.harga_beli',
@@ -279,8 +279,19 @@ class PenjualanController extends Controller
                     }
                 }
 
-                $result = DB::select("SELECT hitung_cicilan(?, ?, ?, ?) AS jumlah", [$totalCicilan1, $bunga->bunga_barang, $request->jmlcicilan, 1]);
-                $cicilanpertama = $result[0]->jumlah + $totalCicilan0; // Tambahkan cicilan 0
+                // Hitung cicilan pertama untuk kategori 1 menggunakan fungsi toko
+                $cicilanpertamaKategori1 = 0;
+                if($totalCicilan1 > 0 && $request->jmlcicilan > 0) {
+                    $result = DB::select("SELECT hitung_cicilan_toko(?, ?, ?, ?) AS jumlah", [
+                        $totalCicilan1, 
+                        $bunga->bunga_barang, 
+                        $request->jmlcicilan, 
+                        1
+                    ]);
+                    $cicilanpertamaKategori1 = $result[0]->jumlah;
+                }
+                
+                $cicilanpertama = $cicilanpertamaKategori1 + $totalCicilan0; // Tambahkan cicilan 0
 
                 $totalcicilan = PenjualanCicil::where(['anggota_id'=>$request->idcustomer,'status'=>'hutang'])
                 ->sum('total_cicilan');
@@ -295,7 +306,8 @@ class PenjualanController extends Controller
                     return response()->json('Tidak dapat diproses, Melebihi batas limit',500);
                 }
 
-                $penjualan->bunga_barang = $bunga->bunga_barang;
+                // Untuk toko selalu tanpa bunga
+                $penjualan->bunga_barang = 0;
                 $penjualan->status_ambil = 'pesan';
                 $penjualan->kembali = 0;
                 $penjualan->dibayar = 0;
@@ -338,18 +350,25 @@ class PenjualanController extends Controller
                     $cicilan0->save();
                 }
                 
-                // Buat cicilan untuk kategori 1 (sesuai jumlah cicilan)
+                // Buat cicilan untuk kategori 1 (sesuai jumlah cicilan) menggunakan fungsi toko
                 if($totalCicilan1 > 0 && $request->jmlcicilan > 0) {
                     for ($i = 1; $i <= $request->jmlcicilan; $i++) {
-                        $pokoktotal = DB::select("SELECT hitung_pokok(?, ?) AS jumlah", [$totalCicilan1, $request->jmlcicilan]);
-                        $bungatotal = DB::select("SELECT hitung_bunga(?, ?, ?, ?) AS jumlah", [$totalCicilan1, $bunga->bunga_barang, $request->jmlcicilan, $i]);
+                        $result = DB::select("SELECT hitung_cicilan_toko(?, ?, ?, ?) AS jumlah", [
+                            $totalCicilan1, 
+                            $bunga->bunga_barang, 
+                            $request->jmlcicilan, 
+                            $i
+                        ]);
+                        
                         $cicilan = new PenjualanCicil();
                         $cicilan->penjualan_id = $penjualan->id;
                         $cicilan->cicilan = $i;
                         $cicilan->anggota_id = $request->idcustomer;
-                        $cicilan->pokok = $pokoktotal[0]->jumlah;
-                        $cicilan->bunga = $bungatotal[0]->jumlah;
-                        $cicilan->total_cicilan = $pokoktotal[0]->jumlah + $bungatotal[0]->jumlah;
+                        
+                        // Untuk fungsi hitung_cicilan_toko, bunga selalu 0
+                        $cicilan->pokok = $result[0]->jumlah; // Total cicilan = pokok karena tanpa bunga
+                        $cicilan->bunga = 0;
+                        $cicilan->total_cicilan = $result[0]->jumlah;
                         $cicilan->status = 'hutang';
                         $cicilan->kategori = 1;
                         $cicilan->save();
