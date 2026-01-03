@@ -61,15 +61,6 @@
     </div>
 </a>
 
-
-        <div class="perf-item perf-saldo text-decoration-none">
-            <ion-icon name="checkmark-done-outline"></ion-icon>
-            <div class="perf-text">
-                <div class="label">Status</div>
-                <div class="value">{{ ucfirst($user->status) }}</div>
-            </div>
-        </div>
-
     </div>
 </div>
 

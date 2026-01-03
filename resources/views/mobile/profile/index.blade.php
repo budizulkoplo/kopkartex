@@ -68,11 +68,6 @@
         </div>
 
         <div class="mb-3">
-            <label>NBM</label>
-            <input type="text" name="nbm" class="form-control" value="{{ $user->nbm ?? '' }}">
-        </div>
-
-        <div class="mb-3">
             <label>Foto Mobile</label>
             <input type="file" name="fotomobile" class="form-control">
             @if($user->fotomobile)
