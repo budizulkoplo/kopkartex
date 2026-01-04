@@ -7,7 +7,6 @@ use App\Models\Penerimaan;
 use App\Models\PenerimaanDtl;
 use App\Models\StokUnit;
 use App\Models\Supplier;
-use App\Models\User;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -45,21 +44,36 @@ class PenerimaanController extends Controller
         return response()->json($this->genCode());
     }
     
-    public function getBarang(Request $request){
+    public function getBarang(Request $request)
+    {
         $barang = Barang::whereRaw("CONCAT(kode_barang, nama_barang) LIKE ?", ["%{$request->q}%"])
-            ->select('id','kode_barang as code','nama_barang as text','harga_beli','harga_jual')
-            ->get();
+            ->select('id', 'kode_barang as code', 'nama_barang as text', 'type', 'harga_beli', 'harga_jual', 'idsatuan', 'idkategori')
+            ->get()
+            ->map(function($item) {
+                $satuan = Satuan::find($item->idsatuan);
+                $kategori = Kategori::find($item->idkategori);
+                $item->satuan = $satuan ? $satuan->name : '';
+                $item->kategori = $kategori ? $kategori->name : '';
+                return $item;
+            });
+        
         return response()->json($barang);
     }
 
-    public function getBarangByCode(Request $request){
-        $barang = Barang::where("kode_barang", "=",$request->kode)
-            ->select('id','kode_barang as code','nama_barang as text','harga_beli','harga_jual')
+    public function getBarangByCode(Request $request)
+    {
+        $barang = Barang::where("kode_barang", "=", $request->kode)
+            ->select('id', 'kode_barang as code', 'nama_barang as text', 'type', 'harga_beli', 'harga_jual', 'idsatuan', 'idkategori')
             ->first();
+            
         if($barang){
+            $satuan = Satuan::find($barang->idsatuan);
+            $kategori = Kategori::find($barang->idkategori);
+            $barang->satuan = $satuan ? $satuan->name : '';
+            $barang->kategori = $kategori ? $kategori->name : '';
             return response()->json($barang);
         }else{
-            return response()->json('error',404);
+            return response()->json(['error' => 'Barang tidak ditemukan'], 404);
         }
     }
 
@@ -69,7 +83,18 @@ class PenerimaanController extends Controller
         try {
             $formattedDate = Carbon::parse($request->date)->format('Y-m-d H:i:s');
             
-            // Validasi jika metode bayar tempo
+            // Validasi supplier
+            if (!$request->supplier_id) {
+                throw new Exception('Supplier harus dipilih.');
+            }
+            
+            // Cari supplier berdasarkan ID
+            $supplier = Supplier::find($request->supplier_id);
+            if (!$supplier) {
+                throw new Exception('Supplier tidak ditemukan.');
+            }
+
+            // Validasi metode bayar tempo
             if ($request->metode_bayar == 'tempo') {
                 if (!$request->tgl_tempo) {
                     throw new Exception('Tanggal tempo harus diisi untuk pembayaran tempo.');
@@ -84,16 +109,18 @@ class PenerimaanController extends Controller
             // Validasi ada barang yang ditambahkan
             $quantities = $request->input('qty', []);
             $barangIds = $request->input('barang_id', []);
-            $kodeBarangs = $request->input('kode_barang', []);
             
             if (empty($barangIds) || empty($quantities)) {
                 throw new Exception('Minimal ada 1 barang yang harus ditambahkan.');
             }
 
+            // Simpan header penerimaan dengan ID dan kode supplier
             $hdr = new Penerimaan;
             $hdr->nomor_invoice = $request->invoice ?? $this->genCode();
             $hdr->tgl_penerimaan = $formattedDate;
-            $hdr->nama_supplier = $request->supplier;
+            $hdr->idsupplier = $supplier->id;
+            $hdr->kode_supplier = $supplier->kode_supplier;
+            $hdr->nama_supplier = $supplier->nama_supplier;
             $hdr->note = $request->note;
             $hdr->user_id = auth()->user()->id;
             $hdr->metode_bayar = $request->metode_bayar;
@@ -101,7 +128,6 @@ class PenerimaanController extends Controller
             $hdr->status_bayar = $statusBayar;
             $hdr->save();
             
-            // DAPATKAN idpenerimaan YANG BARU DIBUAT
             $idhdr = $hdr->idpenerimaan;
             
             $hargaBeliArr = $request->input('harga_beli', []);
@@ -111,6 +137,7 @@ class PenerimaanController extends Controller
             $ppnPersenArr = $request->input('ppn_persen', []);
             $satuanArr = $request->input('satuan', []);
             $kategoriArr = $request->input('kategori', []);
+            $persenPpnGlobal = $request->input('persen_ppn_global', 0);
 
             $grandTotal = 0;
 
@@ -124,34 +151,28 @@ class PenerimaanController extends Controller
                 if (empty($hargaBeliArr[$index]) || $hargaBeliArr[$index] < 0) {
                     throw new Exception("Harga beli barang ke-" . ($index + 1) . " tidak valid.");
                 }
+                
+                // Validasi harga jual
+                if (empty($hargaJualArr[$index]) || $hargaJualArr[$index] < 0) {
+                    throw new Exception("Harga jual barang ke-" . ($index + 1) . " tidak valid.");
+                }
 
                 $kodeBarang = $kodeBarangArr[$index] ?? '';
                 $namaBarang = $namaBarangArr[$index] ?? '';
                 
                 // Cek apakah ini barang baru (dimulai dengan 'new-')
                 if (str_starts_with($barangId, 'new-')) {
-                    // Barang baru, perlu dibuat dulu
-                    if (empty($kodeBarang) || empty($namaBarang)) {
-                        throw new Exception('Kode dan nama barang harus diisi untuk barang baru.');
-                    }
-                    
-                    // Cek apakah kode barang sudah ada
-                    $existingBarang = Barang::where('kode_barang', $kodeBarang)->first();
-                    if ($existingBarang) {
-                        // Gunakan barang yang sudah ada
-                        $barangId = $existingBarang->id;
-                    } else {
-                        throw new Exception('Barang baru harus disimpan terlebih dahulu sebelum bisa ditambahkan ke penerimaan.');
-                    }
+                    throw new Exception('Barang baru harus disimpan terlebih dahulu sebelum bisa ditambahkan ke penerimaan.');
                 }
                 
+                // Hitung PPN - gunakan PPN per item jika ada, jika tidak gunakan global
+                $ppnPersen = $ppnPersenArr[$index] ?? $persenPpnGlobal;
                 $subtotal = $quantities[$index] * ($hargaBeliArr[$index] ?? 0);
-                $ppnPersen = $ppnPersenArr[$index] ?? 0;
                 $ppn = ($subtotal * $ppnPersen) / 100;
                 $total = $subtotal + $ppn;
                 $grandTotal += $total;
 
-                // insert detail penerimaan
+                // Insert detail penerimaan dengan harga_jual
                 $dtl = new PenerimaanDtl;
                 $dtl->idpenerimaan = $idhdr;
                 $dtl->barang_id    = $barangId;
@@ -162,7 +183,7 @@ class PenerimaanController extends Controller
                 $dtl->subtotal     = $total;
                 $dtl->save();
 
-                // update stok
+                // Update stok
                 DB::statement("
                     INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at, created_at) 
                     VALUES (?, ?, ?, NOW(), NOW())
@@ -172,7 +193,7 @@ class PenerimaanController extends Controller
                     [$barangId, 1, $quantities[$index]]
                 );
 
-                // update harga di master barang
+                // Update harga di master barang
                 Barang::where('id', $barangId)->update([
                     'harga_beli' => $hargaBeliArr[$index] ?? 0,
                     'harga_jual' => $hargaJualArr[$index] ?? 0,
@@ -204,7 +225,7 @@ class PenerimaanController extends Controller
     {
         $q = $request->q;
         $supplier = Supplier::where('nama_supplier', 'LIKE', "%$q%")
-            ->select('id', 'nama_supplier as text')
+            ->select('id', 'kode_supplier', 'nama_supplier as text')
             ->get();
 
         return response()->json($supplier);
@@ -233,8 +254,8 @@ class PenerimaanController extends Controller
                 'success' => true,
                 'supplier' => [
                     'id' => $supplier->id,
-                    'text' => $supplier->nama_supplier,
-                    'kode_supplier' => $supplier->kode_supplier
+                    'kode_supplier' => $supplier->kode_supplier,
+                    'text' => $supplier->nama_supplier
                 ]
             ]);
         } catch (\Exception $e) {
@@ -250,7 +271,7 @@ class PenerimaanController extends Controller
         $tanggalAwal = $request->tanggal_awal ?? date('Y-m-d');
         $tanggalAkhir = $request->tanggal_akhir ?? date('Y-m-d');
 
-        $query = Penerimaan::with(['details.barang', 'user'])
+        $query = Penerimaan::with(['details.barang', 'user', 'supplier'])
             ->whereDate('tgl_penerimaan', '>=', $tanggalAwal)
             ->whereDate('tgl_penerimaan', '<=', $tanggalAkhir)
             ->orderBy('tgl_penerimaan', 'desc');
@@ -270,60 +291,63 @@ class PenerimaanController extends Controller
     }
 
     public function getDetail($id)
-{
-    try {
-        // Cari penerimaan berdasarkan idpenerimaan
-        $penerimaan = Penerimaan::with(['details.barang', 'user'])
-            ->where('idpenerimaan', $id) // <-- GUNAKAN idpenerimaan
-            ->first();
-        
-        if (!$penerimaan) {
+    {
+        try {
+            // Cari penerimaan berdasarkan idpenerimaan
+            $penerimaan = Penerimaan::with(['details.barang', 'user', 'supplier'])
+                ->where('idpenerimaan', $id)
+                ->first();
+            
+            if (!$penerimaan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Penerimaan tidak ditemukan'
+                ], 404);
+            }
+
+            // Format detail
+            $detail = $penerimaan->details->map(function ($d) {
+                return [
+                    'id'               => $d->id,
+                    'barang_id'        => $d->barang_id,
+                    'kode_barang'      => $d->barang->kode_barang ?? 'N/A',
+                    'nama_barang'      => $d->barang->nama_barang ?? 'Tidak ditemukan',
+                    'jumlah'           => $d->jumlah,
+                    'harga_beli'       => $d->harga_beli,
+                    'harga_jual'       => $d->harga_jual,
+                    'ppn'              => $d->ppn,
+                    'subtotal'         => $d->subtotal ?? ($d->jumlah * $d->harga_beli),
+                    'created_at'       => $d->created_at,
+                ];
+            });
+
+            return response()->json([
+                'success'     => true,
+                'penerimaan'  => [
+                    'idpenerimaan'   => $penerimaan->idpenerimaan,
+                    'nomor_invoice'  => $penerimaan->nomor_invoice,
+                    'tgl_penerimaan' => $penerimaan->tgl_penerimaan->format('d-m-Y H:i'),
+                    'idsupplier'     => $penerimaan->idsupplier,
+                    'kode_supplier'  => $penerimaan->kode_supplier,
+                    'nama_supplier'  => $penerimaan->nama_supplier,
+                    'note'           => $penerimaan->note ?? '',
+                    'metode_bayar'   => $penerimaan->metode_bayar,
+                    'tgl_tempo'      => $penerimaan->tgl_tempo ? $penerimaan->tgl_tempo->format('d-m-Y') : null,
+                    'status_bayar'   => $penerimaan->status_bayar,
+                    'grandtotal'     => $penerimaan->grandtotal,
+                    'user_name'      => $penerimaan->user->name ?? '-'
+                ],
+                'detail'      => $detail,
+                'grand_total' => $penerimaan->grandtotal
+            ]);
+
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Penerimaan tidak ditemukan'
-            ], 404);
+                'message' => 'Gagal memuat detail penerimaan: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Format detail
-        $detail = $penerimaan->details->map(function ($d) {
-            return [
-                'id'               => $d->id,
-                'barang_id'        => $d->barang_id,
-                'kode_barang'      => $d->barang->kode_barang ?? 'N/A',
-                'nama_barang'      => $d->barang->nama_barang ?? 'Tidak ditemukan',
-                'jumlah'           => $d->jumlah,
-                'harga_beli'       => $d->harga_beli,
-                'harga_jual'       => $d->harga_jual,
-                'subtotal'         => $d->subtotal ?? ($d->jumlah * $d->harga_beli),
-                'created_at'       => $d->created_at,
-            ];
-        });
-
-        return response()->json([
-            'success'     => true,
-            'penerimaan'  => [
-                'idpenerimaan'   => $penerimaan->idpenerimaan, // <-- idpenerimaan
-                'nomor_invoice'  => $penerimaan->nomor_invoice,
-                'tgl_penerimaan' => $penerimaan->tgl_penerimaan->format('d-m-Y H:i'),
-                'nama_supplier'  => $penerimaan->nama_supplier,
-                'note'           => $penerimaan->note ?? '',
-                'metode_bayar'   => $penerimaan->metode_bayar,
-                'tgl_tempo'      => $penerimaan->tgl_tempo ? $penerimaan->tgl_tempo->format('d-m-Y') : null,
-                'status_bayar'   => $penerimaan->status_bayar,
-                'grandtotal'     => $penerimaan->grandtotal,
-                'user_name'      => $penerimaan->user->name ?? '-'
-            ],
-            'detail'      => $detail,
-            'grand_total' => $penerimaan->grandtotal
-        ]);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Gagal memuat detail penerimaan: ' . $e->getMessage()
-        ], 500);
     }
-}
 
     public function prosesRevisi(Request $request)
     {
@@ -484,6 +508,7 @@ class PenerimaanController extends Controller
                 'penerimaan_detail.jumlah',
                 'penerimaan_detail.harga_beli',
                 'penerimaan_detail.harga_jual',
+                'penerimaan_detail.ppn',
                 'penerimaan_detail.subtotal'
             )
             ->where('idpenerimaan',$hdr->idpenerimaan)
@@ -523,7 +548,7 @@ class PenerimaanController extends Controller
     public function edit($id)
     {
         try {
-            $penerimaan = Penerimaan::with(['details.barang', 'user'])->findOrFail($id);
+            $penerimaan = Penerimaan::with(['details.barang', 'user', 'supplier'])->findOrFail($id);
             
             return view('transaksi.edit-penerimaan', [
                 'penerimaan' => $penerimaan,
@@ -554,9 +579,17 @@ class PenerimaanController extends Controller
                 $statusBayar = 'paid';
             }
 
-            // Update header
+            // Update header dengan data supplier baru
+            if ($request->supplier_id) {
+                $supplier = Supplier::find($request->supplier_id);
+                if ($supplier) {
+                    $penerimaan->idsupplier = $supplier->id;
+                    $penerimaan->kode_supplier = $supplier->kode_supplier;
+                    $penerimaan->nama_supplier = $supplier->nama_supplier;
+                }
+            }
+
             $penerimaan->tgl_penerimaan = $formattedDate;
-            $penerimaan->nama_supplier = $request->supplier;
             $penerimaan->note = $request->note;
             $penerimaan->metode_bayar = $request->metode_bayar;
             $penerimaan->tgl_tempo = $tglTempo;
@@ -583,7 +616,7 @@ class PenerimaanController extends Controller
 
     public function getKategori()
     {
-        $kategoris = Kategori::select('id', 'nama_kategori')->get();
+        $kategoris = Kategori::select('id', 'name')->get();
         return response()->json($kategoris);
     }
 
@@ -616,6 +649,7 @@ class PenerimaanController extends Controller
             $barang->harga_beli = $request->harga_beli;
             $barang->harga_jual = $request->harga_jual;
             $barang->kelompok_unit = $request->kelompok_unit ?? 'toko';
+            $barang->deskripsi = $request->deskripsi ?? null;
             $barang->save();
 
             // Tambahkan stok awal 0
@@ -642,8 +676,8 @@ class PenerimaanController extends Controller
                     'nama_barang' => $barang->nama_barang,
                     'harga_beli' => $barang->harga_beli,
                     'harga_jual' => $barang->harga_jual,
-                    'satuan' => $satuan->name ?? '',
-                    'kategori' => $kategori->name ?? ''
+                    'satuan' => $satuan ? $satuan->name : '',
+                    'kategori' => $kategori ? $kategori->name : ''
                 ]
             ]);
         } catch (\Exception $e) {

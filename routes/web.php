@@ -203,6 +203,10 @@ Route::prefix('mutasi')->middleware(['auth', 'verified', 'role:superadmin|admin'
     Route::get('/getbarang', [MutasiStockController::class, 'getBarang'])->name('mutasi.getbarang');
     Route::post('/store', [MutasiStockController::class, 'store'])->name('mutasi.store');
     Route::post('/kembalikan', [MutasiStockController::class, 'Kembalikan'])->name('mutasi.kembalikan');
+    Route::get('/nota/{id}', [MutasiStockController::class, 'nota'])->name('mutasi.nota'); 
+    Route::post('/update-status', [MutasiStockController::class, 'updateStatus'])->name('mutasi.updateStatus');
+    Route::get('/detail/{id}', [MutasiStockController::class, 'detail'])->name('mutasi.detail');
+    Route::post('/batalkan', [MutasiStockController::class, 'batalkan'])->name('mutasi.batalkan');
 });
 
 Route::prefix('simpanan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {

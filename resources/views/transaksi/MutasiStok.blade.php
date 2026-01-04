@@ -1,5 +1,6 @@
 <x-app-layout>
     <x-slot name="pagetitle">Mutasi Stok</x-slot>
+    
     <div class="app-content-header">
         <div class="container-fluid">
             <div class="row mb-3">
@@ -15,265 +16,647 @@
             </div>
         </div>
     </div>
-    <div class="app-content"> <!--begin::Container-->
-        <div class="container"> <!--begin::Row-->
-        <form class="needs-validation" novalidate id="frmterima">
-            <div class="card card-success card-outline mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Stock Transfer Form</h5>
+    
+    <div class="app-content">
+        <div class="container">
+            <form class="needs-validation" novalidate id="frmmutasi">
+                <div class="card card-primary card-outline mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-arrow-left-right"></i> Stock Transfer Form
+                        </h5>
+                    </div>
+                    <div class="card-body p-3">
+                        {{-- Header Form --}}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="input-group input-group-sm mb-2"> 
+                                    <span class="input-group-text label-fixed-width">Tanggal</span>
+                                    <input type="text" class="form-control datepicker" name="date" required>
+                                    <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group input-group-sm mb-2"> 
+                                    <span class="input-group-text label-fixed-width">Petugas</span>
+                                    <input type="text" class="form-control" value="{{ auth()->user()->name }}" disabled>
+                                    <input type="hidden" name="petugas" value="{{ auth()->user()->name }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Unit Selection --}}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="input-group input-group-sm mb-2"> 
+                                    <span class="input-group-text label-fixed-width">Dari Unit</span>
+                                    <select class="form-select" id="unit1" name="unit1" required>
+                                        <option value="">Pilih Unit Asal</option>
+                                        @foreach ($unit as $item)
+                                            <option value="{{ $item->id }}" data-nama="{{ $item->nama_unit }}">
+                                                {{ $item->nama_unit }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group input-group-sm mb-2"> 
+                                    <span class="input-group-text label-fixed-width">Ke Unit</span>
+                                    <select class="form-select" id="unit2" name="unit2" required>
+                                        <option value="">Pilih Unit Tujuan</option>
+                                        @foreach ($unit as $item)
+                                            <option value="{{ $item->id }}" data-nama="{{ $item->nama_unit }}">
+                                                {{ $item->nama_unit }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Scan Barang --}}
+                        <div class="row mb-3" id="scnbarcode" style="display: none">
+                            <div class="col-md-12">
+                                <div class="input-group input-group-sm mb-2"> 
+                                    <span class="input-group-text label-fixed-width">Barcode</span>
+                                    <input type="text" class="form-control typeahead" id="barcode-search" placeholder="Scan barcode atau ketik nama barang" autocomplete="off">
+                                    <span class="input-group-text bg-primary"><i class="bi bi-search text-white"></i></span>
+                                </div>
+                                <small class="text-muted">Tekan Enter untuk mencari, F2 untuk auto focus</small>
+                            </div>
+                        </div>
+
+                        {{-- Table Mutasi --}}
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="table-responsive">
+                                    <table id="tbmutasi" class="table table-sm table-striped table-bordered" style="width: 100%; font-size: small;">
+                                        <thead>
+                                            <tr class="bg-light">
+                                                <th width="5%">#</th>
+                                                <th width="15%">Kode</th>
+                                                <th width="30%">Nama Barang</th>
+                                                <th width="10%">Stok</th>
+                                                <th width="10%">Qty Mutasi</th>
+                                                <th width="5%">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                        <tfoot>
+                                            <tr class="table-secondary">
+                                                <th colspan="5" class="text-end fw-bold">Total Item:</th>
+                                                <th id="total-item" class="fw-bold text-center">0</th>
+                                            </tr>
+                                            <tr class="table-success">
+                                                <th colspan="5" class="text-end fw-bold">Total Qty:</th>
+                                                <th id="total-qty" class="fw-bold text-center">0</th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                                <div class="alert alert-info mt-2" id="empty-table-alert" style="display: none;">
+                                    <i class="bi bi-info-circle"></i> Belum ada barang yang ditambahkan. Scan barcode atau ketik nama barang.
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Catatan --}}
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label form-label-sm mb-1">Catatan Mutasi</label>
+                                <textarea class="form-control form-control-sm" name="note" rows="2" placeholder="Keterangan mutasi..."></textarea>
+                            </div>
+                        </div>
+
+                        {{-- Tombol Aksi --}}
+                        <div class="row">
+                            <div class="col-12 d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-warning btn-sm" onclick="clearform();">
+                                    <i class="bi bi-x-circle"></i> Batal
+                                </button>
+                                <button type="submit" class="btn btn-success btn-sm" id="btnsimpan" style="display: none">
+                                    <i class="bi bi-floppy-fill"></i> Simpan Mutasi
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
-                <div class="card-body">
-
-                    <div class="row mb-0">
-                        <div class="col-md-6">
-                            <div class="input-group input-group-sm mb-2"> 
-                                <span class="input-group-text w-25">Tanggal</span>
-                                <input type="text" class="form-control datepicker" name="date" required>
-                                <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="input-group input-group-sm mb-2"> 
-                                <span class="input-group-text w-25">Petugas</span>
-                                <input type="text" class="form-control" value="{{ auth()->user()->name }}" disabled>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row mb-0">
-                        <div class="col-md-6">
-                            <div class="input-group input-group-sm mb-2"> 
-                                <span class="input-group-text w-25">Dari Unit</span>
-                                <select class="form-select" id="unit1" name="unit1" required>
-                                    <option value=""></option>
-                                    @foreach ($unit as $item)
-                                        <option value="{{ $item->id }}">{{ $item->nama_unit }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="input-group input-group-sm mb-2"> 
-                                <span class="input-group-text w-25">Ke Unit</span>
-                                <select class="form-select" id="unit2" name="unit2" required>
-                                    <option value=""></option>
-                                    @foreach ($unit as $item)
-                                        <option value="{{ $item->id }}">{{ $item->nama_unit }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3" id="scnbarcode" style="display: none">
-                        <div class="col-md-6">
-                            <div class="input-group input-group-sm mb-2"> 
-                                <span class="input-group-text w-25">Barcode</span>
-                                <input type="text" class="form-control typeahead" id="barcode-search">
-                                <input type="hidden" id="barcode-id">
-                                <span class="input-group-text bg-primary"><i class="bi bi-search text-white"></i></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-12">
-                        <table id="tbterima" class="table table-sm table-striped table-bordered" style="width: 100%; font-size: small;">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Kode</th>
-                                        <th>Nama Barang</th>
-                                        <th>Stok</th>
-                                        <th>Qty</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <div class="input-group"> 
-                                <span class="input-group-text w-25">Catatan</span> 
-                                <textarea class="form-control" name="note" rows="2"></textarea> 
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row mb-2">
-                        <div class="col-12 d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-warning" onclick="clearform();"><i class="bi bi-arrow-clockwise"></i> Batal</button>
-                            <button type="submit" class="btn btn-success" id="btnsimpan" style="display: none"><i class="bi bi-floppy-fill"></i> Simpan</button>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        </form>
-
+            </form>
         </div>
     </div>
+
     <x-slot name="csscustom">
         <style>
-        /* Typeahead dropdown menu */
-        .tt-menu {
-        width: 100%;
-        background-color: #fff;
-        border: 1px solid #ced4da;
-        border-radius: 0.25rem;
-        z-index: 1000;
-        max-height: 250px;
-        overflow-y: auto;
-        }
-
-        /* Each suggestion */
-        .tt-suggestion {
-        padding: 0.5rem 1rem;
-        cursor: pointer;
-        }
-
-        .tt-suggestion:hover {
-        background-color: #f8f9fa; /* Bootstrap's hover color */
-        }
+            .twitter-typeahead {
+                flex: 1;
+                position: relative;
+                display: block !important;
+            }
+            .twitter-typeahead .tt-hint {
+                display: none !important;
+            }
+            .twitter-typeahead .tt-input {
+                width: 100% !important;
+                height: calc(1.5em + 0.5rem + 2px) !important;
+                padding: 0.25rem 0.5rem !important;
+                font-size: 0.875rem !important;
+                line-height: 1.5 !important;
+                border: 1px solid #ced4da !important;
+                border-radius: 0.25rem !important;
+            }
+            .twitter-typeahead .tt-input:focus {
+                border-color: #80bdff !important;
+                outline: 0 !important;
+                box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+            }
+            .tt-menu {
+                width: 100% !important;
+                background-color: #fff !important;
+                border: 1px solid #ced4da !important;
+                border-radius: 0.25rem !important;
+                z-index: 1000 !important;
+                max-height: 250px !important;
+                overflow-y: auto !important;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+            }
+            .tt-suggestion {
+                padding: 0.5rem 1rem !important;
+                cursor: pointer !important;
+                border-bottom: 1px solid #f0f0f0 !important;
+                font-size: 0.875rem !important;
+            }
+            .tt-suggestion:hover, .tt-suggestion.tt-cursor {
+                background-color: #f8f9fa !important;
+                color: #0d6efd !important;
+            }
+            .tt-suggestion:last-child {
+                border-bottom: none !important;
+            }
+            .label-fixed-width {
+                min-width: 90px !important;
+                font-size: 0.875rem !important;
+            }
+            .table td, .table th {
+                vertical-align: middle !important;
+            }
+            .dellist {
+                cursor: pointer !important;
+                padding: 0.25rem 0.5rem !important;
+            }
+            .dellist:hover {
+                opacity: 0.8 !important;
+            }
+            #empty-table-alert {
+                font-size: 0.875rem !important;
+                padding: 0.5rem 1rem !important;
+            }
+            .stok-info {
+                font-size: 0.8rem !important;
+                color: #6c757d !important;
+            }
+            .qty-mutasi {
+                width: 80px !important;
+                text-align: center !important;
+            }
+            .input-group.input-group-sm {
+                height: auto !important;
+            }
+            .input-group.input-group-sm > .input-group-text {
+                height: calc(1.5em + 0.5rem + 2px) !important;
+                font-size: 0.875rem !important;
+                line-height: 1.5 !important;
+            }
         </style>
     </x-slot>
+
     <x-slot name="jscustom">
-        {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-3-typeahead/4.0.2/bootstrap3-typeahead.min.js"></script> --}}
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/corejs-typeahead/1.3.1/typeahead.bundle.min.js"></script>
         <script>
-            function validasi(){
-                if($('#unit1').val() == '' || $('#unit2').val() == ''){
-                    $('#scnbarcode, #btnsimpan').hide();
-                }else{
-                    if(($('#unit1').val() == $('#unit2').val())){
-                        $('#scnbarcode, #btnsimpan').hide();
-                    }else{
-                        $('#scnbarcode, #btnsimpan').show();
-                    }
+            let barang = [];
+            let rowCounter = 0;
+            let mutasiId = null;
+
+            function updateTableAlert() {
+                const rowCount = $('#tbmutasi tbody tr').length;
+                if (rowCount === 0) {
+                    $('#empty-table-alert').show();
+                } else {
+                    $('#empty-table-alert').hide();
                 }
+                updateTotals();
             }
+
+            function updateTotals() {
+                let totalQty = 0;
+                let totalItem = 0;
+                
+                $('#tbmutasi tbody tr').each(function() {
+                    const qty = parseFloat($(this).find('input[name="qty[]"]').val()) || 0;
+                    if (qty > 0) {
+                        totalQty += qty;
+                        totalItem++;
+                    }
+                });
+                
+                $('#total-qty').text(totalQty);
+                $('#total-item').text(totalItem);
+            }
+
             function numbering(){
-                $('#tbterima tbody tr').each(function(index) {
+                $('#tbmutasi tbody tr').each(function(index) {
                     $(this).find('td:first').text(index + 1);
                 });
+                updateTableAlert();
             }
+
             function addRow(datarow){
-                let str = '',boleh=true;
-                $('#tbterima tbody tr').each(function(index, element) {
-                    if(datarow.id == $(this).data('id'))
-                    {boleh=false;return false;}
-                });
-                if(boleh){
-                    str +=`<tr data-id="`+datarow.id+`" class="align-middle"><td></td><td>`+datarow.code+`</td><td>`+datarow.text+`</td>
-                        <td>
-                            <input type="number" readonly value="${datarow.stok}" class="form-control form-control-sm w-auto" min="1" name="stok[]">
-                        </td>
-                        <td>
-                            <input type="number" value="0" class="form-control form-control-sm w-auto" onfocus="this.select()" min="1" name="qty[]" max="${datarow.stok}" required>
-                            <input type="hidden" class="idbarang" name="id[]" value="`+datarow.id+`">
-                        </td>
-                        <td><span class="badge bg-danger dellist" onclick="$(this).parent().parent().remove();numbering();"><i class="bi bi-trash3-fill"></i></span></td></tr>`;
-                    $('#tbterima tbody').append(str);
-                }
-                numbering();
-                $('#barcode-search').val('');
-            }
-            function clearform(){
-                $('input[name="invoice"]').val('');
-                $('input[name="supplier"]').val('');
-                $('textarea[name="note"]').val('');
-                $('#tbterima tbody tr').remove();
-            }
-            $(document).on('keydown', 'form', function(event) {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    return false;
-                }
-            });
-            $(document).ready(function () {
-                $('#unit1, #unit2').on('change',function(){
-                    validasi();
-                });
-                let currentRequest = null;
-                $('#barcode-search').typeahead({
-                    source: function (query, process) {
-                        if (currentRequest !== null) {
-                            currentRequest.abort();
-                        }
-                        currentRequest = $.ajax({
-                        url: '{{ route('mutasi.getbarang') }}',       // Your backend endpoint
-                        type: 'GET',
-                        data: { q: query,unit: $('#unit1').val() },
-                        dataType: 'json',
-                        success: function (data) {
-                            barang = data; // Save for lookup later
-                            return process(data.map(barang => barang.text));
-                        }
-                        });
-                        return currentRequest;
-                    },
-                    afterSelect: function (text) {
-                        const selected = barang.find(barang => barang.text === text);
-                        if (selected) {
-                            $('#barcode-id').val(selected.code); // save the ID in a hidden field
-                            addRow(selected);
-                        }
+                let existingRow = false;
+                const searchCode = datarow.code || datarow.kode_barang || '';
+                
+                $('#tbmutasi tbody tr').each(function() {
+                    const rowCode = $(this).find('input[name="kode_barang[]"]').val();
+                    if(searchCode && rowCode === searchCode) {
+                        existingRow = true;
+                        // Auto-focus ke barcode setelah update
+                        setTimeout(() => {
+                            $('#barcode-search').val('').focus();
+                        }, 100);
+                        return false;
                     }
                 });
+                
+                if(!existingRow){
+                    rowCounter++;
+                    const str = `<tr data-id="${datarow.id}" class="align-middle" id="row-${rowCounter}">
+                        <td class="text-center">${rowCounter}</td>
+                        <td>
+                            <input type="hidden" name="kode_barang[]" value="${datarow.code || ''}">
+                            <input type="hidden" name="nama_barang[]" value="${datarow.text || ''}">
+                            <input type="hidden" name="id[]" value="${datarow.id}">
+                            ${datarow.code || 'N/A'}
+                        </td>
+                        <td>${datarow.text || ''}</td>
+                        <td class="text-center">
+                            <input type="number" readonly value="${datarow.stok || 0}" class="form-control form-control-sm stok-info" style="width: 80px;">
+                            <small class="text-muted">tersedia</small>
+                        </td>
+                        <td class="text-center">
+                            <input type="number" value="1" class="form-control form-control-sm qty-mutasi" min="1" 
+                                   max="${datarow.stok || 0}" name="qty[]" required>
+                            <small class="text-muted">mutasi</small>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-danger dellist" onclick="removeRow(${rowCounter})" title="Hapus">
+                                <i class="bi bi-trash3-fill"></i>
+                            </span>
+                        </td>
+                    </tr>`;
+                    $('#tbmutasi tbody').append(str);
+                    updateTableAlert();
+                    
+                    // Auto-focus ke barcode setelah menambah row baru
+                    setTimeout(() => {
+                        $('#barcode-search').val('').focus();
+                    }, 100);
+                }
+            }
+
+            function removeRow(rowId) {
+                $(`#row-${rowId}`).remove();
+                numbering();
+                
+                // Auto-focus ke barcode setelah hapus
+                setTimeout(() => {
+                    $('#barcode-search').focus();
+                }, 100);
+            }
+
+            function clearform(){
+                if ($('#tbmutasi tbody tr').length > 0) {
+                    Swal.fire({
+                        title: 'Bersihkan Form?',
+                        text: "Semua data yang belum disimpan akan hilang.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Ya, Bersihkan!',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            doClearForm();
+                        }
+                    });
+                } else {
+                    doClearForm();
+                }
+            }
+
+            function doClearForm(){
+                // Reset form
+                $('input[name="date"]').val('');
+                $('#unit1').val('');
+                $('#unit2').val('');
+                $('textarea[name="note"]').val('');
+                $('#scnbarcode, #btnsimpan').hide();
+                
+                // Clear table
+                $('#tbmutasi tbody').empty();
+                updateTableAlert();
+                
+                // Reset datepicker to today
+                $('.datepicker').datepicker('setDate', new Date());
+                
+                // Auto focus ke barcode
+                setTimeout(() => {
+                    $('#barcode-search').focus();
+                }, 100);
+            }
+
+            function validasi(){
+                const unit1 = $('#unit1').val();
+                const unit2 = $('#unit2').val();
+                
+                if(!unit1 || !unit2) {
+                    $('#scnbarcode, #btnsimpan').hide();
+                    return;
+                }
+                
+                if(unit1 === unit2) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Perhatian',
+                        text: 'Unit asal dan tujuan tidak boleh sama!'
+                    });
+                    $('#scnbarcode, #btnsimpan').hide();
+                    return;
+                }
+                
+                $('#scnbarcode, #btnsimpan').show();
+                setTimeout(() => {
+                    $('#barcode-search').focus();
+                }, 100);
+            }
+
+            function cetakNotaMutasi(mutasiId) {
+                const notaUrl = '{{ route("mutasi.nota", ":id") }}'.replace(':id', mutasiId);
+                window.open(notaUrl, '_blank');
+            }
+
+            $(document).ready(function () {
+                let currentRequest = null;
+                
+                // Set datepicker
                 $('.datepicker').datepicker({
                     format: 'dd-mm-yyyy',
                     autoclose: true,
-                    todayHighlight: true
+                    todayHighlight: true,
+                    language: 'id'
                 }).datepicker('setDate', new Date());
-                $('#barcode-search').on('keydown', function(e) {
-                    if (e.key === 'Enter') {
-                        $.ajax({
-                            url: '{{ route('mutasi.getbarangbycode') }}',
-                            method: 'GET',
-                            data: {
-                                kode: $(this).val(),
-                                unit: $('#unit1').val(),
-                            },
-                            dataType: 'json',
-                            success: function(response) {
-                                addRow(response);
-                            },
-                            error: function(xhr, status, error) {
-                                Swal.fire({
-                                title: "Barang tidak ditemukan!",
-                                icon: "error",
-                                draggable: true
-                                });
-                            }
-                        });
+
+                // Validasi unit
+                $('#unit1, #unit2').on('change', function() {
+                    validasi();
+                });
+
+                // Typeahead untuk barcode
+                const barangBloodhound = new Bloodhound({
+                    datumTokenizer: Bloodhound.tokenizers.whitespace,
+                    queryTokenizer: Bloodhound.tokenizers.whitespace,
+                    remote: {
+                        url: '{{ route('mutasi.getbarang') }}?q=%QUERY&unit=%UNIT',
+                        replace: function(url, query) {
+                            return url.replace('%QUERY', query).replace('%UNIT', $('#unit1').val());
+                        },
+                        wildcard: '%QUERY'
                     }
                 });
-                $('#frmterima').on('submit', function(e) {
-                    e.preventDefault(); // Prevent default form submit
-                    if (!this.checkValidity()) {
-                        e.stopPropagation();
-                    } else {
-                        $.ajax({
-                        type: 'POST',
-                        url: '{{ route('mutasi.store') }}', // Your endpoint
-                        data: $(this).serialize(), // Serialize form data
-                        success: function(response) {
-                            Swal.fire({
-                            position: "top-end",
-                            icon: "success",
-                            title: "Your work has been saved",
-                            showConfirmButton: false,
-                            timer: 2500
-                            });
-                            clearform();
-                        },
-                        error: function(xhr) {
-                            alert('Something went wrong');
+
+                $('#barcode-search').typeahead({
+                    hint: true,
+                    highlight: true,
+                    minLength: 1
+                }, {
+                    name: 'barang',
+                    source: barangBloodhound,
+                    display: 'text',
+                    templates: {
+                        suggestion: function(data) {
+                            return `<div><strong>${data.code}</strong> - ${data.text} (Stok: ${data.stok})</div>`;
                         }
+                    }
+                }).on('typeahead:select', function(ev, suggestion) {
+                    addRow(suggestion);
+                    // Auto clear input setelah memilih
+                    $(this).typeahead('val', '');
+                });
+
+                // Enter untuk search barcode
+                $('#barcode-search').on('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const searchVal = $(this).val().trim();
+                        const unit1 = $('#unit1').val();
+                        
+                        if (!unit1) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Perhatian',
+                                text: 'Pilih unit asal terlebih dahulu!'
+                            });
+                            return;
+                        }
+                        
+                        if (searchVal) {
+                            $.ajax({
+                                url: '{{ route('mutasi.getbarangbycode') }}',
+                                method: 'GET',
+                                data: { 
+                                    kode: searchVal,
+                                    unit: unit1 
+                                },
+                                dataType: 'json',
+                                beforeSend: function() {
+                                    if (currentRequest !== null) currentRequest.abort();
+                                },
+                                success: function(response) { 
+                                    addRow(response);
+                                    // Auto clear input
+                                    $('#barcode-search').val('');
+                                },
+                                error: function() {
+                                    Swal.fire({
+                                        title: "Barang tidak ditemukan!",
+                                        text: "Barang dengan kode '" + searchVal + "' tidak ditemukan di unit ini.",
+                                        icon: "error"
+                                    });
+                                }
+                            });
+                        }
+                    }
+                });
+
+                // Update totals on change Qty
+                $('#tbmutasi').on('input', 'input[name="qty[]"]', function() {
+                    const max = parseInt($(this).attr('max')) || 0;
+                    const value = parseInt($(this).val()) || 0;
+                    
+                    if (value > max) {
+                        $(this).val(max);
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Stok tidak mencukupi!',
+                            text: 'Stok tersedia: ' + max,
+                            timer: 2000
                         });
                     }
+                    
+                    updateTotals();
+                });
+
+                // Focus ke barcode search saat halaman load
+                setTimeout(() => {
+                    $('#barcode-search').focus();
+                }, 500);
+
+                // Submit form
+                $('#frmmutasi').on('submit', function(e) {
+                    e.preventDefault();
+                    if (!this.checkValidity()) { 
+                        e.stopPropagation(); 
+                        this.classList.add('was-validated');
+                        return; 
+                    }
+
+                    // Validasi unit
+                    const unit1 = $('#unit1').val();
+                    const unit2 = $('#unit2').val();
+                    
+                    if (!unit1 || !unit2) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Perhatian',
+                            text: 'Unit asal dan tujuan harus dipilih!'
+                        });
+                        return;
+                    }
+                    
+                    if (unit1 === unit2) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Perhatian',
+                            text: 'Unit asal dan tujuan tidak boleh sama!'
+                        });
+                        return;
+                    }
+
+                    // Validasi ada barang yang ditambahkan
+                    if ($('#tbmutasi tbody tr').length === 0) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Perhatian',
+                            text: 'Tidak ada barang yang ditambahkan!'
+                        });
+                        $('#barcode-search').focus();
+                        return;
+                    }
+
+                    // Validasi quantity
+                    let qtyError = false;
+                    $('input[name="qty[]"]').each(function() {
+                        const qty = parseInt($(this).val()) || 0;
+                        const max = parseInt($(this).attr('max')) || 0;
+                        
+                        if (qty <= 0 || qty > max) {
+                            qtyError = true;
+                            return false;
+                        }
+                    });
+                    
+                    if (qtyError) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Perhatian',
+                            text: 'Quantity harus antara 1 dan stok tersedia!'
+                        });
+                        return;
+                    }
+
+                    const formData = $(this).serialize();
+                    
+                    $.ajax({
+                        type: 'POST',
+                        url: '{{ route('mutasi.store') }}',
+                        data: formData,
+                        dataType: 'json',
+                        beforeSend: function() {
+                            $('#btnsimpan').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Menyimpan...');
+                        },
+                        success: function(response) {
+                            if (response && response.id) {
+                                mutasiId = response.id;
+                                
+                                Swal.fire({
+                                    position: "top-end", 
+                                    icon: "success", 
+                                    title: "Mutasi berhasil disimpan", 
+                                    showConfirmButton: false, 
+                                    timer: 1500
+                                }).then(() => {
+                                    // Cetak nota mutasi
+                                    cetakNotaMutasi(mutasiId);
+                                    
+                                    // Clear form
+                                    doClearForm();
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: "error", 
+                                    title: "Oops...", 
+                                    text: "Terjadi kesalahan saat menyimpan!"
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            let errorMsg = "Terjadi kesalahan saat menyimpan!";
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMsg = xhr.responseJSON.message;
+                            }
+                            Swal.fire({
+                                icon: "error", 
+                                title: "Oops...", 
+                                text: errorMsg
+                            });
+                        },
+                        complete: function() {
+                            $('#btnsimpan').prop('disabled', false).html('<i class="bi bi-floppy-fill"></i> Simpan Mutasi');
+                        }
+                    });
+                });
+
+                // Shortcut keyboard
+                $(document).keydown(function(e) {
+                    // Ctrl + S untuk simpan
+                    if (e.ctrlKey && e.key === 's') {
+                        e.preventDefault();
+                        $('#frmmutasi').submit();
+                    }
+                    // Esc untuk batal
+                    if (e.key === 'Escape') {
+                        clearform();
+                    }
+                    // F2 untuk focus barcode
+                    if (e.key === 'F2') {
+                        e.preventDefault();
+                        $('#barcode-search').focus();
+                    }
+                });
+
+                // Auto focus ke input qty
+                $('#tbmutasi').on('focus', 'input[name="qty[]"]', function() {
+                    $(this).select();
                 });
             });
         </script>

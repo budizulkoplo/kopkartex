@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak Nota {{ $hdr->nomor_invoice }}</title>
+    <title>Cetak Nota Mutasi {{ $hdr->nomor_mutasi }}</title>
     <style>
         @page { margin: 0 }
         body { margin: 0; font-size:11pt; font-family: monospace; }
@@ -32,6 +32,12 @@
                 box-shadow: 0 .5mm 2mm rgba(0,0,0,.3);
                 margin: 5mm;
             }
+            .preview-controls {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                z-index: 1000;
+            }
         }
 
         @media print {
@@ -50,14 +56,23 @@
             font-size: 24px;
         }
 
-        /* Style untuk preview mode */
-        @media screen {
-            .preview-controls {
-                position: fixed;
-                top: 10px;
-                right: 10px;
-                z-index: 1000;
-            }
+        .info-label {
+            font-weight: bold;
+        }
+        
+        .status-selesai {
+            color: green;
+            font-weight: bold;
+        }
+        
+        .status-diajukan {
+            color: orange;
+            font-weight: bold;
+        }
+        
+        .status-dibatalkan {
+            color: red;
+            font-weight: bold;
         }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+128&display=swap" rel="stylesheet">
@@ -81,28 +96,28 @@
         <table style="width:100%; border-collapse:collapse;">
             <tr>
                 <td class="txt-center" colspan="3">
-                    <b>NOTA PENERIMAAN BARANG <br>{{ auth()->user()->unit->nama_unit ?? '-' }}</b>
+                    <b>NOTA MUTASI STOK</b>
                 </td>
             </tr>
             <tr>
                 <td class="txt-center" colspan="3">
-                    <div class="barcode">*{{ $hdr->nomor_invoice }}*</div>
+                    <div class="barcode">*{{ $hdr->nomor_mutasi }}*</div>
                 </td>
             </tr>
         </table>
         <hr>
 
-        {{-- Info Penerimaan --}}
+        {{-- Info Mutasi --}}
         <table style="width:100%; border-collapse:collapse;">
             <tr>
-                <td style="width:30%">Nota</td>
+                <td style="width:35%">Nomor Mutasi</td>
                 <td style="width:5%">:</td>
-                <td>{{ $hdr->nomor_invoice }}</td>
+                <td>{{ $hdr->nomor_mutasi }}</td>
             </tr>
             <tr>
                 <td>Tanggal</td>
                 <td>:</td>
-                <td>{{ \Carbon\Carbon::parse($hdr->tgl_penerimaan)->format('d/m/Y H:i') }}</td>
+                <td>{{ \Carbon\Carbon::parse($hdr->tanggal)->format('d/m/Y H:i') }}</td>
             </tr>
             <tr>
                 <td>Petugas</td>
@@ -110,37 +125,21 @@
                 <td>{{ $hdr->petugas }}</td>
             </tr>
             <tr>
-                <td>Supplier</td>
+                <td>Dari Unit</td>
                 <td>:</td>
-                <td>{{ $hdr->nama_supplier }}</td>
+                <td>{{ $hdr->nama_unit_asal }}</td>
             </tr>
             <tr>
-                <td>Kode Supplier</td>
+                <td>Ke Unit</td>
                 <td>:</td>
-                <td>{{ $hdr->kode_supplier ?? '-' }}</td>
+                <td>{{ $hdr->nama_unit_tujuan }}</td>
             </tr>
-            <tr>
-                <td>Metode Bayar</td>
-                <td>:</td>
-                <td>{{ strtoupper($hdr->metode_bayar) }}</td>
-            </tr>
-            @if($hdr->metode_bayar == 'tempo')
-            <tr>
-                <td>Tgl Tempo</td>
-                <td>:</td>
-                <td>{{ \Carbon\Carbon::parse($hdr->tgl_tempo)->format('d/m/Y') }}</td>
-            </tr>
-            <tr>
-                <td>Status Bayar</td>
-                <td>:</td>
-                <td>{{ strtoupper($hdr->status_bayar) }}</td>
-            </tr>
-            @endif
             <tr>
                 <td>Catatan</td>
                 <td>:</td>
                 <td>{{ $hdr->note ? substr($hdr->note, 0, 30) . (strlen($hdr->note) > 30 ? '...' : '') : '-' }}</td>
             </tr>
+            
         </table>
         <hr>
 
@@ -148,67 +147,52 @@
         <table style="width:100%; border-collapse:collapse;">
             <tr>
                 <th class="txt-left" style="width:5%">#</th>
-                <th class="txt-left" style="width:45%" colspan='2'>Item</th>
-                <th class="txt-center" style="width:10%">Qty</th>
-                <th class="txt-right" style="width:20%">H.Beli</th>
+                <th class="txt-left" style="width:55%" colspan='2'>Item</th>
+                <th class="txt-center" style="width:15%">Qty</th>
             </tr>
-            <tr><td colspan="5"><hr></td></tr>
+            <tr><td colspan="4"><hr></td></tr>
 
             @foreach($dtl as $index => $item)
             <tr>
                 <td class="txt-left">{{ $index + 1 }}</td>
                 <td class="txt-left" colspan='2'>
-                    {{ substr($item->kode_barang, 0, 8) }}<br>
-                    <small>{{ substr($item->nama_barang, 0, 20) }}{{ strlen($item->nama_barang) > 20 ? '...' : '' }}</small>
+                    <span>{{ substr($item->nama_barang, 0, 25) }}{{ strlen($item->nama_barang) > 25 ? '...' : '' }}</span>
                 </td>
-                <td class="txt-center">{{ number_format($item->jumlah, 0) }}</td>
-                <td class="txt-right">{{ number_format($item->harga_beli, 0) }}</td>
-
+                <td class="txt-center">{{ number_format($item->qty, 0) }}</td>
+               
             </tr>
             @endforeach
 
-            <tr><td colspan="5"><hr></td></tr>
+            <tr><td colspan="4"><hr></td></tr>
 
             {{-- Summary --}}
             @php
-                $subtotal = $dtl->sum(function($item) {
-                    return $item->harga_beli * $item->jumlah;
-                });
-                $totalHargaJual = $dtl->sum(function($item) {
-                    return $item->harga_jual * $item->jumlah;
-                });
-                $totalPpn = $dtl->sum('ppn');
+                $totalQty = $dtl->sum('qty');
+                $totalItem = $dtl->count();
             @endphp
 
             <tr>
-                <td colspan="4" class="txt-right">Subtotal Beli</td>
-                <td class="txt-right">{{ number_format($subtotal, 0) }}</td>
+                <td colspan="2" class="txt-right">Total Item:</td>
+                <td colspan="2" class="txt-center">{{ $totalItem }}</td>
             </tr>
-            @if($totalPpn > 0)
             <tr>
-                <td colspan="4" class="txt-right">PPN</td>
-                <td class="txt-right">{{ number_format($totalPpn, 0) }}</td>
+                <td colspan="2" class="txt-right"><b>Total Qty Mutasi:</b></td>
+                <td colspan="2" class="txt-center"><b>{{ $totalQty }}</b></td>
             </tr>
-            @endif
-            <tr>
-                <td colspan="4" class="txt-right"><b>Grand Total</b></td>
-                <td class="txt-right"><b>{{ number_format($hdr->grandtotal, 0) }}</b></td>
-            </tr>
-            
         </table>
 
         <br>
         {{-- Footer Note --}}
         <div class="txt-center" style="font-size: 9pt;">
-            * Barang yang sudah diterima menjadi tanggung jawab gudang *
+            * Barang yang sudah dimutasikan menjadi tanggung jawab unit penerima *
         </div>
 
         {{-- Tanda tangan --}}
         <br><br><br>
         <table style="width:100%; border-collapse:collapse; margin-top:20px;">
             <tr>
-                <td class="txt-center" style="width:50%">Petugas</td>
-                <td class="txt-center" style="width:50%">Supplier</td>
+                <td class="txt-center" style="width:50%">Pengirim</td>
+                <td class="txt-center" style="width:50%">Penerima</td>
             </tr>
             <tr><td colspan="2" style="height:40px"></td></tr>
             <tr>
@@ -248,7 +232,7 @@
             }
         });
 
-        // Auto print jika diakses dari halaman penerimaan
+        // Auto print jika diakses dari halaman mutasi
         if (window.location.search.includes('autoprint=true')) {
             window.print();
         }

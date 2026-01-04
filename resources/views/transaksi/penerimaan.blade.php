@@ -49,6 +49,9 @@
                                 <div class="input-group input-group-sm mb-2"> 
                                     <span class="input-group-text label-fixed-width">Supplier</span>
                                     <input type="text" class="form-control typeahead" id="supplier-search" name="supplier" required>
+                                    {{-- Input hidden untuk data supplier --}}
+                                    <input type="hidden" id="supplier_id" name="supplier_id">
+                                    <input type="hidden" id="kode_supplier" name="kode_supplier">
                                     <button class="btn btn-outline-primary btn-sm px-2 py-0" type="button" id="btn-add-supplier" data-bs-toggle="modal" data-bs-target="#modalSupplier">
                                         <i class="bi bi-plus-lg"></i>
                                     </button>
@@ -105,6 +108,7 @@
                                                 <th width="22%">Nama Barang</th>
                                                 <th width="8%">Qty</th>
                                                 <th width="12%">Harga Beli</th>
+                                                <th width="12%">Harga Jual</th>
                                                 <th width="12%">PPN</th>
                                                 <th width="13%">Total + PPN</th>
                                                 <th width="5%">Aksi</th>
@@ -113,13 +117,13 @@
                                         <tbody></tbody>
                                         <tfoot>
                                             <tr class="table-secondary">
-                                                <th colspan="5" class="text-end fw-bold">Subtotal:</th>
+                                                <th colspan="6" class="text-end fw-bold">Subtotal:</th>
                                                 <th id="subtotal-ppn" class="fw-bold text-end">0</th>
                                                 <th id="subtotal" class="fw-bold text-end">0</th>
                                                 <th></th>
                                             </tr>
                                             <tr class="table-success">
-                                                <th colspan="5" class="text-end fw-bold">Grand Total:</th>
+                                                <th colspan="6" class="text-end fw-bold">Grand Total:</th>
                                                 <th id="grandtotal-ppn" class="fw-bold text-end">0</th>
                                                 <th id="grandtotal" class="fw-bold text-end">0</th>
                                                 <th></th>
@@ -275,21 +279,21 @@
                                 </select>
                             </div>
                             
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label">Harga Beli <span class="text-danger">*</span></label>
                                 <input type="number" class="form-control form-control-sm" name="harga_beli" id="add-harga-beli" step="0.01" min="0" required>
                                 <div class="invalid-feedback">Harga beli wajib diisi</div>
                             </div>
                             
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label">Harga Jual <span class="text-danger">*</span></label>
                                 <input type="number" class="form-control form-control-sm" name="harga_jual" id="add-harga-jual" step="0.01" min="0" required>
                                 <div class="invalid-feedback">Harga jual wajib diisi</div>
                             </div>
                             
-                            <div class="col-md-4">
+                            <div class="col-md-12">
                                 <label class="form-label">Type</label>
-                                <input type="text" class="form-control form-control-sm" name="type" id="add-type">
+                                <input type="text" class="form-control form-control-sm" name="type" id="add-type" placeholder="Contoh: Original, KW, Premium, dll">
                             </div>
                             
                             <div class="col-md-12">
@@ -413,12 +417,48 @@
             }
 
             .input-group .btn-sm {
-            height: calc(1.5em + 0.5rem + 2px) !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            padding: 0.25rem 0.5rem !important;
-        }
+                height: calc(1.5em + 0.5rem + 2px) !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 0.25rem 0.5rem !important;
+            }
+            
+            /* Styling untuk kode supplier */
+            .tt-suggestion strong {
+                font-weight: 600 !important;
+                color: #495057 !important;
+            }
+
+            /* Styling untuk type barang */
+            .type-badge {
+                font-size: 0.7rem !important;
+                padding: 0.1rem 0.4rem !important;
+                background-color: #6c757d !important;
+                color: white !important;
+                border-radius: 0.25rem !important;
+                margin-left: 5px !important;
+            }
+
+            /* Tooltip untuk harga jual */
+            .harga-jual-input:focus {
+                border-color: #198754 !important;
+                box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25) !important;
+            }
+
+            /* Responsive table */
+            @media (max-width: 768px) {
+                .table-responsive {
+                    font-size: 0.8rem !important;
+                }
+                .table th, .table td {
+                    padding: 0.3rem !important;
+                }
+                input.form-control-sm {
+                    font-size: 0.8rem !important;
+                    padding: 0.2rem 0.3rem !important;
+                }
+            }
 
         </style>
     </x-slot>
@@ -527,23 +567,33 @@
                     const usePpnPersen = ppnPersen !== null ? ppnPersen : globalPpnPersen;
                     const calculation = calculatePpn(datarow.harga_beli || 0, 1, usePpnPersen);
                     
+                    const typeBadge = datarow.type ? `<span class="type-badge">${datarow.type}</span>` : '';
+                    
                     const str = `<tr data-id="${datarow.id || 'new-' + rowCounter}" class="align-middle" id="row-${rowCounter}">
                         <td class="text-center">${rowCounter}</td>
                         <td>
                             <input type="hidden" name="kode_barang[]" value="${datarow.code || datarow.kode_barang || ''}">
                             <input type="hidden" name="nama_barang[]" value="${datarow.text || datarow.nama_barang || ''}">
                             <input type="hidden" name="barang_id[]" value="${datarow.id || ''}">
-                            <input type="hidden" name="harga_jual[]" value="${datarow.harga_jual || 0}">
                             <input type="hidden" name="satuan[]" value="${datarow.satuan || ''}">
                             <input type="hidden" name="kategori[]" value="${datarow.kategori || ''}">
+                            <input type="hidden" name="type_barang[]" value="${datarow.type || ''}">
                             ${datarow.code || datarow.kode_barang || 'N/A'}
                         </td>
-                        <td>${datarow.text || datarow.nama_barang || ''}</td>
+                        <td>
+                            ${datarow.text || datarow.nama_barang || ''}
+                            ${typeBadge}
+                        </td>
                         <td>
                             <input type="number" value="1" class="form-control form-control-sm qty" min="1" name="qty[]" style="width: 70px;" required>
                         </td>
                         <td>
                             <input type="number" value="${datarow.harga_beli || 0}" step="0.01" class="form-control form-control-sm harga_beli" name="harga_beli[]" style="width: 100px;" required>
+                            <small class="text-muted">Beli</small>
+                        </td>
+                        <td>
+                            <input type="number" value="${datarow.harga_jual || 0}" step="0.01" class="form-control form-control-sm harga-jual-input" name="harga_jual[]" style="width: 100px;" required>
+                            <small class="text-muted">Jual</small>
                         </td>
                         <td>
                             <div class="input-group input-group-sm">
@@ -619,7 +669,9 @@
             function doClearForm(){
                 // Reset header form
                 $('input[name="invoice"]').val('');
-                $('input[name="supplier"]').val('');
+                $('#supplier-search').val('');
+                $('#supplier_id').val('');
+                $('#kode_supplier').val('');
                 $('textarea[name="note"]').val('');
                 $('select[name="metode_bayar"]').val('cash');
                 $('input[name="tgl_tempo"]').val('');
@@ -674,6 +726,7 @@
                 }
                 $('#add-harga-beli').val('');
                 $('#add-harga-jual').val('');
+                $('#add-type').val('');
                 $('#modalAddBarang').modal('show');
             }
 
@@ -729,6 +782,7 @@
                             if (response && response.length === 0 && $('#supplier-search').val().trim() !== '') {
                                 response.push({
                                     id: 'new',
+                                    kode_supplier: '',
                                     text: '[+] Tambah supplier baru: "' + $('#supplier-search').val().trim() + '"'
                                 });
                             }
@@ -750,7 +804,7 @@
                             if (data.id === 'new') {
                                 return '<div class="tt-suggestion new-supplier">' + data.text + '</div>';
                             }
-                            return '<div>' + data.text + '</div>';
+                            return '<div><strong>' + (data.kode_supplier || '') + '</strong> - ' + data.text + '</div>';
                         }
                     }
                 }).on('typeahead:select', function(ev, suggestion) {
@@ -765,8 +819,15 @@
                         
                         // Kosongkan input supplier
                         $('#supplier-search').val('');
+                        $('#supplier_id').val('');
+                        $('#kode_supplier').val('');
                         return;
                     }
+                    
+                    // Set nilai untuk supplier yang dipilih
+                    $('#supplier-search').val(suggestion.text);
+                    $('#supplier_id').val(suggestion.id);
+                    $('#kode_supplier').val(suggestion.kode_supplier || '');
                 });
 
                 // Submit form tambah supplier
@@ -791,8 +852,10 @@
                         },
                         success: function(response) {
                             if (response.success) {
-                                // Set nilai input supplier dengan nama yang baru ditambahkan
+                                // Set semua nilai supplier
                                 $('#supplier-search').val(response.supplier.text);
+                                $('#supplier_id').val(response.supplier.id);
+                                $('#kode_supplier').val(response.supplier.kode_supplier);
                                 
                                 // Reload daftar supplier
                                 loadSuppliers();
@@ -910,7 +973,7 @@
                     $('#barcode-search').focus();
                 });
 
-                // Typeahead untuk barcode (barang)
+                // Typeahead untuk barcode (barang) dengan type
                 const barangBloodhound = new Bloodhound({
                     datumTokenizer: Bloodhound.tokenizers.whitespace,
                     queryTokenizer: Bloodhound.tokenizers.whitespace,
@@ -930,7 +993,15 @@
                     display: 'text',
                     templates: {
                         suggestion: function(data) {
-                            return '<div><strong>' + data.code + '</strong> - ' + data.text + '</div>';
+                            const typeBadge = data.type ? `<span class="type-badge">${data.type}</span>` : '';
+                            return `<div>
+                                <strong>${data.code}</strong> - ${data.text} ${typeBadge}
+                                <br>
+                                <small class="text-muted">
+                                    Beli: ${formatCurrency(data.harga_beli)} | Jual: ${formatCurrency(data.harga_jual)}
+                                    ${data.satuan ? `| Satuan: ${data.satuan}` : ''}
+                                </small>
+                            </div>`;
                         }
                     }
                 }).on('typeahead:select', function(ev, suggestion) {
@@ -973,6 +1044,7 @@
                                         if (result.isConfirmed) {
                                             $('#add-kode-barang').val(searchVal);
                                             $('#add-nama-barang').val('');
+                                            $('#add-type').val('');
                                             $('#modalAddBarang').modal('show');
                                         } else if (result.isDenied) {
                                             // Cari dengan nama
@@ -988,6 +1060,7 @@
                                                     } else {
                                                         $('#add-nama-barang').val(searchVal);
                                                         $('#add-kode-barang').val('');
+                                                        $('#add-type').val('');
                                                         $('#modalAddBarang').modal('show');
                                                     }
                                                 }
@@ -1017,9 +1090,31 @@
                     language: 'id'
                 });
 
-                // Update totals on change Qty / Harga Beli / PPN
-                $('#tbterima').on('input', '.qty, .harga_beli, .ppn-persen', function() {
+                // Update totals on change Qty / Harga Beli / Harga Jual / PPN
+                $('#tbterima').on('input', '.qty, .harga_beli, .harga-jual-input, .ppn-persen', function() {
                     updateTotals();
+                });
+
+                // Validasi harga jual harus lebih tinggi dari harga beli
+                $('#tbterima').on('blur', '.harga-jual-input', function() {
+                    const hargaJual = parseFloat($(this).val()) || 0;
+                    const hargaBeli = parseFloat($(this).closest('tr').find('.harga_beli').val()) || 0;
+                    
+                    if (hargaJual > 0 && hargaBeli > 0 && hargaJual < hargaBeli) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Perhatian',
+                            text: 'Harga jual lebih rendah dari harga beli. Apakah Anda yakin?',
+                            showCancelButton: true,
+                            confirmButtonText: 'Ya, Simpan',
+                            cancelButtonText: 'Perbaiki'
+                        }).then((result) => {
+                            if (!result.isConfirmed) {
+                                $(this).val(hargaBeli);
+                                $(this).focus();
+                            }
+                        });
+                    }
                 });
 
                 // Focus ke barcode search saat halaman load
@@ -1035,12 +1130,14 @@
                         return; 
                     }
 
-                    // Validasi supplier harus diisi
-                    if (!$('#supplier-search').val().trim()) {
+                    // Validasi supplier harus dipilih
+                    const supplierId = $('#supplier_id').val();
+                    const supplierName = $('#supplier-search').val().trim();
+                    if (!supplierId || !supplierName) {
                         Swal.fire({
                             icon: 'warning',
                             title: 'Perhatian',
-                            text: 'Supplier harus diisi!'
+                            text: 'Supplier harus dipilih dari daftar!'
                         });
                         $('#supplier-search').focus();
                         return;
@@ -1068,8 +1165,62 @@
                         return;
                     }
 
+                    // Validasi harga jual untuk setiap barang
+                    let hargaJualError = false;
+                    let hargaJualWarning = false;
+                    let warningMessage = '';
+                    
+                    $('input[name="harga_jual[]"]').each(function(index) {
+                        const hargaJual = parseFloat($(this).val()) || 0;
+                        const hargaBeli = parseFloat($(this).closest('tr').find('input[name="harga_beli[]"]').val()) || 0;
+                        
+                        if (hargaJual <= 0) {
+                            hargaJualError = true;
+                            return false;
+                        }
+                        
+                        if (hargaJual < hargaBeli) {
+                            hargaJualWarning = true;
+                            const namaBarang = $(this).closest('tr').find('input[name="nama_barang[]"]').val();
+                            warningMessage += `• ${namaBarang}: Jual (${formatCurrency(hargaJual)}) < Beli (${formatCurrency(hargaBeli)})\n`;
+                        }
+                    });
+                    
+                    if (hargaJualError) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Perhatian',
+                            text: 'Harga jual harus diisi untuk semua barang!'
+                        });
+                        return;
+                    }
+                    
+                    if (hargaJualWarning) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Harga Jual Lebih Rendah!',
+                            html: `Beberapa barang memiliki harga jual lebih rendah dari harga beli:<br><br>
+                                  <div class="text-start"><small>${warningMessage.replace(/\n/g, '<br>')}</small></div><br>
+                                  Apakah Anda yakin ingin melanjutkan?`,
+                            showCancelButton: true,
+                            confirmButtonText: 'Ya, Lanjutkan',
+                            cancelButtonText: 'Periksa Kembali',
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                proceedWithSubmit();
+                            }
+                        });
+                        return;
+                    }
+
+                    proceedWithSubmit();
+                });
+
+                function proceedWithSubmit() {
                     // Serialize form data dengan menambahkan hidden fields
-                    const formData = $(this).serializeArray();
+                    const formData = $('#frmterima').serializeArray();
                     
                     // Tambahkan persen PPN global ke form data
                     formData.push({name: 'persen_ppn_global', value: globalPpnPersen});
@@ -1119,7 +1270,7 @@
                             $('#btn-simpan').prop('disabled', false).html('<i class="bi bi-floppy-fill"></i> Simpan');
                         }
                     });
-                });
+                }
 
                 // Shortcut keyboard untuk input cepat
                 $(document).keydown(function(e) {
@@ -1142,21 +1293,54 @@
                         e.preventDefault();
                         quickAddItem();
                     }
+                    // F4 untuk focus supplier
+                    if (e.key === 'F4') {
+                        e.preventDefault();
+                        $('#supplier-search').focus();
+                    }
+                    // F5 untuk focus harga jual
+                    if (e.key === 'F5') {
+                        e.preventDefault();
+                        $('#tbterima tbody tr:last-child .harga-jual-input').focus();
+                    }
                 });
 
                 // Auto focus ke input harga/qty setelah tambah barang
-                $('#tbterima').on('focus', '.harga_beli, .qty, .ppn-persen', function() {
+                $('#tbterima').on('focus', '.harga_beli, .harga-jual-input, .qty, .ppn-persen', function() {
                     $(this).select();
                 });
 
                 // Auto-save on blur untuk qty dan harga
-                $('#tbterima').on('blur', '.qty, .harga_beli, .ppn-persen', function() {
+                $('#tbterima').on('blur', '.qty, .harga_beli, .harga-jual-input, .ppn-persen', function() {
                     updateTotals();
                 });
 
                 // Apply PPN global ketika diubah
                 $('#persen-ppn').on('change', function() {
                     globalPpnPersen = parseFloat($(this).val()) || 0;
+                });
+
+                // Reset supplier saat input dikosongkan
+                $('#supplier-search').on('input', function() {
+                    if (!$(this).val().trim()) {
+                        $('#supplier_id').val('');
+                        $('#kode_supplier').val('');
+                    }
+                });
+
+                // Auto calculate margin saat harga beli/jual diubah
+                $('#tbterima').on('input', '.harga_beli, .harga-jual-input', function() {
+                    const row = $(this).closest('tr');
+                    const hargaBeli = parseFloat(row.find('.harga_beli').val()) || 0;
+                    const hargaJual = parseFloat(row.find('.harga-jual-input').val()) || 0;
+                    
+                    if (hargaBeli > 0 && hargaJual > 0) {
+                        const margin = ((hargaJual - hargaBeli) / hargaBeli) * 100;
+                        const marginText = margin.toFixed(2) + '%';
+                        
+                        // Tampilkan margin kecil di bawah input harga jual
+                        row.find('.harga-jual-input').next('small').text('Jual | Margin: ' + marginText);
+                    }
                 });
             });
         </script>

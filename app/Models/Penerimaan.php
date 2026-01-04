@@ -10,13 +10,15 @@ class Penerimaan extends Model
     use SoftDeletes;
     
     protected $table = 'penerimaan';
-    protected $primaryKey = 'idpenerimaan'; // <-- INI YANG PENTING
-    public $incrementing = true; // idpenerimaan adalah auto increment
+    protected $primaryKey = 'idpenerimaan'; 
+    public $incrementing = true; 
     
     protected $fillable = [
-        'idpenerimaan', // <-- TAMBAHKAN INI
+        'idpenerimaan', 
         'nomor_invoice',
         'tgl_penerimaan',
+        'idsupplier',
+        'kode_supplier',
         'nama_supplier',
         'note',
         'user_id',
