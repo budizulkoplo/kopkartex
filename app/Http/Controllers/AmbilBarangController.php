@@ -75,59 +75,134 @@ class AmbilBarangController extends Controller
         try {
             $jual = Penjualan::find($request->id);
             $jual->status_ambil = $request->status;
+            
             if($request->status == 'finish'){
                 $jual->ambil_at = now();
                 $jual->metode_bayar = $request->metode;
+                
                 if($request->metode == 'cicilan'){
+                    // Ambil bunga konfigurasi (walaupun untuk toko selalu 0)
                     $bunga = KonfigBunga::select('bunga_barang')->first();
                     $jual->status = 'hutang';
                     $jual->tenor = $request->jmlcicilan;
                     $user = User::find($jual->anggota_id);
-                    $result = DB::select("SELECT hitung_cicilan(?, ?, ?, ?) AS jumlah", [$jual->grandtotal, $bunga->bunga_barang, $request->jmlcicilan, 1]);
-                    $cicilanpertama = $result[0]->jumlah;
+                    
+                    // Hitung total per kategori dari detail penjualan
+                    $detail = PenjualanDetail::where('penjualan_id', $request->id)->get();
+                    $totalCicilan0 = 0;
+                    $totalCicilan1 = 0;
+                    
+                    foreach ($detail as $item) {
+                        $barang = DB::table('barang')
+                            ->join('kategori', 'kategori.id', '=', 'barang.idkategori')
+                            ->where('barang.id', $item->barang_id)
+                            ->select('kategori.cicilan')
+                            ->first();
+                        
+                        if($barang) {
+                            $subtotal = $item->qty * $item->harga;
+                            if($barang->cicilan == 0) {
+                                $totalCicilan0 += $subtotal;
+                            } else {
+                                $totalCicilan1 += $subtotal;
+                            }
+                        }
+                    }
+                    
+                    // Hitung cicilan pertama untuk kategori 1 menggunakan fungsi toko
+                    $cicilanpertamaKategori1 = 0;
+                    if($totalCicilan1 > 0 && $request->jmlcicilan > 0) {
+                        $result = DB::select("SELECT hitung_cicilan_toko(?, ?, ?, ?) AS jumlah", [
+                            $totalCicilan1, 
+                            $bunga->bunga_barang, 
+                            $request->jmlcicilan, 
+                            1
+                        ]);
+                        $cicilanpertamaKategori1 = $result[0]->jumlah;
+                    }
+                    
+                    $cicilanpertama = $cicilanpertamaKategori1 + $totalCicilan0; // Tambahkan cicilan 0
 
-                    $totalcicilan = PenjualanCicil::where(['anggota_id'=>$jual->anggota_id,'status'=>'hutang'])
-                    ->sum('total_cicilan');
+                    // Hitung total cicilan yang masih aktif (hutang)
+                    $totalcicilan = PenjualanCicil::where(['anggota_id' => $jual->anggota_id, 'status' => 'hutang'])
+                        ->sum('total_cicilan');
 
-                    $batas = 0.35 * $user->gaji; // 35% dari gaji
-                    if (($totalcicilan+$cicilanpertama) > $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
+                    // Cek limit hutang
+                    if (!empty($user->limit_hutang) && $user->limit_hutang > 0) {
+                        $batas = $user->limit_hutang;
+                    } else {
+                        $batas = 0.35 * $user->gaji;
+                    }
+                    
+                    if (($totalcicilan + $cicilanpertama) > $batas) {
                         DB::rollBack();
-                        return response()->json('Tidak dapat diproses, Melebihi batas limit',500);
-                        //return response()->json([$request->idcustomer,$totalcicilan,$cicilanpertama],500);
+                        return response()->json('Tidak dapat diproses, Melebihi batas limit', 500);
                     }
 
-                    $jual->bunga_barang = $bunga->bunga_barang;
+                    // Untuk toko selalu tanpa bunga
+                    $jual->bunga_barang = 0;
                     $jual->kembali = 0;
                     $jual->dibayar = 0;
 
-                    for ($i = 1; $i <= $request->jmlcicilan; $i++) {
-                        $pokoktotal = DB::select("SELECT hitung_pokok(?, ?) AS jumlah", [$jual->grandtotal, $request->jmlcicilan]);
-                        $bungatotal = DB::select("SELECT hitung_bunga(?, ?, ?, ?) AS jumlah", [$jual->grandtotal, $bunga->bunga_barang, $request->jmlcicilan, $i]);
-                        $cicilan = new PenjualanCicil();
-                        $cicilan->penjualan_id = $jual->id;
-                        $cicilan->cicilan = $i;
-                        $cicilan->anggota_id = $jual->anggota_id;
-                        $cicilan->pokok = $pokoktotal[0]->jumlah;
-                        $cicilan->bunga = $bungatotal[0]->jumlah;
-                        $cicilan->total_cicilan = $pokoktotal[0]->jumlah+$bungatotal[0]->jumlah;
-                        $cicilan->status = 'hutang';
-                        $cicilan->save();
+                    // Hapus cicilan lama jika ada (untuk keamanan)
+                    PenjualanCicil::where('penjualan_id', $jual->id)->delete();
+                    
+                    // Buat cicilan untuk kategori 0 (hanya 1 cicilan)
+                    if($totalCicilan0 > 0) {
+                        $cicilan0 = new PenjualanCicil();
+                        $cicilan0->penjualan_id = $jual->id;
+                        $cicilan0->cicilan = 1;
+                        $cicilan0->anggota_id = $jual->anggota_id;
+                        $cicilan0->pokok = $totalCicilan0;
+                        $cicilan0->bunga = 0;
+                        $cicilan0->total_cicilan = $totalCicilan0;
+                        $cicilan0->status = 'hutang';
+                        $cicilan0->kategori = 0;
+                        $cicilan0->save();
                     }
-                }else{
+                    
+                    // Buat cicilan untuk kategori 1 (sesuai jumlah cicilan) menggunakan fungsi toko
+                    if($totalCicilan1 > 0 && $request->jmlcicilan > 0) {
+                        for ($i = 1; $i <= $request->jmlcicilan; $i++) {
+                            $result = DB::select("SELECT hitung_cicilan_toko(?, ?, ?, ?) AS jumlah", [
+                                $totalCicilan1, 
+                                $bunga->bunga_barang, 
+                                $request->jmlcicilan, 
+                                $i
+                            ]);
+                            
+                            $cicilan = new PenjualanCicil();
+                            $cicilan->penjualan_id = $jual->id;
+                            $cicilan->cicilan = $i;
+                            $cicilan->anggota_id = $jual->anggota_id;
+                            $cicilan->pokok = $result[0]->jumlah; // Total cicilan = pokok karena tanpa bunga
+                            $cicilan->bunga = 0;
+                            $cicilan->total_cicilan = $result[0]->jumlah;
+                            $cicilan->status = 'hutang';
+                            $cicilan->kategori = 1;
+                            $cicilan->save();
+                        }
+                    }
+                } else {
                     $jual->status = 'lunas';
                     $jual->kembali = $request->kembalian;
                     $jual->dibayar = $request->dibayar;
+                    
+                    // Hapus cicilan jika ada (jika sebelumnya cicilan lalu diubah menjadi tunai)
+                    PenjualanCicil::where('penjualan_id', $jual->id)->delete();
                 }
-                 $detail = PenjualanDetail::where('penjualan_id',$request->id)->get();
+                
+                // Kurangi stok hanya jika status_ambil = 'finish'
+                $detail = PenjualanDetail::where('penjualan_id', $request->id)->get();
                 foreach ($detail as $value) {
-                    StokUnit::where('unit_id',$jual->unit_id)
-                        ->where('barang_id',$value->barang_id)
+                    StokUnit::where('unit_id', $jual->unit_id)
+                        ->where('barang_id', $value->barang_id)
                         ->decrement('stok', $value->qty);
                 }
             }
+            
             $jual->save();      
             
-           
             DB::commit();
             // Kembalikan nomor invoice untuk cetak nota
             return response()->json(['invoice' => $jual->nomor_invoice], 200);
