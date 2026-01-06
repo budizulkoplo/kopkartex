@@ -48,19 +48,15 @@
         .small { font-size: 9pt; }
         .xsmall { font-size: 8pt; }
         
-        /* Garis putus-putus untuk pemotongan */
-        .cut-line {
-            border-top: 1px dashed #666;
-            margin: 5px 0;
-            text-align: center;
-            color: #666;
-            font-size: 8pt;
+        /* Untuk cicilan horizontal */
+        .cicilan-line {
+            display: block;
+            line-height: 1.2;
         }
         
-        /* Untuk tampilan item dalam tabel */
-        .item-name {
-            max-width: 60mm;
-            word-wrap: break-word;
+        .cicilan-item {
+            display: inline-block;
+            margin-right: 8px;
         }
         
         @media print {
@@ -175,7 +171,7 @@
             <?php foreach($dtl as $v): ?>
                 <table>
                     <tr>
-                        <td style="width: 50%" class="txt-left item-name"><?= $v->nama_barang ?></td>
+                        <td style="width: 50%" class="txt-left"><?= $v->nama_barang ?></td>
                         <td style="width: 10%" class="txt-center"><?= $v->qty ?></td>
                         <td style="width: 20%" class="txt-right"><?= number_format($v->harga*1, 0, ',', '.') ?></td>
                         <td style="width: 20%" class="txt-right"><?= number_format($v->harga * $v->qty, 0, ',', '.') ?></td>
@@ -204,38 +200,42 @@
         
         <hr>
         
-        <!-- Rincian Cicilan -->
+        <!-- Rincian Cicilan (HORIZONTAL seperti asli) -->
         <table>
             <tr>
-                <td colspan="2" class="bold">RINCIAN CICILAN:</td>
+                <td colspan="2" class="txt-left bold">RINCIAN CICILAN:</td>
             </tr>
-            
-            <?php
-            $cicilanGrouped = $cicilan->groupBy('kategori');
-            $pokok = $cicilanGrouped[0] ?? collect();
-            $nonPokok = $cicilanGrouped[1] ?? collect();
-            ?>
-            
-            <?php if($pokok->count() > 0): ?>
-                <?php foreach($pokok as $c): ?>
-                    <tr>
-                        <td>• Bahan Pokok</td>
-                        <td class="txt-right">Rp <?= number_format($c->total_cicilan, 0, ',', '.') ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-            
-            <?php if($nonPokok->count() > 0): ?>
-                <tr>
-                    <td colspan="2" style="padding-top: 2px;">• Non Bahan Pokok:</td>
-                </tr>
-                <?php foreach($nonPokok as $c): ?>
-                    <tr>
-                        <td style="padding-left: 10px;">- Cicilan <?= $c->cicilan ?></td>
-                        <td class="txt-right">Rp <?= number_format($c->total_cicilan, 0, ',', '.') ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
+            <tr>
+                <td colspan="2" class="txt-left">
+                    <?php
+                    $cicilanGrouped = $cicilan->groupBy('kategori');
+                    $cicilanText = '';
+                    
+                    // Bahan Pokok
+                    if(isset($cicilanGrouped[0])) {
+                        foreach($cicilanGrouped[0] as $c) {
+                            $cicilanText .= 'Bahan Pokok: Rp.' . number_format($c->total_cicilan, 0, ',', '.');
+                        }
+                    }
+                    
+                    // Non Bahan Pokok
+                    if(isset($cicilanGrouped[1])) {
+                        $nonPokokItems = [];
+                        foreach($cicilanGrouped[1] as $c) {
+                            $nonPokokItems[] = "Cicilan {$c->cicilan}: Rp." . number_format($c->total_cicilan, 0, ',', '.');
+                        }
+                        
+                        if(!empty($cicilanText)) {
+                            $cicilanText .= ' | ';
+                        }
+                        
+                        $cicilanText .= 'Non Bahan Pokok: ' . implode(' | ', $nonPokokItems);
+                    }
+                    ?>
+                    
+                    <span class="cicilan-line"><?= $cicilanText ?></span>
+                </td>
+            </tr>
         </table>
         
         <hr>
@@ -258,16 +258,7 @@
                 </td>
             </tr>
         </table>
-        
-        <!-- Garis potong untuk struk -->
-        <div class="cut-line">
-            ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ●
-        </div>
-        
-        <!-- Info untuk preview di browser -->
-        <div class="no-print print-preview">
-            DOT MATRIX PRINTER - LEBAR 12CM
-        </div>
+    
         
     </div>
 </div>
