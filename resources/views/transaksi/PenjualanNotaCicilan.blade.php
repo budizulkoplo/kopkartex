@@ -49,7 +49,7 @@
 
     <!-- Header -->
     <table style="width:100%; border-collapse:collapse;">
-        <tr><td class="txt-center" colspan="3"><b>NOTA PENJUALAN KREDIT</b></td></tr>
+        <tr><td class="txt-center" colspan="3"><b>NOTA PENJUALAN KREDIT</b><br>{{ auth()->user()->unit->nama_unit ?? '-' }}</td></tr>
     </table>
     <hr>
     <table style="width:100%; border-collapse:collapse;">
@@ -79,8 +79,8 @@
                 <tr>
                     <td class="txt-left"><?= $v->nama_barang ?></td>
                     <td class="txt-center"><?= $v->qty ?></td>
-                    <td class="txt-right"><?= format_rupiah($v->harga) ?></td>
-                    <td class="txt-right"><?= format_rupiah($v->harga * $v->qty) ?></td>
+                    <td class="txt-right"><?= $v->harga*1 ?></td>
+                    <td class="txt-right"><?= $v->harga * $v->qty ?></td>
                 </tr>
             <?php endforeach; ?>
         <?php endif; ?>
@@ -100,31 +100,6 @@
             <td class="txt-right"><b><?= format_rupiah($hdr->grandtotal) ?></b></td>
         </tr>
         {{-- Rincian Cicilan --}}
-        <!-- Tambahkan bagian untuk rincian cicilan per kategori -->
-        <tr><td colspan="4"><hr></td></tr>
-        @if($itemsCicilan0->count() > 0)
-        <tr>
-            <td class="txt-left" colspan="4">
-                <b>Barang Cicilan 1x:</b><br>
-                @foreach($itemsCicilan0 as $item)
-                {{ $item->nama_barang }} ({{ $item->qty }}x) = Rp.{{ number_format($item->harga * $item->qty,0,',','.') }}<br>
-                @endforeach
-                <b>Total Cicilan 1: Rp.{{ number_format($itemsCicilan0->sum(function($item) { return $item->harga * $item->qty; }),0,',','.') }}</b>
-            </td>
-        </tr>
-        @endif
-
-        @if($itemsCicilan1->count() > 0)
-        <tr>
-            <td class="txt-left" colspan="4">
-                <b>Barang Cicilan {{ $hdr->tenor }}x:</b><br>
-                @foreach($itemsCicilan1 as $item)
-                {{ $item->nama_barang }} ({{ $item->qty }}x) = Rp.{{ number_format($item->harga * $item->qty,0,',','.') }}<br>
-                @endforeach
-                <b>Total Cicilan {{ $hdr->tenor }}x: Rp.{{ number_format($itemsCicilan1->sum(function($item) { return $item->harga * $item->qty; }),0,',','.') }}</b>
-            </td>
-        </tr>
-        @endif
 
         <tr><td colspan="4"><hr></td></tr>
         <tr>
@@ -136,15 +111,19 @@
                 
                 @if(isset($cicilanGrouped[0]))
                 @foreach($cicilanGrouped[0] as $c)
-                Cicilan {{ $c->cicilan }}: Rp.{{ number_format($c->total_cicilan,0,',','.') }}<br>
+                Bahan Pokok: Rp.{{ number_format($c->total_cicilan,0,',','.') }}<br>
                 @endforeach
                 @endif
                 
-                @if(isset($cicilanGrouped[1]))
-                @foreach($cicilanGrouped[1] as $c)
-                Cicilan {{ $c->cicilan }}: Rp.{{ number_format($c->total_cicilan,0,',','.') }}<br>
-                @endforeach
-                @endif
+               @if(isset($cicilanGrouped[1]))
+                Non Bahan Pokok:
+                {{
+                    collect($cicilanGrouped[1])->map(function ($c) {
+                        return "Cicilan {$c->cicilan}: Rp." . number_format($c->total_cicilan, 0, ',', '.');
+                    })->implode(' | ')
+                }}
+@endif
+
             </td>
         </tr>
         <tr><td colspan="4"><hr></td></tr>
@@ -153,12 +132,9 @@
     <br>
     <!-- Footer -->
     <div class="txt-center">
-        * Barang yang sudah dibeli tidak bisa dikembalikan *
+        <small>* Barang yang sudah dibeli tidak bisa dikembalikan *</small>
     </div>
-
-    <!-- Tanda tangan -->
-    <br><br><br>
-    <table style="width:100%; border-collapse:collapse; margin-top:20px;">
+    <table style="width:100%; border-collapse:collapse; margin-top:10px;">
         <tr>
             <td class="txt-center" style="width:50%">Kasir</td>
             <td class="txt-center" style="width:50%">Pembeli</td>

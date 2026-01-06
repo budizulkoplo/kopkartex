@@ -258,6 +258,7 @@
             var barang = [];
             var existingProducts = {}; // Menyimpan produk yang sudah ada di tabel
             var typeaheadInstance = null; // Simpan instance typeahead
+            var enterPressed = false; // Flag untuk mencegah double execution
             
             function loader(onoff) {
                 if (onoff)
@@ -325,7 +326,7 @@
                         qty = cekbarang.stok;
 
                         Swal.fire({
-                      
+                            position: 'top-end',
                             icon: 'warning',
                             title: 'Melebihi stok!',
                             showConfirmButton: false,
@@ -380,7 +381,7 @@
                 // Jika ada barang kategori cicilan 0, maksimal cicilan adalah 1
                 if(hasCicilan0 && jmlCicilan > 1) {
                     Swal.fire({
-                        
+                        position: 'top-end',
                         icon: 'warning',
                         title: 'Ada barang dengan cicilan 1x, cicilan diubah menjadi 1',
                         showConfirmButton: false,
@@ -420,7 +421,7 @@
                 if (newQty > maxQty) {
                     newQty = maxQty;
                     Swal.fire({
-                        
+                        position: 'top-end',
                         icon: 'warning',
                         title: 'Qty melebihi stok!',
                         showConfirmButton: false,
@@ -436,7 +437,7 @@
             function validateStock(datarow) {
                 if (datarow.stok === 0 || datarow.stok <= 0) {
                     Swal.fire({
-                        
+                        position: 'top-end',
                         icon: 'warning',
                         title: 'Stok habis!',
                         text: `Produk "${datarow.text}" tidak tersedia (stok: ${datarow.stok})`,
@@ -829,10 +830,19 @@
                     }
                 });
 
+                // Nonaktifkan Enter di seluruh form kecuali untuk input barcode
                 $(window).keydown(function (event) {
                     if (event.key === "Enter") {
                         event.preventDefault();
                         return false;
+                    }
+                });
+                
+                // Kecuali untuk input barcode
+                $('#barcode-search').on('keydown', function(e) {
+                    if (e.key === "Enter") {
+                        // Biarkan event Enter berjalan untuk input barcode
+                        return true;
                     }
                 });
                 
@@ -889,10 +899,16 @@
                         }, 10);
                     },
                     updater: function(item) {
+                        // Jika sudah ada flag enterPressed, skip
+                        if (enterPressed) {
+                            enterPressed = false;
+                            return '';
+                        }
+                        
                         // VALIDASI: Cek stok sebelum menambahkan produk
                         if (item.stok === 0 || item.stok <= 0) {
                             Swal.fire({
-                                
+                                position: 'top-end',
                                 icon: 'warning',
                                 title: 'Stok habis!',
                                 text: `Produk "${item.text}" tidak tersedia (stok: ${item.stok})`,
@@ -922,11 +938,14 @@
                     }
                 });
                 
-                // Enter untuk barcode search
+                // Enter untuk barcode search - PERBAIKAN: Tambah flag untuk mencegah double
                 $('#barcode-search').on('keydown', function(e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         let barcode = $(this).val().trim();
+                        
+                        // Set flag untuk mencegah typeahead updater juga dieksekusi
+                        enterPressed = true;
                         
                         if(barcode) {
                             $.ajax({
@@ -939,7 +958,7 @@
                                     // VALIDASI: Cek stok sebelum menambahkan produk
                                     if (response.stok === 0 || response.stok <= 0) {
                                         Swal.fire({
-                                            
+                                            position: "top-end",
                                             icon: "warning",
                                             title: "Stok habis!",
                                             text: `Produk "${response.text}" tidak tersedia (stok: ${response.stok})`,
@@ -959,7 +978,7 @@
                                 },
                                 error: function(xhr, status, error) {
                                     Swal.fire({
-                                        
+                                        position: "top-end",
                                         icon: "error",
                                         title: "Barang tidak ditemukan!",
                                         showConfirmButton: false,
@@ -973,6 +992,11 @@
                                 }
                             });
                         }
+                        
+                        // Reset flag setelah 100ms
+                        setTimeout(() => {
+                            enterPressed = false;
+                        }, 100);
                     }
                 });
                 
