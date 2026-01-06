@@ -123,9 +123,10 @@ class AnggotaController extends Controller
     }
     public function getdata(Request $request)
     {
-        $user = User::whereDoesntHave('roles', function ($query) {
-            $query->where('name', 'superadmin');
-        });
+        $user = User::where('ui', 'user') // ⬅️ filter ui = user
+            ->whereDoesntHave('roles', function ($query) {
+                $query->where('name', 'superadmin');
+            });
 
         return DataTables::of($user)
             ->addIndexColumn()

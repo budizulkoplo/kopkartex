@@ -31,8 +31,8 @@
                                     <tr>
                                         <th>No.</th>
                                         <th>Nomor Anggota</th>
-                                        <th>Username</th>
                                         <th>NIK</th>
+                                        <th>Nama</th>
                                         <th>Jabatan</th>
                                         <th>Limit PPOB</th>
                                         <th>Limit Hutang</th>
@@ -201,8 +201,8 @@
                     columns: [
                         { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                         { data: 'nomor_anggota', name: 'nomor_anggota' },
-                        { data: 'username', name: 'username' },
                         { data: 'nik', name: 'nik' },
+                        { data: 'name', name: 'name' },
                         { data: 'jabatan', name: 'jabatan' },
                         { data: 'limit_ppob', name: 'limit_ppob' },
                         { data: 'limit_hutang', name: 'limit_hutang' },
