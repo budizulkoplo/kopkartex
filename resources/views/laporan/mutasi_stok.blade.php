@@ -194,7 +194,7 @@
                             }
                             
                             /* Column widths */
-                            th:nth-child(1), td:nth-child(1) { width: 8%; }   /* No */
+                            th:nth-child(1), td:nth-child(1) { width: 5%; }   /* No */
                             th:nth-child(2), td:nth-child(2) { width: 8%; }   /* Tanggal */
                             th:nth-child(3), td:nth-child(3) { width: 12%; }  /* Invoice */
                             th:nth-child(4), td:nth-child(4) { width: 10%; }  /* Dari Unit */
@@ -434,8 +434,14 @@
                             return data;
                         }
                     },
-                    { data: "kode_barang", className: "text-start" },
-                    { data: "nama_barang", className: "text-start" },
+                    { 
+                        data: "kode_barang", 
+                        className: "text-start" 
+                    },
+                    { 
+                        data: "nama_barang", 
+                        className: "text-start" 
+                    },
                     { 
                         data: "qty", 
                         className: "text-end",
@@ -463,10 +469,11 @@
                     $(rows).filter('.invoice-total-row').remove();
                     
                     // Reset semua rowspan sebelumnya
-                    $(rows).find('td').removeAttr('rowspan');
+                    $(rows).find('td').removeAttr('rowspan').removeClass('align-middle');
                     
                     let invoiceGroups = {};
                     let grandTotal = 0;
+                    let invoiceCount = 0;
 
                     // Kelompokkan data berdasarkan invoice
                     data.each(function (row, i) {
@@ -481,6 +488,7 @@
                                 firstRowIndex: i,
                                 data: row
                             };
+                            invoiceCount++;
                         }
                         
                         invoiceGroups[invoice].count++;
@@ -492,7 +500,7 @@
                         let group = invoiceGroups[invoice];
                         
                         if (group.count > 1) {
-                            // Terapkan rowspan pada baris pertama kelompok
+                            // Terapkan rowspan pada baris pertama kelompok untuk kolom yang sama
                             $(rows).eq(group.firstRowIndex).find('td:eq(0)').attr('rowspan', group.count).addClass('align-middle');
                             $(rows).eq(group.firstRowIndex).find('td:eq(1)').attr('rowspan', group.count).addClass('align-middle');
                             $(rows).eq(group.firstRowIndex).find('td:eq(2)').attr('rowspan', group.count).addClass('align-middle');
@@ -500,16 +508,15 @@
                             $(rows).eq(group.firstRowIndex).find('td:eq(4)').attr('rowspan', group.count).addClass('align-middle');
                             $(rows).eq(group.firstRowIndex).find('td:eq(8)').attr('rowspan', group.count).addClass('align-middle');
                             
-                            // Sembunyikan kolom pada baris berikutnya dalam kelompok yang sama
+                            // Hapus elemen td yang duplikat (untuk kolom yang sama di baris berikutnya)
                             for (let i = group.firstRowIndex + 1; i < group.firstRowIndex + group.count; i++) {
-                                if ($(rows).eq(i).find('td').length > 6) {
-                                    $(rows).eq(i).find('td:eq(0)').remove();
-                                    $(rows).eq(i).find('td:eq(0)').remove();
-                                    $(rows).eq(i).find('td:eq(0)').remove();
-                                    $(rows).eq(i).find('td:eq(0)').remove();
-                                    $(rows).eq(i).find('td:eq(0)').remove();
-                                    $(rows).eq(i).find('td:eq(0)').remove();
-                                }
+                                // Kolom 0-4 dan 8 harus dihapus karena sudah di-rowspan
+                                $(rows).eq(i).find('td:eq(0)').remove(); // Tanggal
+                                $(rows).eq(i).find('td:eq(0)').remove(); // Invoice
+                                $(rows).eq(i).find('td:eq(0)').remove(); // Dari Unit
+                                $(rows).eq(i).find('td:eq(0)').remove(); // Ke Unit
+                                $(rows).eq(i).find('td:eq(0)').remove(); // Status
+                                $(rows).eq(i).find('td:eq(3)').remove(); // Note (indeks berubah setelah penghapusan)
                             }
                         }
                     }
@@ -547,7 +554,7 @@
                         `<tr class="fw-bold bg-primary text-white">
                             <td colspan="7" class="text-end">Grand Total</td>
                             <td class="text-end">${grandTotal.toLocaleString('id-ID')}</td>
-                            <td class="text-end">${Object.keys(invoiceGroups).length} invoice</td>
+                            <td class="text-end">${invoiceCount} invoice</td>
                         </tr>`
                     );
                 },

@@ -312,102 +312,102 @@ class LaporanController extends Controller
     }
 
     // Controller
-public function mutasiStok(Request $request)
-{
-    $start_date = $request->input('start_date', date('Y-m-d'));
-    $end_date = $request->input('end_date', date('Y-m-d'));
-    $unit_id = $request->input('unit', 'all');
-    $status = $request->input('status', 'all');
+    public function mutasiStok(Request $request)
+    {
+        $start_date = $request->input('start_date', date('Y-m-d'));
+        $end_date = $request->input('end_date', date('Y-m-d'));
+        $unit_id = $request->input('unit', 'all');
+        $status = $request->input('status', 'all');
 
-    // Ambil unit user yang login
-    $userUnitId = auth()->user()->unit->id;
-    $userUnitName = auth()->user()->unit->nama_unit;
-    
-    // Buat array untuk dropdown
-    $units = [$userUnitId => $userUnitName];
-
-    return view('laporan.mutasi_stok', [
-        'start_date' => $start_date,
-        'end_date' => $end_date,
-        'unit_id' => $unit_id,
-        'status' => $status,
-        'units' => $units,
-    ]);
-}
-
-public function mutasiStokData(Request $request)
-{
-    $start_date = $request->input('start_date', date('Y-m-d'));
-    $end_date = $request->input('end_date', date('Y-m-d'));
-    $unit = $request->input('unit', 'all');
-    $status = $request->input('status', 'all');
-
-    $mutasi = DB::table('mutasi_stok as m')
-        ->join('mutasi_stok_detail as d', 'm.id', '=', 'd.mutasi_id')
-        ->join('barang as b', 'd.barang_id', '=', 'b.id')
-        ->join('unit as u_from', 'm.dari_unit', '=', 'u_from.id')
-        ->join('unit as u_to', 'm.ke_unit', '=', 'u_to.id')
-        ->select(
-            'm.id as idmutasi',
-            'm.nomor_invoice',
-            'm.tanggal',
-            'm.status',
-            'm.note',
-            'u_from.nama_unit as dari_unit',
-            'u_to.nama_unit as ke_unit',
-            'b.kode_barang',
-            'b.nama_barang',
-            'd.qty'
-        )
-        ->whereDate('m.tanggal', '>=', $start_date)
-        ->whereDate('m.tanggal', '<=', $end_date)
-        ->whereNull('m.deleted_at')
-        ->whereNull('d.deleted_at');
-
-    if ($unit !== 'all') {
-        $mutasi->where(function($query) use ($unit) {
-            $query->where('m.dari_unit', $unit)
-                  ->orWhere('m.ke_unit', $unit);
-        });
-    }
-
-    if ($status !== 'all') {
-        $mutasi->where('m.status', $status);
-    }
-
-    $mutasi = $mutasi->orderBy('m.tanggal')
-                     ->orderBy('m.nomor_invoice')
-                     ->orderBy('m.id')
-                     ->get();
-
-    // Grouping untuk rowspan
-    $grouped = [];
-    foreach ($mutasi as $row) {
-        if (!isset($grouped[$row->idmutasi])) {
-            $grouped[$row->idmutasi] = [
-                'header' => [
-                    'nomor_invoice' => $row->nomor_invoice,
-                    'tanggal'       => $row->tanggal,
-                    'dari_unit'     => $row->dari_unit,
-                    'ke_unit'       => $row->ke_unit,
-                    'status'        => $row->status,
-                    'note'          => $row->note,
-                ],
-                'details' => [],
-                'total_qty' => 0
-            ];
-        }
+        // Ambil unit user yang login
+        $userUnitId = auth()->user()->unit->id;
+        $userUnitName = auth()->user()->unit->nama_unit;
         
-        $grouped[$row->idmutasi]['details'][] = [
-            'kode_barang' => $row->kode_barang,
-            'nama_barang' => $row->nama_barang,
-            'qty'         => $row->qty,
-        ];
-        $grouped[$row->idmutasi]['total_qty'] += $row->qty;
+        // Buat array untuk dropdown
+        $units = [$userUnitId => $userUnitName];
+
+        return view('laporan.mutasi_stok', [
+            'start_date' => $start_date,
+            'end_date' => $end_date,
+            'unit_id' => $unit_id,
+            'status' => $status,
+            'units' => $units,
+        ]);
     }
 
-    return response()->json(['data' => array_values($grouped)]);
-}
+    public function mutasiStokData(Request $request)
+    {
+        $start_date = $request->input('start_date', date('Y-m-d'));
+        $end_date = $request->input('end_date', date('Y-m-d'));
+        $unit = $request->input('unit', 'all');
+        $status = $request->input('status', 'all');
+
+        $mutasi = DB::table('mutasi_stok as m')
+            ->join('mutasi_stok_detail as d', 'm.id', '=', 'd.mutasi_id')
+            ->join('barang as b', 'd.barang_id', '=', 'b.id')
+            ->join('unit as u_from', 'm.dari_unit', '=', 'u_from.id')
+            ->join('unit as u_to', 'm.ke_unit', '=', 'u_to.id')
+            ->select(
+                'm.id as idmutasi',
+                'm.nomor_invoice',
+                'm.tanggal',
+                'm.status',
+                'm.note',
+                'u_from.nama_unit as dari_unit',
+                'u_to.nama_unit as ke_unit',
+                'b.kode_barang',
+                'b.nama_barang',
+                'd.qty'
+            )
+            ->whereDate('m.tanggal', '>=', $start_date)
+            ->whereDate('m.tanggal', '<=', $end_date)
+            ->whereNull('m.deleted_at')
+            ->whereNull('d.deleted_at');
+
+        if ($unit !== 'all') {
+            $mutasi->where(function($query) use ($unit) {
+                $query->where('m.dari_unit', $unit)
+                    ->orWhere('m.ke_unit', $unit);
+            });
+        }
+
+        if ($status !== 'all') {
+            $mutasi->where('m.status', $status);
+        }
+
+        $mutasi = $mutasi->orderBy('m.tanggal')
+                        ->orderBy('m.nomor_invoice')
+                        ->orderBy('m.id')
+                        ->get();
+
+        // Grouping untuk rowspan
+        $grouped = [];
+        foreach ($mutasi as $row) {
+            if (!isset($grouped[$row->idmutasi])) {
+                $grouped[$row->idmutasi] = [
+                    'header' => [
+                        'nomor_invoice' => $row->nomor_invoice,
+                        'tanggal'       => $row->tanggal,
+                        'dari_unit'     => $row->dari_unit,
+                        'ke_unit'       => $row->ke_unit,
+                        'status'        => $row->status,
+                        'note'          => $row->note,
+                    ],
+                    'details' => [],
+                    'total_qty' => 0
+                ];
+            }
+            
+            $grouped[$row->idmutasi]['details'][] = [
+                'kode_barang' => $row->kode_barang,
+                'nama_barang' => $row->nama_barang,
+                'qty'         => $row->qty,
+            ];
+            $grouped[$row->idmutasi]['total_qty'] += $row->qty;
+        }
+
+        return response()->json(['data' => array_values($grouped)]);
+    }
 
     public function penjualanDetail(Request $request)
     {
