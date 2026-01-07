@@ -82,11 +82,27 @@ class PenjualanController extends Controller
         }
     }
 
-    function genCode(){
-        $total = Penjualan::withTrashed()->whereDate('created_at', date("Y-m-d"))->count();
-        $nomorUrut = $total + 1;
-        $newcode='INV-'.date("ymd").str_pad($nomorUrut, 3, '0', STR_PAD_LEFT);
-        return $newcode;
+    function genCode()
+    {
+        $today  = now()->toDateString();          
+        $date   = now()->format('ymd');            
+        $prefix = 'INV-'. auth()->user()->unit->id .'-' . $date;
+
+        $lastInvoice = Penjualan::withTrashed()
+            ->whereDate('created_at', $today)
+            ->where('nomor_invoice', 'like', $prefix.'%')
+            ->orderBy('nomor_invoice', 'desc')
+            ->lockForUpdate()                      
+            ->value('nomor_invoice');
+
+        if ($lastInvoice) {
+            $lastNumber = (int) substr($lastInvoice, -3);
+            $nomorUrut = $lastNumber + 1;
+        } else {
+            $nomorUrut = 1;                      
+        }
+
+        return $prefix . str_pad($nomorUrut, 3, '0', STR_PAD_LEFT);
     }
 
     function genCodeUmum(){

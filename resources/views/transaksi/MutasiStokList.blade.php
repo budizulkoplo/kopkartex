@@ -226,12 +226,10 @@
                         width: '3%'
                     },
                     { 
-                        data: "id",
+                        data: "nomor_invoice",
                         orderable: false,
-                        width: '10%',
-                        render: function(data, type, row) {
-                            return 'MUT-' + String(data).padStart(6, '0');
-                        }
+                        width: '10%'
+                        
                     },
                     { 
                         data: "NamaUnit1",
@@ -287,7 +285,7 @@
                         orderable: false,
                         width: '20%',
                         render: function(data, type, row) {
-                            const mutasiNumber = 'MUT-' + String(row.id).padStart(6, '0');
+                            const mutasiNumber = row.nomor_invoice;
                             let str = `
                                 <div class="aksi-buttons">
                                     <button type="button" class="btn btn-info btn-sm" onclick="showDetail('${row.id}')" title="Detail">
@@ -332,7 +330,7 @@
 
             function showDetail(idmutasi) {
                 selectedMutasiId = idmutasi;
-                selectedMutasiNumber = 'MUT-' + String(idmutasi).padStart(6, '0');
+                selectedMutasiNumber = idmutasi;
                 
                 // Reset modal content
                 $('#detailNomorMutasi').text(selectedMutasiNumber);

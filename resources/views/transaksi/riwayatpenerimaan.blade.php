@@ -38,15 +38,18 @@
                 <div class="card-header">
                     <h5 class="card-title mb-0">Data Penerimaan</h5>
                     <div class="card-tools">
-                        <span class="badge bg-info">
-                            Total: Rp {{ number_format($penerimaan->sum('grandtotal'), 0, ',', '.') }}
-                        </span>
-                        <span class="badge bg-secondary ms-1">
-                            {{ $penerimaan->total() }} data
-                        </span>
+                        @if($penerimaan->count() > 0)
+                            <span class="badge bg-info">
+                                Total: Rp {{ number_format($penerimaan->sum('grandtotal'), 0, ',', '.') }}
+                            </span>
+                            <span class="badge bg-secondary ms-1">
+                                {{ $penerimaan->total() }} data
+                            </span>
+                        @endif
                     </div>
                 </div>
                 <div class="card-body">
+                    @if($penerimaan->count() > 0)
                     <div class="table-responsive">
                         <table id="tbriwayatpenerimaan" class="table table-striped table-bordered table-hover table-sm" style="width:100%; font-size: small;">
                             <thead class="table-light">
@@ -63,7 +66,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($penerimaan as $key => $row)
+                                @foreach($penerimaan as $key => $row)
                                     @php
                                         $totalQty = $row->details->sum('jumlah');
                                     @endphp
@@ -142,16 +145,7 @@
                                             </div>
                                         </td>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="9" class="text-center py-4">
-                                            <div class="text-muted">
-                                                <i class="bi bi-inbox display-6"></i>
-                                                <p class="mt-2">Tidak ada data penerimaan</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                             @if($penerimaan->count() > 0)
                             <tfoot>
@@ -175,6 +169,16 @@
                         </div>
                         <div>
                             {{ $penerimaan->links('pagination::bootstrap-4') }}
+                        </div>
+                    </div>
+                    @endif
+                    
+                    @else
+                    <div class="text-center py-5">
+                        <div class="text-muted">
+                            <i class="bi bi-inbox display-6"></i>
+                            <p class="mt-2 mb-0">Tidak ada data penerimaan</p>
+                            <small class="text-muted">Coba gunakan filter yang berbeda</small>
                         </div>
                     </div>
                     @endif
@@ -382,7 +386,8 @@
     <x-slot name="jscustom">
         <script>
             $(document).ready(function () {
-                // Inisialisasi DataTable
+                // Inisialisasi DataTable hanya jika ada data
+                @if($penerimaan->count() > 0)
                 const table = $('#tbriwayatpenerimaan').DataTable({
                     responsive: true,
                     pageLength: 25,
@@ -404,8 +409,12 @@
                         "<'row'<'col-md-6'l><'col-md-6'f>>" +
                         "<'row'<'col-12'tr>>" +
                         "<'row'<'col-md-5'i><'col-md-7'p>>",
-                    order: [[1, 'desc']]
+                    order: [[1, 'desc']],
+                    columnDefs: [
+                        { orderable: false, targets: [0, 8] } // Kolom # dan Aksi tidak bisa di-sort
+                    ]
                 });
+                @endif
 
                 // Event handler untuk tombol detail
                 $(document).on('click', '.btn-detail', function() {

@@ -38,6 +38,7 @@ class MutasiStockController extends Controller
             ->whereBetween('mutasi_stok.tanggal', [$request->startdate, $request->enddate])
             ->select(
                 'mutasi_stok.id',
+                'mutasi_stok.nomor_invoice',
                 'mutasi_stok.tanggal',
                 'mutasi_stok.status',
                 'users.name as petugas',
