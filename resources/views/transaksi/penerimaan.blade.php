@@ -554,10 +554,8 @@
                         
                         updateTotals();
                         
-                        // Auto-focus ke barcode setelah update
-                        setTimeout(() => {
-                            $('#barcode-search').val('').focus();
-                        }, 100);
+                        // Auto-clear dan focus ke barcode setelah update
+                        clearAndFocusBarcode();
                         return false;
                     }
                 });
@@ -585,7 +583,7 @@
                             ${typeBadge}
                         </td>
                         <td>
-                            <input type="number" value="1" class="form-control form-control-sm qty" min="1" name="qty[]" style="width: 70px;" required>
+                            <input type="number" value="1" class="form-control form-control-sm qty" min="1" name="qty[]" style="width: 90px;" required>
                         </td>
                         <td>
                             <input type="number" value="${datarow.harga_beli || 0}" step="0.01" class="form-control form-control-sm harga_beli" name="harga_beli[]" style="width: 100px;" required>
@@ -616,11 +614,18 @@
                     updateTotals();
                     updateTableAlert();
                     
-                    // Auto-focus ke barcode setelah menambah row baru
-                    setTimeout(() => {
-                        $('#barcode-search').val('').focus();
-                    }, 100);
+                    // Auto-clear dan focus ke barcode setelah menambah row baru
+                    clearAndFocusBarcode();
                 }
+            }
+
+            // Tambahkan fungsi helper untuk clear dan focus barcode
+            function clearAndFocusBarcode() {
+                $('#barcode-search').typeahead('val', '');
+                $('#barcode-search').val('');
+                setTimeout(() => {
+                    $('#barcode-search').focus();
+                }, 100);
             }
 
             function applyPpnToAll() {
