@@ -266,6 +266,7 @@ class MutasiStockController extends Controller
         // Ambil detail dengan join ke tabel barang
         $dtl = MutasiStokDetail::join('barang', 'barang.id', '=', 'mutasi_stok_detail.barang_id')
             ->where('mutasi_stok_detail.mutasi_id', $hdr->id)
+            ->where('mutasi_stok_detail.canceled', 0)
             ->select(
                 'mutasi_stok_detail.*',
                 'barang.nama_barang',
