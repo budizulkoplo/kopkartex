@@ -157,8 +157,8 @@
                 <td class="txt-left">{{ $index + 1 }}</td>
                 <td class="txt-left" colspan="2">
                     <span>
-                        {{ substr($item->nama_barang . ' (' . $item->type . ')', 0, 30) }}
-                        {{ strlen($item->nama_barang . ' (' . $item->type . ')') > 30 ? '...' : '' }}
+                        {{ substr($item->nama_barang . ' (' . $item->type . ')', 0, 32) }}
+                        {{ strlen($item->nama_barang . ' (' . $item->type . ')') > 32 ? '...' : '' }}
                     </span><br>
                     <small>{{ $item->kode_barang }}</small>
                 </td>
