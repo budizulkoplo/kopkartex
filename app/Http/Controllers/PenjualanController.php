@@ -159,6 +159,7 @@ class PenjualanController extends Controller
         $barang = StokUnit::join('barang', 'barang.id', '=', 'stok_unit.barang_id')
             ->join('kategori', 'kategori.id', '=', 'barang.idkategori')
             ->where('stok_unit.unit_id', Auth::user()->unit_kerja)
+            ->where('stok_unit.stok', '>', 0)
             ->whereRaw(
                 "CONCAT(barang.kode_barang, ' ', barang.nama_barang) LIKE ?",
                 ["%{$request->q}%"]

@@ -356,13 +356,22 @@ class LaporanController extends Controller
                 'u_from.nama_unit as dari_unit',
                 'u_to.nama_unit as ke_unit',
                 'b.kode_barang',
-                'b.nama_barang',
-                'd.qty'
-            )
-            ->whereDate('m.tanggal', '>=', $start_date)
-            ->whereDate('m.tanggal', '<=', $end_date)
-            ->whereNull('m.deleted_at')
-            ->whereNull('d.deleted_at');
+            DB::raw("
+            CASE 
+                WHEN d.canceled = 1 
+                THEN CONCAT(
+                    b.nama_barang, ' ', '<span class=\"badge bg-danger me-1\">|batal|</span>'
+                )
+                ELSE b.nama_barang
+            END as nama_barang
+        "),
+        'd.qty'
+    )
+    ->whereDate('m.tanggal', '>=', $start_date)
+    ->whereDate('m.tanggal', '<=', $end_date)
+    ->whereNull('m.deleted_at')
+    ->whereNull('d.deleted_at');
+
 
         if ($unit !== 'all') {
             $mutasi->where(function($query) use ($unit) {

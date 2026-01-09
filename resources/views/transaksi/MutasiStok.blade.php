@@ -237,6 +237,7 @@
             let barang = [];
             let rowCounter = 0;
             let mutasiId = null;
+            let typeaheadInstance = null;
 
             function updateTableAlert() {
                 const rowCount = $('#tbmutasi tbody tr').length;
@@ -273,16 +274,37 @@
 
             function addRow(datarow){
                 let existingRow = false;
+                let existingRowId = null;
                 const searchCode = datarow.code || datarow.kode_barang || '';
                 
                 $('#tbmutasi tbody tr').each(function() {
                     const rowCode = $(this).find('input[name="kode_barang[]"]').val();
                     if(searchCode && rowCode === searchCode) {
                         existingRow = true;
+                        existingRowId = $(this).attr('id');
+                        
+                        // Update quantity jika barang sudah ada
+                        const currentQty = parseInt($(this).find('input[name="qty[]"]').val()) || 0;
+                        const newQty = currentQty + 1;
+                        const maxQty = parseInt($(this).find('input[name="qty[]"]').attr('max')) || 0;
+                        
+                        if (newQty <= maxQty) {
+                            $(this).find('input[name="qty[]"]').val(newQty);
+                            updateTotals();
+                            
+                            // Tampilkan notifikasi sukses
+                            showSuccessToast(`Qty ${datarow.text} ditambah menjadi ${newQty}`);
+                        } else {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Stok tidak mencukupi!',
+                                text: 'Stok maksimal: ' + maxQty,
+                                timer: 2000
+                            });
+                        }
+                        
                         // Auto-focus ke barcode setelah update
-                        setTimeout(() => {
-                            $('#barcode-search').val('').focus();
-                        }, 100);
+                        focusBarcodeSearch();
                         return false;
                     }
                 });
@@ -313,13 +335,18 @@
                             </span>
                         </td>
                     </tr>`;
-                    $('#tbmutasi tbody').append(str);
-                    updateTableAlert();
+                    
+                    // Barang baru ditambahkan di paling atas
+                    $('#tbmutasi tbody').prepend(str);
+                    
+                    // Update numbering
+                    numbering();
+                    
+                    // Tampilkan notifikasi sukses
+                    showSuccessToast(`${datarow.text} ditambahkan`);
                     
                     // Auto-focus ke barcode setelah menambah row baru
-                    setTimeout(() => {
-                        $('#barcode-search').val('').focus();
-                    }, 100);
+                    focusBarcodeSearch();
                 }
             }
 
@@ -328,9 +355,7 @@
                 numbering();
                 
                 // Auto-focus ke barcode setelah hapus
-                setTimeout(() => {
-                    $('#barcode-search').focus();
-                }, 100);
+                focusBarcodeSearch();
             }
 
             function clearform(){
@@ -369,6 +394,9 @@
                 // Reset datepicker to today
                 $('.datepicker').datepicker('setDate', new Date());
                 
+                // Clear barcode search field
+                clearBarcodeSearch();
+                
                 // Auto focus ke barcode
                 setTimeout(() => {
                     $('#barcode-search').focus();
@@ -395,14 +423,53 @@
                 }
                 
                 $('#scnbarcode, #btnsimpan').show();
-                setTimeout(() => {
-                    $('#barcode-search').focus();
-                }, 100);
+                focusBarcodeSearch();
             }
 
             function cetakNotaMutasi(mutasiId) {
                 const notaUrl = '{{ route("mutasi.nota", ":id") }}'.replace(':id', mutasiId);
                 window.open(notaUrl, '_blank');
+            }
+
+            function focusBarcodeSearch() {
+                setTimeout(() => {
+                    $('#barcode-search').val('').focus();
+                    // Clear typeahead suggestions
+                    if (typeaheadInstance) {
+                        typeaheadInstance.typeahead('val', '');
+                    }
+                }, 100);
+            }
+
+            function clearBarcodeSearch() {
+                $('#barcode-search').val('');
+                // Clear typeahead suggestions
+                if (typeaheadInstance) {
+                    typeaheadInstance.typeahead('val', '');
+                }
+            }
+
+            function showSuccessToast(message) {
+                // Simple toast notification
+                const toast = $(`<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+                    <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <i class="bi bi-check-circle-fill me-2"></i> ${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
+                </div>`);
+                
+                $('body').append(toast);
+                const bsToast = new bootstrap.Toast(toast.find('.toast')[0]);
+                bsToast.show();
+                
+                // Remove after hide
+                toast.find('.toast').on('hidden.bs.toast', function () {
+                    toast.remove();
+                });
             }
 
             $(document).ready(function () {
@@ -434,7 +501,7 @@
                     }
                 });
 
-                $('#barcode-search').typeahead({
+                typeaheadInstance = $('#barcode-search').typeahead({
                     hint: true,
                     highlight: true,
                     minLength: 1
@@ -449,11 +516,14 @@
                     }
                 }).on('typeahead:select', function(ev, suggestion) {
                     addRow(suggestion);
-                    // Auto clear input setelah memilih
+                    // Clear typeahead value after selection
+                    $(this).typeahead('val', '');
+                }).on('typeahead:close', function(ev) {
+                    // Clear suggestions when closing
                     $(this).typeahead('val', '');
                 });
 
-                // Enter untuk search barcode
+                // Enter untuk search barcode - PERBAIKAN UTAMA
                 $('#barcode-search').on('keydown', function(e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
@@ -470,6 +540,9 @@
                         }
                         
                         if (searchVal) {
+                            // Clear typeahead suggestions
+                            $(this).typeahead('val', '');
+                            
                             $.ajax({
                                 url: '{{ route('mutasi.getbarangbycode') }}',
                                 method: 'GET',
@@ -483,8 +556,8 @@
                                 },
                                 success: function(response) { 
                                     addRow(response);
-                                    // Auto clear input
-                                    $('#barcode-search').val('');
+                                    // Clear input field setelah berhasil
+                                    $('#barcode-search').val('').typeahead('val', '');
                                 },
                                 error: function() {
                                     Swal.fire({
@@ -492,6 +565,8 @@
                                         text: "Barang dengan kode '" + searchVal + "' tidak ditemukan di unit ini.",
                                         icon: "error"
                                     });
+                                    // Tetap clear input meski error
+                                    $('#barcode-search').val('').typeahead('val', '');
                                 }
                             });
                         }
@@ -650,6 +725,7 @@
                     // F2 untuk focus barcode
                     if (e.key === 'F2') {
                         e.preventDefault();
+                        clearBarcodeSearch();
                         $('#barcode-search').focus();
                     }
                 });
@@ -657,6 +733,14 @@
                 // Auto focus ke input qty
                 $('#tbmutasi').on('focus', 'input[name="qty[]"]', function() {
                     $(this).select();
+                });
+
+                // Click outside to clear barcode search
+                $(document).on('click', function(e) {
+                    if (!$(e.target).closest('#barcode-search').length && 
+                        !$(e.target).closest('.tt-menu').length) {
+                        clearBarcodeSearch();
+                    }
                 });
             });
         </script>

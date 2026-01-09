@@ -100,7 +100,7 @@
                             
                             body {
                                 font-family: 'Arial', sans-serif;
-                                font-size: 12px;
+                                font-size: 12pt;
                                 line-height: 1.4;
                                 color: #000;
                                 padding: 20px;
@@ -108,7 +108,7 @@
                             }
                             
                             @page {
-                                size: A4 landscape;
+                                size: A4 portrait;
                                 margin: 15mm;
                             }
                             
@@ -117,11 +117,28 @@
                                     padding: 0;
                                     margin: 0;
                                 }
+                                
+                                table {
+                                    page-break-inside: auto !important;
+                                }
+                                
+                                tr {
+                                    page-break-inside: avoid !important;
+                                    page-break-after: auto !important;
+                                }
+                                
+                                thead {
+                                    display: table-header-group !important;
+                                }
+                                
+                                tfoot {
+                                    display: table-footer-group !important;
+                                }
                             }
                             
                             .header {
                                 text-align: center;
-                                margin-bottom: 20px;
+                                margin-bottom: 15px;
                                 padding-bottom: 10px;
                                 border-bottom: 2px solid #000;
                             }
@@ -130,6 +147,7 @@
                                 font-size: 18px;
                                 margin-bottom: 5px;
                                 color: #000;
+                                font-weight: bold;
                             }
                             
                             .header p {
@@ -137,11 +155,20 @@
                                 font-size: 11px;
                             }
                             
+                            .filter-info {
+                                font-size: 10px;
+                                color: #666;
+                                margin-bottom: 10px;
+                                text-align: center;
+                            }
+                            
                             table {
                                 width: 100%;
                                 border-collapse: collapse;
                                 margin-top: 10px;
+                                font-size: 10pt;
                                 table-layout: fixed;
+                                word-wrap: break-word;
                             }
                             
                             th {
@@ -150,16 +177,18 @@
                                 border: 1px solid #000 !important;
                                 padding: 6px 4px;
                                 font-weight: bold;
-                                font-size: 11px;
+                                font-size: 10px;
                                 text-align: left;
                                 -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
                             }
                             
                             td {
                                 border: 1px solid #000 !important;
-                                padding: 4px 3px;
-                                font-size: 10px;
+                                padding: 5px 4px;
+                                font-size: 9px;
                                 text-align: left;
+                                vertical-align: top;
                             }
                             
                             .text-right {
@@ -170,6 +199,10 @@
                                 text-align: center;
                             }
                             
+                            .text-left {
+                                text-align: left;
+                            }
+                            
                             .bold {
                                 font-weight: bold;
                             }
@@ -177,11 +210,13 @@
                             .invoice-total {
                                 background-color: #e9ecef !important;
                                 -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
                             }
                             
                             .grand-total {
                                 background-color: #d1e7ff !important;
                                 -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
                             }
                             
                             .subtotal-row td {
@@ -193,50 +228,56 @@
                                 font-weight: bold;
                             }
                             
-                            /* Column widths */
-                            th:nth-child(1), td:nth-child(1) { width: 5%; }   /* No */
-                            th:nth-child(2), td:nth-child(2) { width: 8%; }   /* Tanggal */
-                            th:nth-child(3), td:nth-child(3) { width: 12%; }  /* Invoice */
-                            th:nth-child(4), td:nth-child(4) { width: 10%; }  /* Dari Unit */
-                            th:nth-child(5), td:nth-child(5) { width: 10%; }  /* Ke Unit */
-                            th:nth-child(6), td:nth-child(6) { width: 8%; }   /* Status */
-                            th:nth-child(7), td:nth-child(7) { width: 10%; }  /* Kode Barang */
-                            th:nth-child(8), td:nth-child(8) { width: 15%; }  /* Nama Barang */
-                            th:nth-child(9), td:nth-child(9) { width: 6%; }   /* Qty */
-                            th:nth-child(10), td:nth-child(10) { width: 13%; } /* Note */
+                            /* FIXED COLUMN WIDTHS - DITENTUKAN UNTUK SEMUA KOLOM */
+                            /* Untuk print hanya ada 8 kolom: No, Tanggal, Invoice, Dari Unit, Ke Unit, Kode, Nama, Qty */
+                            th:nth-child(1), td:nth-child(1) { width: 5%; }     /* No */
+                            th:nth-child(2), td:nth-child(2) { width: 8%; }     /* Tanggal */
+                            th:nth-child(3), td:nth-child(3) { width: 10%; }    /* Invoice */
+                            th:nth-child(4), td:nth-child(4) { width: 12%; }    /* Dari Unit */
+                            th:nth-child(5), td:nth-child(5) { width: 12%; }    /* Ke Unit */
+                            th:nth-child(6), td:nth-child(6) { width: 12%; }    /* Kode Barang */
+                            th:nth-child(7), td:nth-child(7) { width: 31%; }    /* Nama Barang */
+                            th:nth-child(8), td:nth-child(8) { width: 10%; }    /* Qty - DIPERKECIL */
+                            
+                            /* Untuk kolom Qty khusus */
+                            th:nth-child(8), td:nth-child(8) {
+                                text-align: right;
+                                padding-right: 8px;
+                                width: 10% !important;
+                                min-width: 60px;
+                                max-width: 80px;
+                            }
+                            
+                            /* Untuk kolom nama barang yang panjang */
+                            td:nth-child(7) {
+                                word-break: break-word;
+                                overflow-wrap: break-word;
+                            }
                             
                             .footer {
-                                margin-top: 20px;
-                                font-size: 10px;
+                                margin-top: 15px;
+                                font-size: 9px;
                                 text-align: center;
                                 color: #666;
+                                padding-top: 10px;
+                                border-top: 1px solid #ccc;
+                            }
+                            
+                            /* Untuk menghindari page break di tengah invoice */
+                            .invoice-group {
+                                page-break-inside: avoid;
                             }
                         </style>
                     </head>
                     <body>
                         <div class="header">
                             <h1>LAPORAN MUTASI STOK</h1>
-                            <p>Periode: ${$('#start_date').val()} s/d ${$('#end_date').val()}</p>
-                            <p>Unit: ${$('#unit').find('option:selected').text()} | Status: ${$('#status').find('option:selected').text()}</p>
-                            <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                        </div>
-                        
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th class="text-center">No</th>
-                                    <th>Tanggal</th>
-                                    <th>Invoice</th>
-                                    <th>Dari Unit</th>
-                                    <th>Ke Unit</th>
-                                    <th>Status</th>
-                                    <th>Kode Barang</th>
-                                    <th>Nama Barang</th>
-                                    <th class="text-right">Qty</th>
-                                    <th>Note</th>
-                                </tr>
-                            </thead>
-                            <tbody>`;
+                            <div class="filter-info">
+                                <p>Periode: ${$('#start_date').val()} s/d ${$('#end_date').val()}</p>
+                                <p>Unit: ${$('#unit').find('option:selected').text()} | Status: ${$('#status').find('option:selected').text()}</p>
+                            </div>
+                            <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        </div>`;
 
                 // Kelompokkan data berdasarkan invoice untuk perhitungan subtotal
                 let invoiceGroups = {};
@@ -266,11 +307,31 @@
                     grandTotal += parseFloat(row.qty);
                 });
 
+                // Start table
+                printHTML += `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="text-center" width="5%">No</th>
+                                    <th width="8%">Tanggal</th>
+                                    <th width="10%">Invoice</th>
+                                    <th width="12%">Dari Unit</th>
+                                    <th width="12%">Ke Unit</th>
+                                    <th width="12%">Kode Barang</th>
+                                    <th width="31%">Nama Barang</th>
+                                    <th class="text-right" width="10%">Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
                 // Render data dengan subtotal per invoice
                 let invoiceIndex = 0;
                 for (let invoice in invoiceGroups) {
                     let group = invoiceGroups[invoice];
                     let groupRows = group.rows;
+                    
+                    // Tambahkan class invoice-group untuk menghindari page break
+                    printHTML += `<tbody class="invoice-group">`;
                     
                     // Render setiap baris dalam invoice
                     groupRows.forEach(row => {
@@ -281,21 +342,19 @@
                                 <td>${row.nomor_invoice}</td>
                                 <td>${row.dari_unit}</td>
                                 <td>${row.ke_unit}</td>
-                                <td>${row.status}</td>
                                 <td>${row.kode_barang}</td>
                                 <td>${row.nama_barang}</td>
                                 <td class="text-right">${parseFloat(row.qty).toLocaleString('id-ID')}</td>
-                                <td>${row.note || ''}</td>
                             </tr>`;
                     });
                     
                     // Tambahkan subtotal untuk invoice ini
                     printHTML += `
                         <tr class="subtotal-row invoice-total">
-                            <td colspan="8" class="text-right bold">Subtotal Invoice ${invoice}</td>
+                            <td colspan="7" class="text-right bold">Subtotal Invoice ${invoice}</td>
                             <td class="text-right bold">${group.total.toLocaleString('id-ID')}</td>
-                            <td></td>
-                        </tr>`;
+                        </tr>
+                        </tbody>`;
                     
                     invoiceIndex++;
                 }
@@ -305,15 +364,15 @@
                             </tbody>
                             <tfoot>
                                 <tr class="grand-total-row grand-total">
-                                    <td colspan="8" class="text-right bold">GRAND TOTAL</td>
+                                    <td colspan="7" class="text-right bold">GRAND TOTAL (${invoiceCount} Invoice)</td>
                                     <td class="text-right bold">${grandTotal.toLocaleString('id-ID')}</td>
-                                    <td class="text-right bold">${invoiceCount} invoice</td>
                                 </tr>
                             </tfoot>
                         </table>
                         
                         <div class="footer">
                             <p>Dicetak dari Sistem pada ${new Date().toLocaleTimeString('id-ID')}</p>
+                            <p>Halaman 1</p>
                         </div>
                     </body>
                     </html>`;
@@ -329,8 +388,9 @@
                     setTimeout(function() {
                         printWindow.focus();
                         printWindow.print();
-                        printWindow.close();
-                    }, 250);
+                        // Tidak langsung close, biarkan user melihat preview
+                        // printWindow.close();
+                    }, 500);
                 };
             }
 
@@ -552,9 +612,9 @@
                     // Render grand total di footer
                     $(api.table().footer()).html(
                         `<tr class="fw-bold bg-primary text-white">
-                            <td colspan="7" class="text-end">Grand Total</td>
+                            <td colspan="7" class="text-end">Grand Total ${invoiceCount} invoice</td>
                             <td class="text-end">${grandTotal.toLocaleString('id-ID')}</td>
-                            <td class="text-end">${invoiceCount} invoice</td>
+                            
                         </tr>`
                     );
                 },

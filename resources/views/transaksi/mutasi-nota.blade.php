@@ -16,8 +16,8 @@
             page-break-after: always;
         }
 
-        /* Lebar kertas 12cm (120mm) */
-        body.struk .sheet { width: 120mm; padding: 5mm; }
+        /* Lebar kertas 12cm (100%) */
+        body.struk .sheet { width: 100%; padding: 5mm; }
 
         .print-area { width: 100%; margin: 0 auto; }
 
@@ -41,7 +41,7 @@
         }
 
         @media print {
-            body.struk { width: 120mm; }
+            body.struk { width: 100%; }
             .no-print { display: none; }
         }
 
@@ -147,27 +147,28 @@
         <table style="width:100%; border-collapse:collapse;">
             <tr>
                 <th class="txt-left" style="width:5%">#</th>
+                <th class="txt-left" style="width:5%">Barcode</th>
                 <th class="txt-left" style="width:55%" colspan='2'>Item</th>
                 <th class="txt-center" style="width:15%">Qty</th>
             </tr>
-            <tr><td colspan="4"><hr></td></tr>
+            <tr><td colspan="5"><hr></td></tr>
 
             @foreach($dtl as $index => $item)
             <tr>
                 <td class="txt-left">{{ $index + 1 }}</td>
+                <td class="txt-left">{{ $item->kode_barang }}</td>
                 <td class="txt-left" colspan="2">
                     <span>
                         {{ substr($item->nama_barang . ' (' . $item->type . ')', 0, 32) }}
                         {{ strlen($item->nama_barang . ' (' . $item->type . ')') > 32 ? '...' : '' }}
-                    </span><br>
-                    <small>{{ $item->kode_barang }}</small>
+                    </span>
                 </td>
                 <td class="txt-center">{{ number_format($item->qty, 0) }}</td>
                
             </tr>
             @endforeach
 
-            <tr><td colspan="4"><hr></td></tr>
+            <tr><td colspan="5"><hr></td></tr>
 
             {{-- Summary --}}
             @php

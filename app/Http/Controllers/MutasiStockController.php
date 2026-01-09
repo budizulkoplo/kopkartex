@@ -150,8 +150,107 @@ class MutasiStockController extends Controller
     }
 
     public function detail($id)
-{
-    try {
+    {
+        try {
+            $hdr = MutasiStok::join('users','users.id','mutasi_stok.created_user')
+                ->join('unit as unit_asal', 'unit_asal.id', '=', 'mutasi_stok.dari_unit')
+                ->join('unit as unit_tujuan', 'unit_tujuan.id', '=', 'mutasi_stok.ke_unit')
+                ->select(
+                    'mutasi_stok.*',
+                    'users.name as petugas',
+                    'unit_asal.nama_unit as nama_unit_asal',
+                    'unit_tujuan.nama_unit as nama_unit_tujuan'
+                )
+                ->where('mutasi_stok.id', $id)
+                ->first();
+
+            if (!$hdr) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mutasi tidak ditemukan'
+                ], 404);
+            }
+
+            // Format data
+            $hdr->tanggal_formatted = \Carbon\Carbon::parse($hdr->tanggal)->format('d/m/Y');
+
+            return response()->json([
+                'success' => true,
+                'data' => $hdr
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat detail mutasi: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    public function batalkan(Request $request)
+    {
+        DB::beginTransaction();
+        try {
+            $mutasi = MutasiStok::find($request->id);
+            
+            if (!$mutasi) {
+                throw new Exception('Mutasi tidak ditemukan.');
+            }
+            
+            // Cek apakah mutasi sudah dibatalkan
+            if ($mutasi->status == 'dibatalkan') {
+                throw new Exception('Mutasi sudah dibatalkan.');
+            }
+            
+            // Ambil semua detail mutasi
+            $details = MutasiStokDetail::where('mutasi_id', $mutasi->id)
+                ->where('canceled', 0)
+                ->get();
+            
+            // Kembalikan stok untuk setiap barang
+            foreach ($details as $detail) {
+                // Kembalikan ke unit asal (tambah stok)
+                DB::table('stok_unit')
+                    ->where('barang_id', $detail->barang_id)
+                    ->where('unit_id', $mutasi->dari_unit)
+                    ->update([
+                        'stok' => DB::raw("stok + {$detail->qty}")
+                    ]);
+                    
+                // Kurangi dari unit tujuan
+                DB::table('stok_unit')
+                    ->where('barang_id', $detail->barang_id)
+                    ->where('unit_id', $mutasi->ke_unit)
+                    ->update([
+                        'stok' => DB::raw("stok - {$detail->qty}")
+                    ]);
+                    
+                // Update status detail menjadi canceled
+                $detail->canceled = 1;
+                $detail->save();
+            }
+            
+            // Update status mutasi menjadi dibatalkan
+            $mutasi->status = 'dibatalkan';
+            $mutasi->save();
+            
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Mutasi berhasil dibatalkan'
+            ]);
+            
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function nota($id): View
+    {   
         $hdr = MutasiStok::join('users','users.id','mutasi_stok.created_user')
             ->join('unit as unit_asal', 'unit_asal.id', '=', 'mutasi_stok.dari_unit')
             ->join('unit as unit_tujuan', 'unit_tujuan.id', '=', 'mutasi_stok.ke_unit')
@@ -162,180 +261,115 @@ class MutasiStockController extends Controller
                 'unit_tujuan.nama_unit as nama_unit_tujuan'
             )
             ->where('mutasi_stok.id', $id)
-            ->first();
+            ->firstOrFail();
 
-        if (!$hdr) {
+        // Ambil detail dengan join ke tabel barang
+        $dtl = MutasiStokDetail::join('barang', 'barang.id', '=', 'mutasi_stok_detail.barang_id')
+            ->where('mutasi_stok_detail.mutasi_id', $hdr->id)
+            ->select(
+                'mutasi_stok_detail.*',
+                'barang.nama_barang',
+                'barang.type',
+                'barang.kode_barang'
+            )
+            ->get();
+
+        // Format nomor mutasi
+        $hdr->nomor_mutasi = 'MUT-' . str_pad($hdr->id, 6, '0', STR_PAD_LEFT);
+
+        return view('transaksi.mutasi-nota', [
+            'hdr' => $hdr,
+            'dtl' => $dtl,
+        ]);
+    }
+
+    public function updateStatus(Request $request)
+    {
+        DB::beginTransaction();
+        try {
+            $mutasi = MutasiStok::find($request->id);
+            
+            if (!$mutasi) {
+                throw new Exception('Mutasi tidak ditemukan.');
+            }
+            
+            $mutasi->status = $request->status;
+            $mutasi->save();
+            
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Status mutasi berhasil diupdate'
+            ]);
+            
+        } catch (Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Mutasi tidak ditemukan'
-            ], 404);
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        // Format data
-        $hdr->tanggal_formatted = \Carbon\Carbon::parse($hdr->tanggal)->format('d/m/Y');
-
-        return response()->json([
-            'success' => true,
-            'data' => $hdr
-        ]);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Gagal memuat detail mutasi: ' . $e->getMessage()
-        ], 500);
     }
-}
-public function batalkan(Request $request)
-{
-    DB::beginTransaction();
-    try {
-        $mutasi = MutasiStok::find($request->id);
-        
-        if (!$mutasi) {
-            throw new Exception('Mutasi tidak ditemukan.');
-        }
-        
-        // Cek apakah mutasi sudah dibatalkan
-        if ($mutasi->status == 'dibatalkan') {
-            throw new Exception('Mutasi sudah dibatalkan.');
-        }
-        
-        // Ambil semua detail mutasi
-        $details = MutasiStokDetail::where('mutasi_id', $mutasi->id)
-            ->where('canceled', 0)
-            ->get();
-        
-        // Kembalikan stok untuk setiap barang
-        foreach ($details as $detail) {
-            // Kembalikan ke unit asal (tambah stok)
-            DB::table('stok_unit')
-                ->where('barang_id', $detail->barang_id)
-                ->where('unit_id', $mutasi->dari_unit)
-                ->update([
-                    'stok' => DB::raw("stok + {$detail->qty}")
-                ]);
-                
-            // Kurangi dari unit tujuan
-            DB::table('stok_unit')
-                ->where('barang_id', $detail->barang_id)
-                ->where('unit_id', $mutasi->ke_unit)
-                ->update([
-                    'stok' => DB::raw("stok - {$detail->qty}")
-                ]);
-                
-            // Update status detail menjadi canceled
-            $detail->canceled = 1;
-            $detail->save();
-        }
-        
-        // Update status mutasi menjadi dibatalkan
-        $mutasi->status = 'dibatalkan';
-        $mutasi->save();
-        
-        DB::commit();
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Mutasi berhasil dibatalkan'
-        ]);
-        
-    } catch (Exception $e) {
-        DB::rollBack();
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage()
-        ], 500);
-    }
-}
-
-    public function nota($id): View
-{   
-    $hdr = MutasiStok::join('users','users.id','mutasi_stok.created_user')
-        ->join('unit as unit_asal', 'unit_asal.id', '=', 'mutasi_stok.dari_unit')
-        ->join('unit as unit_tujuan', 'unit_tujuan.id', '=', 'mutasi_stok.ke_unit')
-        ->select(
-            'mutasi_stok.*',
-            'users.name as petugas',
-            'unit_asal.nama_unit as nama_unit_asal',
-            'unit_tujuan.nama_unit as nama_unit_tujuan'
-        )
-        ->where('mutasi_stok.id', $id)
-        ->firstOrFail();
-
-    // Ambil detail dengan join ke tabel barang
-    $dtl = MutasiStokDetail::join('barang', 'barang.id', '=', 'mutasi_stok_detail.barang_id')
-        ->where('mutasi_stok_detail.mutasi_id', $hdr->id)
-        ->select(
-            'mutasi_stok_detail.*',
-            'barang.nama_barang',
-            'barang.type',
-            'barang.kode_barang'
-        )
-        ->get();
-
-    // Format nomor mutasi
-    $hdr->nomor_mutasi = 'MUT-' . str_pad($hdr->id, 6, '0', STR_PAD_LEFT);
-
-    return view('transaksi.mutasi-nota', [
-        'hdr' => $hdr,
-        'dtl' => $dtl,
-    ]);
-}
-
-public function updateStatus(Request $request)
-{
-    DB::beginTransaction();
-    try {
-        $mutasi = MutasiStok::find($request->id);
-        
-        if (!$mutasi) {
-            throw new Exception('Mutasi tidak ditemukan.');
-        }
-        
-        $mutasi->status = $request->status;
-        $mutasi->save();
-        
-        DB::commit();
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Status mutasi berhasil diupdate'
-        ]);
-        
-    } catch (Exception $e) {
-        DB::rollBack();
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage()
-        ], 500);
-    }
-}
 
     public function Kembalikan(Request $request){
+    DB::beginTransaction();
+    try {
         $cekhdr = MutasiStok::find($request->idmutasi);
-        $dtl = MutasiStokDetail::where(['mutasi_id'=>$request->idmutasi,'barang_id'=>$request->idbarang])->first();
-        if($dtl){
-            $qty = (int) $dtl->qty;
-
-            DB::table('stok_unit')
-                ->where('barang_id', $request->idbarang)
-                ->where('unit_id', $cekhdr->dari_unit)
-                ->update([
-                    'stok' => DB::raw("stok + {$qty}")
-                ]);
-            DB::table('stok_unit')
-                ->where('barang_id', $request->idbarang)
-                ->where('unit_id', $cekhdr->ke_unit)
-                ->update([
-                    'stok' => DB::raw("stok - {$qty}")
-                ]);
-            $dtlupdate = MutasiStokDetail::find($dtl->id);
-            $dtlupdate->canceled=1;
-            $dtlupdate->save();
-            return response()->json('ok');
-        }else{
-            return response()->json('error',404);
+        
+        if (!$cekhdr) {
+            throw new Exception('Mutasi tidak ditemukan.');
         }
+        
+        $dtl = MutasiStokDetail::where([
+            'mutasi_id' => $request->idmutasi,
+            'barang_id' => $request->idbarang
+        ])->first();
+        
+        if (!$dtl) {
+            throw new Exception('Detail barang tidak ditemukan.');
+        }
+        
+        // Cek apakah barang sudah dikembalikan
+        if ($dtl->canceled == 1) {
+            throw new Exception('Barang sudah dikembalikan sebelumnya.');
+        }
+        
+        $qty = (int) $dtl->qty;
+
+        // Kembalikan stok ke unit asal
+        DB::table('stok_unit')
+            ->where('barang_id', $request->idbarang)
+            ->where('unit_id', $cekhdr->dari_unit)
+            ->update([
+                'stok' => DB::raw("stok + {$qty}")
+            ]);
+            
+        // Kurangi stok dari unit tujuan
+        DB::table('stok_unit')
+            ->where('barang_id', $request->idbarang)
+            ->where('unit_id', $cekhdr->ke_unit)
+            ->update([
+                'stok' => DB::raw("stok - {$qty}")
+            ]);
+            
+        // Update status detail menjadi canceled
+        $dtl->canceled = 1;
+        $dtl->save();
+        
+        DB::commit();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Barang berhasil dikembalikan'
+        ]);
+        
+    } catch (Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
 }
