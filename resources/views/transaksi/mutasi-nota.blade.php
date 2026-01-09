@@ -155,8 +155,12 @@
             @foreach($dtl as $index => $item)
             <tr>
                 <td class="txt-left">{{ $index + 1 }}</td>
-                <td class="txt-left" colspan='2'>
-                    <span>{{ substr($item->nama_barang, 0, 25) }}{{ strlen($item->nama_barang) > 25 ? '...' : '' }}</span>
+                <td class="txt-left" colspan="2">
+                    <span>
+                        {{ substr($item->nama_barang . ' (' . $item->type . ')', 0, 25) }}
+                        {{ strlen($item->nama_barang . ' (' . $item->type . ')') > 25 ? '...' : '' }}
+                    </span><br>
+                    <small>{{ $item->kode_barang }}</small>
                 </td>
                 <td class="txt-center">{{ number_format($item->qty, 0) }}</td>
                
