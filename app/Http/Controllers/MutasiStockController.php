@@ -269,6 +269,7 @@ public function batalkan(Request $request)
         ->select(
             'mutasi_stok_detail.*',
             'barang.nama_barang',
+            'barang.type',
             'barang.kode_barang'
         )
         ->get();
