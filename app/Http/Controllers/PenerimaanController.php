@@ -350,108 +350,134 @@ class PenerimaanController extends Controller
     }
 
     public function prosesRevisi(Request $request)
-    {
-        DB::beginTransaction();
-        try {
-            $penerimaanId = $request->penerimaan_id;
-            $items = $request->items;
-            
-            $penerimaan = Penerimaan::findOrFail($penerimaanId);
-            
-            foreach ($items as $item) {
-                $detail = PenerimaanDtl::findOrFail($item['id']);
-                $oldQty = $item['old_qty'];
-                $newQty = $item['new_qty'];
-                
-                if ($newQty != $oldQty) {
-                    $selisih = $newQty - $oldQty;
-                    
-                    // Update detail penerimaan
-                    $detail->jumlah = $newQty;
-                    $detail->subtotal = $newQty * $detail->harga_beli;
-                    $detail->save();
-                    
-                    // Adjust stok
-                    if ($selisih != 0) {
-                        DB::statement("
-                            INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at, created_at) 
-                            VALUES (?, ?, ?, NOW(), NOW())
-                            ON DUPLICATE KEY UPDATE 
-                                stok = stok + VALUES(stok),
-                                updated_at = VALUES(updated_at)",
-                            [$detail->barang_id, 1, $selisih]
-                        );
-                    }
-                    
-                    // Catat history revisi
-                    DB::table('revisi_penerimaan')->insert([
-                        'penerimaan_id' => $penerimaanId,
-                        'penerimaan_dtl_id' => $detail->id,
-                        'barang_id' => $detail->barang_id,
-                        'qty_lama' => $oldQty,
-                        'qty_baru' => $newQty,
-                        'selisih' => $selisih,
-                        'keterangan' => 'Revisi penerimaan',
-                        'created_at' => now(),
-                        'created_user' => auth()->id()
-                    ]);
+{
+    DB::beginTransaction();
+    try {
+        $penerimaanId = $request->penerimaan_id;
+        $items = $request->items;
+
+        $penerimaan = Penerimaan::findOrFail($penerimaanId);
+
+        foreach ($items as $item) {
+            $detail = PenerimaanDtl::findOrFail($item['id']);
+            $oldQty = $item['old_qty'];
+            $newQty = $item['new_qty'] ?? $oldQty;
+
+            /*
+             |=====================================================
+             | 1. HANDLE DELETE (PRIORITAS)
+             |=====================================================
+             */
+            if (isset($item['action']) && $item['action'] === 'delete') {
+
+                // lock stok
+                $stok = DB::table('stok_unit')
+                    ->where('barang_id', $detail->barang_id)
+                    ->where('unit_id', 1)
+                    ->lockForUpdate()
+                    ->value('stok');
+
+                if ($stok < $oldQty) {
+                    throw new \Exception('Stok tidak cukup untuk menghapus item');
                 }
-                
-                // Jika action adalah delete
-                if (isset($item['action']) && $item['action'] == 'delete') {
-                    // Kembalikan stok
-                    DB::statement("
-                        UPDATE stok_unit 
-                        SET stok = stok - ?, 
-                            updated_at = NOW()
-                        WHERE barang_id = ? 
-                        AND unit_id = ?",
-                        [$oldQty, $detail->barang_id, 1]
-                    );
-                    
-                    // Hapus detail
-                    $detail->delete();
-                    
-                    // Catat history hapus
-                    DB::table('revisi_penerimaan')->insert([
-                        'penerimaan_id' => $penerimaanId,
-                        'penerimaan_dtl_id' => $item['id'],
-                        'barang_id' => $detail->barang_id,
-                        'qty_lama' => $oldQty,
-                        'qty_baru' => 0,
-                        'selisih' => -$oldQty,
-                        'keterangan' => 'Hapus item dari penerimaan',
-                        'created_at' => now(),
-                        'created_user' => auth()->id()
-                    ]);
-                }
+
+                DB::statement("
+                    UPDATE stok_unit
+                    SET stok = stok - ?, updated_at = NOW()
+                    WHERE barang_id = ? AND unit_id = ?
+                ", [$oldQty, $detail->barang_id, 1]);
+
+                $detail->delete();
+
+                DB::table('revisi_penerimaan')->insert([
+                    'penerimaan_id' => $penerimaanId,
+                    'penerimaan_dtl_id' => $detail->id,
+                    'barang_id' => $detail->barang_id,
+                    'qty_lama' => $oldQty,
+                    'qty_baru' => 0,
+                    'selisih' => -$oldQty,
+                    'keterangan' => 'Hapus item dari penerimaan',
+                    'created_at' => now(),
+                    'created_user' => auth()->id()
+                ]);
+
+                continue; // ⬅️ WAJIB agar tidak lanjut ke revisi
             }
-            
-            // Recalculate grand total
-            $newTotal = PenerimaanDtl::where('idpenerimaan', $penerimaanId)
-                ->select(DB::raw('SUM(subtotal) as total'))
-                ->value('total');
-            
-            // Update penerimaan
-            $penerimaan->grandtotal = $newTotal;
-            $penerimaan->save();
-            
-            DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Revisi berhasil disimpan'
-            ]);
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal memproses revisi: ' . $e->getMessage()
-            ], 500);
+
+            /*
+             |=====================================================
+             | 2. HANDLE REVISI QTY
+             |=====================================================
+             */
+            if ($newQty != $oldQty) {
+                $selisih = $newQty - $oldQty;
+
+                if ($selisih != 0) {
+                    $stok = DB::table('stok_unit')
+                        ->where('barang_id', $detail->barang_id)
+                        ->where('unit_id', 1)
+                        ->lockForUpdate()
+                        ->value('stok');
+
+                    if ($stok + $selisih < 0) {
+                        throw new \Exception('Stok tidak cukup untuk revisi');
+                    }
+
+                    DB::statement("
+                        INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at, created_at)
+                        VALUES (?, ?, ?, NOW(), NOW())
+                        ON DUPLICATE KEY UPDATE
+                            stok = stok + VALUES(stok),
+                            updated_at = VALUES(updated_at)
+                    ", [$detail->barang_id, 1, $selisih]);
+                }
+
+                $detail->jumlah = $newQty;
+                $detail->subtotal = $newQty * $detail->harga_beli;
+                $detail->save();
+
+                DB::table('revisi_penerimaan')->insert([
+                    'penerimaan_id' => $penerimaanId,
+                    'penerimaan_dtl_id' => $detail->id,
+                    'barang_id' => $detail->barang_id,
+                    'qty_lama' => $oldQty,
+                    'qty_baru' => $newQty,
+                    'selisih' => $selisih,
+                    'keterangan' => 'Revisi penerimaan',
+                    'created_at' => now(),
+                    'created_user' => auth()->id()
+                ]);
+            }
         }
+
+        /*
+         |=====================================================
+         | 3. RECALCULATE TOTAL
+         |=====================================================
+         */
+        $newTotal = PenerimaanDtl::where('idpenerimaan', $penerimaanId)
+            ->sum('subtotal');
+
+        $penerimaan->grandtotal = $newTotal;
+        $penerimaan->save();
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Revisi berhasil disimpan'
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal memproses revisi: ' . $e->getMessage()
+        ], 500);
     }
+}
+
 
     public function batalkanPenerimaan($id)
     {
