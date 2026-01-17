@@ -318,7 +318,7 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin',
 });
 
 //LAPORAN
-Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin|bendahara', 'global.app'])->group(function () {
     Route::get('/stok-barang', [LaporanController::class, 'stokBarang'])->name('laporan.stokbarang');
     Route::get('/stok-barang/data', [LaporanController::class, 'stokBarangData'])->name('laporan.stokbarang.data');
     Route::get('/penjualan', [LaporanController::class, 'penjualan'])->name('laporan.penjualan');
