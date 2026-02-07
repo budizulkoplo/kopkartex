@@ -26,6 +26,7 @@ use App\Http\Controllers\JasaBengkelController;
 use App\Http\Controllers\TransaksiBengkelController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\BarangBengkelController;
+use App\Http\Controllers\TagihanController;
 
 //LAPORAN
 use App\Http\Controllers\LaporanController;
@@ -333,6 +334,10 @@ Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin
     Route::get('/mutasi-stok/data', [LaporanController::class, 'mutasiStokData'])->name('laporan.mutasi_stok.data');
     Route::get('/penjualan-detail', [LaporanController::class, 'penjualanDetail'])->name('laporan.penjualan_detail');
     Route::get('/penjualan-detail/data', [LaporanController::class, 'penjualanDetailData'])->name('laporan.penjualan_detail.data');
+    Route::get('/tagihan', [LaporanController::class, 'penjualanVoucher'])->name('laporan.tagihan');
+    Route::get('/tagihan/data', [LaporanController::class, 'penjualanVoucherData'])->name('laporan.tagihan.data');
+    Route::post('/tagihan/pelunasan', [LaporanController::class, 'pelunasanVoucher'])->name('laporan.tagihan.pelunasan');
+    Route::post('/tagihan/pelunasan-semua', [LaporanController::class, 'pelunasanSemuaVoucher'])->name('laporan.tagihan.pelunasan_semua');
 
 });
 
@@ -388,6 +393,26 @@ Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function (
 
     // Simpan opname
     Route::post('/stokopname/store', [MobileStokOpnameController::class, 'store'])->name('stokopname.store');
+});
+
+Route::prefix('tagihan')->middleware(['auth', 'verified', 'role:superadmin|admin|bendahara', 'global.app'])->group(function () {
+    // Transaksi
+    Route::get('/', [TagihanController::class, 'index'])->name('tagihan.index');
+    Route::get('/get-barang', [TagihanController::class, 'getBarangVoucher'])->name('tagihan.get_barang');
+    Route::get('/get-anggota', [TagihanController::class, 'getAnggota'])->name('tagihan.get_anggota');
+    Route::get('/get-invoice', [TagihanController::class, 'getInvoice'])->name('tagihan.get_invoice');
+    Route::post('/store', [TagihanController::class, 'store'])->name('tagihan.store');
+    Route::get('/nota/{invoice}', [TagihanController::class, 'nota'])->name('tagihan.nota');
+    
+    // Riwayat
+    Route::get('/riwayat', [TagihanController::class, 'riwayat'])->name('tagihan.riwayat');
+    Route::get('/riwayat/data', [TagihanController::class, 'riwayatData'])->name('tagihan.riwayat.data');
+    Route::post('/pelunasan', [TagihanController::class, 'pelunasan'])->name('tagihan.pelunasan');
+    
+    // Laporan
+    Route::get('/laporan', [TagihanController::class, 'laporan'])->name('tagihan.laporan');
+    Route::get('/laporan/data', [TagihanController::class, 'laporanData'])->name('tagihan.laporan.data');
+    Route::get('/export-excel', [TagihanController::class, 'exportExcel'])->name('tagihan.export_excel');
 });
 
 

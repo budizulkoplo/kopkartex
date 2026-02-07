@@ -485,4 +485,274 @@ class LaporanController extends Controller
         return DataTables::of($data)->make(true);
     }
 
+    public function penjualanVoucher(Request $request)
+    {
+        // default filter bulan berjalan
+        $bulan = $request->get('bulan', date('Y-m'));
+        
+        // list unit untuk filter dropdown (opsional)
+        $units = DB::table('unit')
+            ->whereNull('deleted_at')
+            ->whereIn('jenis', ['toko', 'bengkel'])
+            ->pluck('nama_unit', 'id');
+
+        return view('laporan.penjualan_voucher', compact('bulan', 'units'));
+    }
+
+    public function penjualanVoucherData(Request $request)
+    {
+        $bulan = $request->input('bulan', date('Y-m'));
+        $unit_id = $request->input('unit', 'all');
+
+        $query = PenjualanCicil::select(
+                'penjualan_cicilan.id',
+                'penjualan_cicilan.anggota_id',
+                'penjualan_cicilan.penjualan_id',
+                'penjualan_cicilan.cicilan',
+                'penjualan_cicilan.pokok',
+                'penjualan_cicilan.bunga',
+                'penjualan_cicilan.total_cicilan',
+                'penjualan_cicilan.status',
+                'penjualan_cicilan.kategori',
+                'penjualan_cicilan.periode_tagihan',
+                'penjualan_cicilan.status_bayar',
+                'penjualan_cicilan.created_at',
+                'penjualan_cicilan.updated_at',
+                'users.name as nama_anggota',
+                'users.nik',
+                'penjualan.nomor_invoice',
+                'penjualan.tanggal as tanggal_penjualan',
+                'unit.nama_unit',
+                DB::raw("DATE_FORMAT(penjualan_cicilan.created_at, '%Y-%m') as bulan_transaksi")
+            )
+            ->join('users', 'penjualan_cicilan.anggota_id', '=', 'users.id')
+            ->join('penjualan', 'penjualan_cicilan.penjualan_id', '=', 'penjualan.id')
+            ->leftJoin('unit', 'penjualan.unit_id', '=', 'unit.id')
+            ->whereNull('penjualan_cicilan.deleted_at')
+            ->whereNull('penjualan.deleted_at')
+            ->where('penjualan_cicilan.kategori', 'voucher') // Filter hanya voucher
+            ->whereRaw("DATE_FORMAT(penjualan_cicilan.created_at, '%Y-%m') = ?", [$bulan]);
+
+        // Filter unit jika dipilih
+        if ($unit_id != 'all') {
+            $query->where('penjualan.unit_id', $unit_id);
+        }
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('action', function($row) {
+                $btn = '';
+                if ($row->status != 'lunas') {
+                    $btn = '<button class="btn btn-sm btn-success btn-pelunasan" 
+                            data-id="'.$row->id.'" 
+                            data-invoice="'.$row->nomor_invoice.'"
+                            data-nama="'.$row->nama_anggota.'">
+                            <i class="bi bi-check-circle"></i> Lunas
+                        </button>';
+                } else {
+                    $btn = '<span class="badge bg-success">Lunas</span>';
+                }
+                return $btn;
+            })
+            ->editColumn('total_cicilan', function($row) {
+                return 'Rp ' . number_format($row->total_cicilan, 0, ',', '.');
+            })
+            ->editColumn('pokok', function($row) {
+                return 'Rp ' . number_format($row->pokok, 0, ',', '.');
+            })
+            ->editColumn('bunga', function($row) {
+                return 'Rp ' . number_format($row->bunga, 0, ',', '.');
+            })
+            ->editColumn('status', function($row) {
+                $badge = $row->status == 'lunas' ? 'success' : 'warning';
+                return '<span class="badge bg-'.$badge.'">'.ucfirst($row->status).'</span>';
+            })
+            ->editColumn('created_at', function($row) {
+                return date('d/m/Y H:i', strtotime($row->created_at));
+            })
+            ->editColumn('tanggal_penjualan', function($row) {
+                return date('d/m/Y', strtotime($row->tanggal_penjualan));
+            })
+            ->rawColumns(['action', 'status'])
+            ->make(true);
+    }
+
+    public function pelunasanVoucher(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|exists:penjualan_cicilan,id'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $cicilan = PenjualanCicil::findOrFail($request->id);
+
+            $cicilan->update([
+                'status' => 'lunas',
+                'status_bayar' => 1,
+            ]);
+
+            DB::commit(); // 🔥 INI YANG KURANG
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Voucher berhasil dilunaskan'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function pelunasanSemuaVoucher(Request $request)
+    {
+        $request->validate([
+            'bulan' => 'required|date_format:Y-m',
+            'unit' => 'nullable'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $bulan = $request->bulan;
+            $unit_id = $request->unit;
+
+            // Query untuk mendapatkan semua voucher yang belum lunas berdasarkan filter
+            $query = PenjualanCicil::select('penjualan_cicilan.id')
+                ->join('penjualan', 'penjualan_cicilan.penjualan_id', '=', 'penjualan.id')
+                ->whereNull('penjualan_cicilan.deleted_at')
+                ->whereNull('penjualan.deleted_at')
+                ->where('penjualan_cicilan.kategori', 'voucher') // Tambahkan filter kategori
+                ->where('penjualan_cicilan.status', '!=', 'lunas') // Ubah dari '=' menjadi '!='
+                ->whereRaw("DATE_FORMAT(penjualan_cicilan.created_at, '%Y-%m') = ?", [$bulan]); // Filter bulan
+
+            if ($unit_id && $unit_id != 'all') {
+                $query->where('penjualan.unit_id', $unit_id);
+            }
+
+            // Debug query (bisa dihapus setelah testing)
+            // \Log::info('Query pelunasan semua:', ['sql' => $query->toSql(), 'bindings' => $query->getBindings()]);
+
+            $vouchers = $query->get();
+
+            if ($vouchers->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak ada voucher yang belum lunas untuk kriteria ini'
+                ]);
+            }
+
+            $ids = $vouchers->pluck('id')->toArray();
+
+            // Debug jumlah data (bisa dihapus setelah testing)
+            // \Log::info('Jumlah voucher yang akan dilunasi:', ['count' => count($ids), 'ids' => $ids]);
+
+            // Update status semua voucher
+            $updated = PenjualanCicil::whereIn('id', $ids)
+                ->where('status', '!=', 'lunas') // Tambahkan kondisi untuk memastikan hanya yang belum lunas
+                ->update([
+                    'status' => 'lunas',
+                    'status_bayar' => 1,
+                    'updated_at' => now()
+                ]);
+
+            // Debug hasil update (bisa dihapus setelah testing)
+            // \Log::info('Jumlah voucher yang berhasil diupdate:', ['updated' => $updated]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Berhasil melunasi ' . $updated . ' voucher',
+                'count' => $updated
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            // Log error untuk debugging
+            \Log::error('Error pelunasan semua voucher: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function belanjaAnggota(Request $request)
+    {
+        // default filter bulan berjalan
+        $bulan = $request->get('bulan', date('Y-m'));
+        $start_date = $request->get('start_date', $bulan . '-01');
+        $end_date = $request->get('end_date', date('Y-m-t', strtotime($start_date)));
+        
+        // list unit untuk filter dropdown
+        $units = DB::table('unit')
+            ->whereNull('deleted_at')
+            ->whereIn('jenis', ['toko', 'bengkel'])
+            ->pluck('nama_unit', 'id');
+
+        return view('laporan.belanja_anggota', compact('bulan', 'start_date', 'end_date', 'units'));
+    }
+
+    public function belanjaAnggotaData(Request $request)
+    {
+        $start_date = $request->input('start_date', date('Y-m-01'));
+        $end_date = $request->input('end_date', date('Y-m-d'));
+        $unit_id = $request->input('unit', 'all');
+
+        $query = PenjualanCicil::select(
+                'users.nik',
+                'users.name as nama_anggota',
+                'users.jabatan',
+                DB::raw('COUNT(DISTINCT penjualan_cicilan.penjualan_id) as jumlah_transaksi'),
+                DB::raw('SUM(penjualan_cicilan.total_cicilan) as total_belanja'),
+                DB::raw('SUM(penjualan_cicilan.pokok) as total_pokok'),
+                DB::raw('SUM(penjualan_cicilan.bunga) as total_bunga'),
+                DB::raw('MAX(penjualan_cicilan.created_at) as terakhir_belanja'),
+                DB::raw("CONCAT(users.nik, ' - ', users.name) as nama_lengkap")
+            )
+            ->join('users', 'penjualan_cicilan.anggota_id', '=', 'users.id')
+            ->join('penjualan', 'penjualan_cicilan.penjualan_id', '=', 'penjualan.id')
+            ->leftJoin('unit', 'penjualan.unit_id', '=', 'unit.id')
+            ->whereNull('penjualan_cicilan.deleted_at')
+            ->whereNull('penjualan.deleted_at')
+            ->where('penjualan_cicilan.kategori', 'voucher')
+            ->where('penjualan.metode_bayar', 'voucher') // Filter metode bayar voucher
+            ->whereBetween(DB::raw('DATE(penjualan_cicilan.created_at)'), [$start_date, $end_date]);
+
+        // Filter unit jika dipilih
+        if ($unit_id != 'all') {
+            $query->where('penjualan.unit_id', $unit_id);
+        }
+
+        $query->groupBy('users.id', 'users.nik', 'users.name', 'users.jabatan');
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('total_belanja', function($row) {
+                return 'Rp ' . number_format($row->total_belanja, 0, ',', '.');
+            })
+            ->editColumn('total_pokok', function($row) {
+                return 'Rp ' . number_format($row->total_pokok, 0, ',', '.');
+            })
+            ->editColumn('total_bunga', function($row) {
+                return 'Rp ' . number_format($row->total_bunga, 0, ',', '.');
+            })
+            ->editColumn('terakhir_belanja', function($row) {
+                return $row->terakhir_belanja ? date('d/m/Y H:i', strtotime($row->terakhir_belanja)) : '-';
+            })
+            ->rawColumns([])
+            ->make(true);
+    }
 }
