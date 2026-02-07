@@ -123,6 +123,9 @@
     </div>
 
     <x-slot name="jscustom">
+        <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
         <script>
             let table;
             let belumLunasCount = 0;

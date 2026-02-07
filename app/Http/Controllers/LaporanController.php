@@ -531,7 +531,6 @@ class LaporanController extends Controller
             ->leftJoin('unit', 'penjualan.unit_id', '=', 'unit.id')
             ->whereNull('penjualan_cicilan.deleted_at')
             ->whereNull('penjualan.deleted_at')
-            ->where('penjualan_cicilan.kategori', 'voucher') // Filter hanya voucher
             ->whereRaw("DATE_FORMAT(penjualan_cicilan.created_at, '%Y-%m') = ?", [$bulan]);
 
         // Filter unit jika dipilih
@@ -591,10 +590,10 @@ class LaporanController extends Controller
 
             $cicilan->update([
                 'status' => 'lunas',
-                'status_bayar' => 1,
+                'status_bayar' => '1',
             ]);
 
-            DB::commit(); // 🔥 INI YANG KURANG
+            DB::commit(); 
 
             return response()->json([
                 'success' => true,
@@ -629,7 +628,6 @@ class LaporanController extends Controller
                 ->join('penjualan', 'penjualan_cicilan.penjualan_id', '=', 'penjualan.id')
                 ->whereNull('penjualan_cicilan.deleted_at')
                 ->whereNull('penjualan.deleted_at')
-                ->where('penjualan_cicilan.kategori', 'voucher') // Tambahkan filter kategori
                 ->where('penjualan_cicilan.status', '!=', 'lunas') // Ubah dari '=' menjadi '!='
                 ->whereRaw("DATE_FORMAT(penjualan_cicilan.created_at, '%Y-%m') = ?", [$bulan]); // Filter bulan
 
@@ -659,7 +657,7 @@ class LaporanController extends Controller
                 ->where('status', '!=', 'lunas') // Tambahkan kondisi untuk memastikan hanya yang belum lunas
                 ->update([
                     'status' => 'lunas',
-                    'status_bayar' => 1,
+                    'status_bayar' => '1',
                     'updated_at' => now()
                 ]);
 
@@ -728,8 +726,6 @@ class LaporanController extends Controller
             ->leftJoin('unit', 'penjualan.unit_id', '=', 'unit.id')
             ->whereNull('penjualan_cicilan.deleted_at')
             ->whereNull('penjualan.deleted_at')
-            ->where('penjualan_cicilan.kategori', 'voucher')
-            ->where('penjualan.metode_bayar', 'voucher') // Filter metode bayar voucher
             ->whereBetween(DB::raw('DATE(penjualan_cicilan.created_at)'), [$start_date, $end_date]);
 
         // Filter unit jika dipilih
