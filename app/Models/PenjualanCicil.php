@@ -11,4 +11,18 @@ class PenjualanCicil extends Model
     use HasFactory,SoftDeletes;
     protected $table = 'penjualan_cicilan';
     protected $primaryKey = 'id';
+
+    protected $fillable = [
+        'anggota_id',
+        'penjualan_id',
+        'cicilan',
+        'pokok',
+        'bunga',
+        'total_cicilan',
+        'status',
+        'kategori',
+        'periode_tagihan',
+        'status_bayar',
+    ];
+
 }
