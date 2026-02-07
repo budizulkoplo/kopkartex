@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Penerimaan;
+use App\Models\PenjualanCicil;
 use App\Exports\LaporanPenerimaanExport;
 use App\Models\Barang;
 use App\Models\Unit;
@@ -485,7 +486,7 @@ class LaporanController extends Controller
         return DataTables::of($data)->make(true);
     }
 
-    public function penjualanVoucher(Request $request)
+    public function penjualanTagihan(Request $request)
     {
         // default filter bulan berjalan
         $bulan = $request->get('bulan', date('Y-m'));
@@ -496,10 +497,10 @@ class LaporanController extends Controller
             ->whereIn('jenis', ['toko', 'bengkel'])
             ->pluck('nama_unit', 'id');
 
-        return view('laporan.penjualan_voucher', compact('bulan', 'units'));
+        return view('laporan.tagihan', compact('bulan', 'units'));
     }
 
-    public function penjualanVoucherData(Request $request)
+    public function penjualanTagihanData(Request $request)
     {
         $bulan = $request->input('bulan', date('Y-m'));
         $unit_id = $request->input('unit', 'all');
@@ -577,7 +578,7 @@ class LaporanController extends Controller
             ->make(true);
     }
 
-    public function pelunasanVoucher(Request $request)
+    public function pelunasanTagihan(Request $request)
     {
         $request->validate([
             'id' => 'required|exists:penjualan_cicilan,id'
@@ -597,7 +598,7 @@ class LaporanController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Voucher berhasil dilunaskan'
+                'message' => 'Tagihan berhasil dilunaskan'
             ]);
 
         } catch (\Exception $e) {
@@ -610,7 +611,7 @@ class LaporanController extends Controller
         }
     }
 
-    public function pelunasanSemuaVoucher(Request $request)
+    public function pelunasanSemuaTagihan(Request $request)
     {
         $request->validate([
             'bulan' => 'required|date_format:Y-m',

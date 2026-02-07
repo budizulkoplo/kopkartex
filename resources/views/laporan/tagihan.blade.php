@@ -1,11 +1,11 @@
 <x-app-layout>
-    <x-slot name="pagetitle">Laporan Penjualan Voucher</x-slot>
+    <x-slot name="pagetitle">Laporan Penjualan Tagihan</x-slot>
 
     <div class="app-content-header">
         <div class="container-fluid">
             <div class="row align-items-center">
                 <div class="col-sm-6">
-                    <h3 class="mb-0">Laporan Penjualan Voucher</h3>
+                    <h3 class="mb-0">Laporan Penjualan Tagihan</h3>
                 </div>
                 <div class="col-sm-6 text-end">
                     <div class="d-inline-flex gap-2">
@@ -33,7 +33,7 @@
             <div class="card card-info card-outline">
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-3">
-                        <h5 class="card-title mb-0">Data Penjualan Voucher</h5>
+                        <h5 class="card-title mb-0">Data Penjualan Tagihan</h5>
                         <div>
                             <span class="badge bg-warning">Belum Lunas: <span id="count-belum-lunas">0</span></span>
                             <span class="badge bg-success ms-2">Sudah Lunas: <span id="count-sudah-lunas">0</span></span>
@@ -196,7 +196,7 @@
                 let id = $('#id-pelunasan').val();
                 
                 $.ajax({
-                    url: "{{ route('laporan.penjualan_voucher.pelunasan') }}",
+                    url: "{{ route('laporan.tagihan.pelunasan') }}",
                     type: 'POST',
                     data: {
                         _token: '{{ csrf_token() }}',
@@ -227,7 +227,7 @@
                 const params = JSON.parse($('#params-lunasi-semua').val());
                 
                 $.ajax({
-                    url: "{{ route('laporan.penjualan_voucher.pelunasan_semua') }}",
+                    url: "{{ route('laporan.tagihan.pelunasan_semua') }}",
                     type: 'POST',
                     data: {
                         _token: '{{ csrf_token() }}',
@@ -265,7 +265,7 @@
                     pageLength: 50,
                     lengthMenu: [[25, 50, 100, 200, -1], [25, 50, 100, 200, 'All']],
                     ajax: {
-                        url: "{{ route('laporan.penjualan_voucher.data') }}",
+                        url: "{{ route('laporan.tagihan.data') }}",
                         type: "GET",
                         data: function (d) {
                             d.bulan = $('#bulan').val();
@@ -298,7 +298,7 @@
                             extend: 'excelHtml5',
                             text: '<i class="bi bi-file-earmark-excel"></i> Export Excel',
                             className: 'btn btn-success btn-sm',
-                            title: 'Laporan Penjualan Voucher',
+                            title: 'Laporan Penjualan Tagihan',
                             exportOptions: { 
                                 columns: [0, 1, 2, 3, 4, 5, 6, 7],
                                 format: {
@@ -320,7 +320,7 @@
                             extend: 'print',
                             text: '<i class="bi bi-printer"></i> Print',
                             className: 'btn btn-primary btn-sm',
-                            title: 'Laporan Penjualan Voucher',
+                            title: 'Laporan Penjualan Tagihan',
                             exportOptions: { 
                                 columns: [0, 1, 2, 3, 4, 5, 6, 7]
                             },
