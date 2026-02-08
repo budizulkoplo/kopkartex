@@ -488,22 +488,39 @@ class LaporanController extends Controller
 
     public function penjualanTagihan(Request $request)
     {
-        // default filter bulan berjalan
-        $bulan = $request->get('bulan', date('Y-m'));
+        // default filter bulan berjalan (format YYYYMM)
+        $periode = $request->get('periode', date('Ym'));
         
-        // list unit untuk filter dropdown (opsional)
+        // konversi untuk tampilan di input month (YYYY-MM)
+        $bulan_tampil = strlen($periode) == 6 
+            ? substr($periode, 0, 4) . '-' . substr($periode, 4, 2)
+            : date('Y-m');
+        
+        // list unit untuk filter dropdown - hanya unit yang memiliki penjualan cicilan
         $units = DB::table('unit')
-            ->whereNull('deleted_at')
-            ->whereIn('jenis', ['toko', 'bengkel'])
-            ->pluck('nama_unit', 'id');
+            ->join('penjualan', 'unit.id', '=', 'penjualan.unit_id')
+            ->join('penjualan_cicilan', 'penjualan.id', '=', 'penjualan_cicilan.penjualan_id')
+            ->whereNull('unit.deleted_at')
+            ->whereNull('penjualan.deleted_at')
+            ->whereNull('penjualan_cicilan.deleted_at')
+            ->where('penjualan.metode_bayar', 'cicilan')
+            ->whereIn('unit.jenis', ['toko', 'bengkel'])
+            ->select('unit.id', 'unit.nama_unit')
+            ->distinct()
+            ->pluck('unit.nama_unit', 'unit.id');
 
-        return view('laporan.tagihan', compact('bulan', 'units'));
+        return view('laporan.tagihan', compact('periode', 'bulan_tampil', 'units'));
     }
 
     public function penjualanTagihanData(Request $request)
     {
-        $bulan = $request->input('bulan', date('Y-m'));
+        $periode = $request->input('periode', date('Ym'));
         $unit_id = $request->input('unit', 'all');
+
+        // Validasi format periode
+        if (!preg_match('/^\d{6}$/', $periode)) {
+            $periode = date('Ym');
+        }
 
         $query = PenjualanCicil::select(
                 'penjualan_cicilan.id',
@@ -523,15 +540,26 @@ class LaporanController extends Controller
                 'users.nik',
                 'penjualan.nomor_invoice',
                 'penjualan.tanggal as tanggal_penjualan',
+                'penjualan.metode_bayar',
+                'penjualan.total as total_penjualan', // dari struktur: total decimal
+                'penjualan.dibayar as dp_awal', // menggunakan dibayar sebagai DP awal
+                'penjualan.tenor',
+                'penjualan.grandtotal',
+                'penjualan.subtotal',
+                'penjualan.bunga_barang',
                 'unit.nama_unit',
-                DB::raw("DATE_FORMAT(penjualan_cicilan.created_at, '%Y-%m') as bulan_transaksi")
+                'unit.jenis as jenis_unit',
+                DB::raw("CONCAT(SUBSTR(penjualan_cicilan.periode_tagihan, 1, 4), '-', SUBSTR(penjualan_cicilan.periode_tagihan, 5, 2)) as periode_format"),
+                // Hitung sisa bayar
+                DB::raw("(penjualan.total - penjualan.dibayar) as sisa_bayar")
             )
             ->join('users', 'penjualan_cicilan.anggota_id', '=', 'users.id')
             ->join('penjualan', 'penjualan_cicilan.penjualan_id', '=', 'penjualan.id')
             ->leftJoin('unit', 'penjualan.unit_id', '=', 'unit.id')
             ->whereNull('penjualan_cicilan.deleted_at')
             ->whereNull('penjualan.deleted_at')
-            ->whereRaw("DATE_FORMAT(penjualan_cicilan.created_at, '%Y-%m') = ?", [$bulan]);
+            ->where('penjualan.metode_bayar', 'cicilan')
+            ->where('penjualan_cicilan.periode_tagihan', $periode);
 
         // Filter unit jika dipilih
         if ($unit_id != 'all') {
@@ -541,18 +569,58 @@ class LaporanController extends Controller
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('action', function($row) {
-                $btn = '';
                 if ($row->status != 'lunas') {
-                    $btn = '<button class="btn btn-sm btn-success btn-pelunasan" 
+                    return '<button class="btn btn-sm btn-success btn-pelunasan" 
                             data-id="'.$row->id.'" 
                             data-invoice="'.$row->nomor_invoice.'"
-                            data-nama="'.$row->nama_anggota.'">
+                            data-nama="'.$row->nama_anggota.'"
+                            data-total="Rp ' . number_format($row->total_cicilan, 0, ',', '.') . '">
                             <i class="bi bi-check-circle"></i> Lunas
                         </button>';
-                } else {
-                    $btn = '<span class="badge bg-success">Lunas</span>';
                 }
-                return $btn;
+                return '<span class="badge bg-success">Lunas</span>';
+            })
+            ->addColumn('sisa_tenor', function($row) {
+                // Hitung sisa tenor berdasarkan data penjualan
+                $tenor = $row->tenor ?? 0;
+                $cicilan_ke = $row->cicilan ?? 0;
+                $sisa = max(0, $tenor - $cicilan_ke);
+                
+                return '<span class="badge bg-info">' . $sisa . ' kali lagi</span>';
+            })
+            ->addColumn('detail_penjualan', function($row) {
+                $totalPenjualan = isset($row->total_penjualan) 
+                    ? number_format($row->total_penjualan, 0, ',', '.') 
+                    : '0';
+                
+                $dpAwal = isset($row->dp_awal) 
+                    ? number_format($row->dp_awal, 0, ',', '.') 
+                    : '0';
+                
+                $sisaBayar = isset($row->sisa_bayar) 
+                    ? number_format($row->sisa_bayar, 0, ',', '.') 
+                    : '0';
+                
+                return '<small class="text-muted">
+                        Total: <strong>Rp ' . $totalPenjualan . '</strong><br>
+                        DP: <strong>Rp ' . $dpAwal . '</strong><br>
+                        Sisa: <strong>Rp ' . $sisaBayar . '</strong>
+                    </small>';
+            })
+            ->addColumn('progress_cicilan', function($row) {
+                $tenor = $row->tenor ?? 1;
+                $cicilan_ke = $row->cicilan ?? 0;
+                $percentage = $tenor > 0 ? min(100, ($cicilan_ke / $tenor) * 100) : 0;
+                
+                return '<div class="progress" style="height: 20px;">
+                    <div class="progress-bar bg-success" role="progressbar" 
+                         style="width: ' . $percentage . '%" 
+                         aria-valuenow="' . $percentage . '" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        ' . round($percentage) . '%
+                    </div>
+                </div>';
             })
             ->editColumn('total_cicilan', function($row) {
                 return 'Rp ' . number_format($row->total_cicilan, 0, ',', '.');
@@ -563,9 +631,24 @@ class LaporanController extends Controller
             ->editColumn('bunga', function($row) {
                 return 'Rp ' . number_format($row->bunga, 0, ',', '.');
             })
+            ->editColumn('total_penjualan', function($row) {
+                return 'Rp ' . number_format($row->total_penjualan, 0, ',', '.');
+            })
+            ->editColumn('dp_awal', function($row) {
+                return 'Rp ' . number_format($row->dp_awal, 0, ',', '.');
+            })
+            ->editColumn('sisa_bayar', function($row) {
+                return 'Rp ' . number_format($row->sisa_bayar, 0, ',', '.');
+            })
             ->editColumn('status', function($row) {
                 $badge = $row->status == 'lunas' ? 'success' : 'warning';
-                return '<span class="badge bg-'.$badge.'">'.ucfirst($row->status).'</span>';
+                $text = $row->status == 'lunas' ? 'Lunas' : 'Belum Lunas';
+                return '<span class="badge bg-'.$badge.'">'.$text.'</span>';
+            })
+            ->editColumn('status_bayar', function($row) {
+                $badge = $row->status_bayar == '1' ? 'success' : 'secondary';
+                $text = $row->status_bayar == '1' ? 'Sudah Bayar' : 'Belum Bayar';
+                return '<span class="badge bg-'.$badge.'">'.$text.'</span>';
             })
             ->editColumn('created_at', function($row) {
                 return date('d/m/Y H:i', strtotime($row->created_at));
@@ -573,8 +656,88 @@ class LaporanController extends Controller
             ->editColumn('tanggal_penjualan', function($row) {
                 return date('d/m/Y', strtotime($row->tanggal_penjualan));
             })
-            ->rawColumns(['action', 'status'])
+            ->editColumn('periode_tagihan', function($row) {
+                if (strlen($row->periode_tagihan) == 6) {
+                    $tahun = substr($row->periode_tagihan, 0, 4);
+                    $bulan = substr($row->periode_tagihan, 4, 2);
+                    $nama_bulan = [
+                        '01' => 'Januari', '02' => 'Februari', '03' => 'Maret',
+                        '04' => 'April', '05' => 'Mei', '06' => 'Juni',
+                        '07' => 'Juli', '08' => 'Agustus', '09' => 'September',
+                        '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
+                    ];
+                    return $nama_bulan[$bulan] . ' ' . $tahun;
+                }
+                return $row->periode_tagihan;
+            })
+            ->editColumn('metode_bayar', function($row) {
+                $badge = $row->metode_bayar == 'cicilan' ? 'primary' : 'success';
+                return '<span class="badge bg-'.$badge.'">'.ucfirst($row->metode_bayar).'</span>';
+            })
+            ->editColumn('cicilan', function($row) {
+                $tenor = $row->tenor ?? 0;
+                return 'Cicilan ke-' . $row->cicilan . ($tenor > 0 ? ' dari ' . $tenor : '');
+            })
+            ->editColumn('jenis_unit', function($row) {
+                if (!$row->jenis_unit) return '-';
+                $badge = $row->jenis_unit == 'toko' ? 'primary' : 'success';
+                return '<span class="badge bg-'.$badge.'">'.ucfirst($row->jenis_unit).'</span>';
+            })
+            ->rawColumns([
+                'action', 'status', 'status_bayar', 'jenis_unit', 
+                'periode_tagihan', 'metode_bayar', 'sisa_tenor', 
+                'detail_penjualan', 'progress_cicilan'
+            ])
             ->make(true);
+    }
+
+    public function getStatistics(Request $request)
+    {
+        $periode = $request->get('periode', date('Ym'));
+        $unit_id = $request->get('unit', 'all');
+
+        // Validasi format periode
+        if (!preg_match('/^\d{6}$/', $periode)) {
+            $periode = date('Ym');
+        }
+
+        // Query untuk statistik
+        $query = PenjualanCicil::select(
+                DB::raw('COUNT(*) as total'),
+                DB::raw('SUM(CASE WHEN penjualan_cicilan.status = "lunas" THEN 1 ELSE 0 END) as lunas_count'),
+                DB::raw('SUM(CASE WHEN penjualan_cicilan.status != "lunas" THEN 1 ELSE 0 END) as belum_lunas_count'),
+                DB::raw('SUM(penjualan_cicilan.total_cicilan) as total_nominal'),
+                DB::raw('SUM(CASE WHEN penjualan_cicilan.status = "lunas" THEN penjualan_cicilan.total_cicilan ELSE 0 END) as nominal_lunas'),
+                DB::raw('SUM(CASE WHEN penjualan_cicilan.status != "lunas" THEN penjualan_cicilan.total_cicilan ELSE 0 END) as nominal_belum_lunas'),
+                DB::raw('SUM(penjualan_cicilan.pokok) as total_pokok'),
+                DB::raw('SUM(penjualan_cicilan.bunga) as total_bunga')
+            )
+            ->join('penjualan', 'penjualan_cicilan.penjualan_id', '=', 'penjualan.id')
+            ->whereNull('penjualan_cicilan.deleted_at')
+            ->whereNull('penjualan.deleted_at')
+            ->where('penjualan.metode_bayar', 'cicilan')
+            ->where('penjualan_cicilan.periode_tagihan', $periode);
+
+        if ($unit_id != 'all') {
+            $query->where('penjualan.unit_id', $unit_id);
+        }
+
+        $statistics = $query->first();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total' => $statistics->total ?? 0,
+                'lunas_count' => $statistics->lunas_count ?? 0,
+                'belum_lunas_count' => $statistics->belum_lunas_count ?? 0,
+                'total_nominal' => $statistics->total_nominal ?? 0,
+                'nominal_lunas' => $statistics->nominal_lunas ?? 0,
+                'nominal_belum_lunas' => $statistics->nominal_belum_lunas ?? 0,
+                'total_pokok' => $statistics->total_pokok ?? 0,
+                'total_bunga' => $statistics->total_bunga ?? 0,
+                'periode' => $periode
+            ]
+        ]);
     }
 
     public function pelunasanTagihan(Request $request)
@@ -587,10 +750,22 @@ class LaporanController extends Controller
             DB::beginTransaction();
 
             $cicilan = PenjualanCicil::findOrFail($request->id);
+            
+            // Ambil data penjualan untuk validasi
+            $penjualan = $cicilan->penjualan;
+
+            // Cek apakah sudah lunas
+            if ($cicilan->status == 'lunas') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tagihan sudah lunas'
+                ], 400);
+            }
 
             $cicilan->update([
                 'status' => 'lunas',
                 'status_bayar' => '1',
+                'updated_at' => now()
             ]);
 
             DB::commit(); 
@@ -603,6 +778,11 @@ class LaporanController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
+            \Log::error('Error pelunasan tagihan: ' . $e->getMessage(), [
+                'id' => $request->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
@@ -613,70 +793,61 @@ class LaporanController extends Controller
     public function pelunasanSemuaTagihan(Request $request)
     {
         $request->validate([
-            'bulan' => 'required|date_format:Y-m',
+            'periode' => 'required|regex:/^\d{6}$/',
             'unit' => 'nullable'
         ]);
 
         try {
             DB::beginTransaction();
 
-            $bulan = $request->bulan;
+            $periode = $request->periode;
             $unit_id = $request->unit;
 
-            // Query untuk mendapatkan semua voucher yang belum lunas berdasarkan filter
+            // Query untuk mendapatkan semua cicilan yang belum lunas berdasarkan periode_tagihan
+            // Hanya ambil yang metode_bayar = 'cicilan'
             $query = PenjualanCicil::select('penjualan_cicilan.id')
                 ->join('penjualan', 'penjualan_cicilan.penjualan_id', '=', 'penjualan.id')
                 ->whereNull('penjualan_cicilan.deleted_at')
                 ->whereNull('penjualan.deleted_at')
-                ->where('penjualan_cicilan.status', '!=', 'lunas') // Ubah dari '=' menjadi '!='
-                ->whereRaw("DATE_FORMAT(penjualan_cicilan.created_at, '%Y-%m') = ?", [$bulan]); // Filter bulan
+                ->where('penjualan.metode_bayar', 'cicilan') // Hanya yang cicilan
+                ->where('penjualan_cicilan.status', '!=', 'lunas')
+                ->where('penjualan_cicilan.periode_tagihan', $periode);
 
             if ($unit_id && $unit_id != 'all') {
                 $query->where('penjualan.unit_id', $unit_id);
             }
-
-            // Debug query (bisa dihapus setelah testing)
-            // \Log::info('Query pelunasan semua:', ['sql' => $query->toSql(), 'bindings' => $query->getBindings()]);
 
             $vouchers = $query->get();
 
             if ($vouchers->isEmpty()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tidak ada voucher yang belum lunas untuk kriteria ini'
+                    'message' => 'Tidak ada tagihan cicilan yang belum lunas untuk periode ini'
                 ]);
             }
 
             $ids = $vouchers->pluck('id')->toArray();
 
-            // Debug jumlah data (bisa dihapus setelah testing)
-            // \Log::info('Jumlah voucher yang akan dilunasi:', ['count' => count($ids), 'ids' => $ids]);
-
             // Update status semua voucher
             $updated = PenjualanCicil::whereIn('id', $ids)
-                ->where('status', '!=', 'lunas') // Tambahkan kondisi untuk memastikan hanya yang belum lunas
                 ->update([
                     'status' => 'lunas',
                     'status_bayar' => '1',
                     'updated_at' => now()
                 ]);
 
-            // Debug hasil update (bisa dihapus setelah testing)
-            // \Log::info('Jumlah voucher yang berhasil diupdate:', ['updated' => $updated]);
-
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Berhasil melunasi ' . $updated . ' voucher',
+                'message' => 'Berhasil melunasi ' . $updated . ' tagihan cicilan',
                 'count' => $updated
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
             
-            // Log error untuk debugging
-            \Log::error('Error pelunasan semua voucher: ' . $e->getMessage(), [
+            \Log::error('Error pelunasan semua tagihan: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'request' => $request->all()
             ]);
@@ -688,44 +859,163 @@ class LaporanController extends Controller
         }
     }
 
-    public function belanjaAnggota(Request $request)
+    public function exportTagihan(Request $request)
     {
-        // default filter bulan berjalan
-        $bulan = $request->get('bulan', date('Y-m'));
-        $start_date = $request->get('start_date', $bulan . '-01');
-        $end_date = $request->get('end_date', date('Y-m-t', strtotime($start_date)));
-        
-        // list unit untuk filter dropdown
-        $units = DB::table('unit')
-            ->whereNull('deleted_at')
-            ->whereIn('jenis', ['toko', 'bengkel'])
-            ->pluck('nama_unit', 'id');
+        $periode = $request->get('periode', date('Ym'));
+        $unit_id = $request->get('unit', 'all');
 
-        return view('laporan.belanja_anggota', compact('bulan', 'start_date', 'end_date', 'units'));
-    }
-
-    public function belanjaAnggotaData(Request $request)
-    {
-        $start_date = $request->input('start_date', date('Y-m-01'));
-        $end_date = $request->input('end_date', date('Y-m-d'));
-        $unit_id = $request->input('unit', 'all');
-
+        // Query untuk data export
         $query = PenjualanCicil::select(
+                'penjualan_cicilan.periode_tagihan',
                 'users.nik',
                 'users.name as nama_anggota',
-                'users.jabatan',
-                DB::raw('COUNT(DISTINCT penjualan_cicilan.penjualan_id) as jumlah_transaksi'),
-                DB::raw('SUM(penjualan_cicilan.total_cicilan) as total_belanja'),
-                DB::raw('SUM(penjualan_cicilan.pokok) as total_pokok'),
-                DB::raw('SUM(penjualan_cicilan.bunga) as total_bunga'),
-                DB::raw('MAX(penjualan_cicilan.created_at) as terakhir_belanja'),
-                DB::raw("CONCAT(users.nik, ' - ', users.name) as nama_lengkap")
+                'penjualan.nomor_invoice',
+                'penjualan_cicilan.cicilan',
+                'penjualan.tenor',
+                'penjualan_cicilan.pokok',
+                'penjualan_cicilan.bunga',
+                'penjualan_cicilan.total_cicilan',
+                'penjualan_cicilan.status',
+                'penjualan_cicilan.status_bayar',
+                'penjualan_cicilan.created_at',
+                'penjualan.tanggal as tanggal_penjualan',
+                'penjualan.total as total_penjualan',
+                'penjualan.dibayar as dp_awal',
+                DB::raw('(penjualan.total - penjualan.dibayar) as sisa_bayar'),
+                'unit.nama_unit'
             )
             ->join('users', 'penjualan_cicilan.anggota_id', '=', 'users.id')
             ->join('penjualan', 'penjualan_cicilan.penjualan_id', '=', 'penjualan.id')
             ->leftJoin('unit', 'penjualan.unit_id', '=', 'unit.id')
             ->whereNull('penjualan_cicilan.deleted_at')
             ->whereNull('penjualan.deleted_at')
+            ->where('penjualan.metode_bayar', 'cicilan')
+            ->where('penjualan_cicilan.periode_tagihan', $periode);
+
+        if ($unit_id != 'all') {
+            $query->where('penjualan.unit_id', $unit_id);
+        }
+
+        $data = $query->orderBy('penjualan_cicilan.created_at', 'asc')->get();
+
+        // Format nama file
+        $tahun = substr($periode, 0, 4);
+        $bulan = substr($periode, 4, 2);
+        $filename = 'tagihan_cicilan_' . $periode . '_' . date('YmdHis') . '.csv';
+        
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        
+        $output = fopen('php://output', 'w');
+        
+        // Tambahkan BOM untuk Excel UTF-8
+        fwrite($output, "\xEF\xBB\xBF");
+        
+        // Header CSV
+        fputcsv($output, [
+            'Periode', 'NIK', 'Nama Anggota', 'Nomor Invoice', 'Cicilan ke-', 'Tenor',
+            'Pokok', 'Bunga', 'Total Cicilan', 'Status', 'Status Bayar',
+            'Tanggal Transaksi', 'Tanggal Penjualan', 'Total Penjualan', 'DP Awal', 'Sisa Bayar', 'Unit'
+        ]);
+        
+        foreach ($data as $row) {
+            fputcsv($output, [
+                $row->periode_tagihan,
+                $row->nik,
+                $row->nama_anggota,
+                $row->nomor_invoice,
+                'Cicilan ke-' . $row->cicilan,
+                $row->tenor,
+                number_format($row->pokok, 0, ',', '.'),
+                number_format($row->bunga, 0, ',', '.'),
+                number_format($row->total_cicilan, 0, ',', '.'),
+                $row->status == 'lunas' ? 'Lunas' : 'Belum Lunas',
+                $row->status_bayar == '1' ? 'Sudah Bayar' : 'Belum Bayar',
+                date('d/m/Y H:i', strtotime($row->created_at)),
+                date('d/m/Y', strtotime($row->tanggal_penjualan)),
+                number_format($row->total_penjualan, 0, ',', '.'),
+                number_format($row->dp_awal, 0, ',', '.'),
+                number_format($row->sisa_bayar, 0, ',', '.'),
+                $row->nama_unit
+            ]);
+        }
+        
+        fclose($output);
+        exit;
+    }
+
+    // Untuk belanja anggota (sesuaikan juga dengan struktur)
+    public function belanjaAnggota(Request $request)
+    {
+        // default filter bulan berjalan (format YYYYMM)
+        $periode = $request->get('periode', date('Ym'));
+        
+        // Konversi periode ke date range
+        $tahun = substr($periode, 0, 4);
+        $bulan = substr($periode, 4, 2);
+        $start_date = date('Y-m-01', strtotime($tahun . '-' . $bulan . '-01'));
+        $end_date = date('Y-m-t', strtotime($start_date));
+        
+        // Konversi untuk tampilan
+        $bulan_tampil = $tahun . '-' . $bulan;
+        
+        // list unit untuk filter dropdown - hanya unit dengan penjualan cicilan
+        $units = DB::table('unit')
+            ->join('penjualan', 'unit.id', '=', 'penjualan.unit_id')
+            ->join('penjualan_cicilan', 'penjualan.id', '=', 'penjualan_cicilan.penjualan_id')
+            ->whereNull('unit.deleted_at')
+            ->whereNull('penjualan.deleted_at')
+            ->whereNull('penjualan_cicilan.deleted_at')
+            ->where('penjualan.metode_bayar', 'cicilan')
+            ->whereIn('unit.jenis', ['toko', 'bengkel'])
+            ->select('unit.id', 'unit.nama_unit')
+            ->distinct()
+            ->pluck('unit.nama_unit', 'unit.id');
+
+        return view('laporan.belanja_anggota', compact('periode', 'bulan_tampil', 'start_date', 'end_date', 'units'));
+    }
+
+    public function belanjaAnggotaData(Request $request)
+    {
+        $periode = $request->input('periode', date('Ym'));
+        $unit_id = $request->input('unit', 'all');
+
+        // Validasi format periode
+        if (!preg_match('/^\d{6}$/', $periode)) {
+            $periode = date('Ym');
+        }
+
+        // Konversi periode ke date range untuk filter created_at
+        $tahun = substr($periode, 0, 4);
+        $bulan = substr($periode, 4, 2);
+        $start_date = date('Y-m-01', strtotime($tahun . '-' . $bulan . '-01'));
+        $end_date = date('Y-m-t', strtotime($start_date));
+
+        $query = PenjualanCicil::select(
+                'users.id as anggota_id',
+                'users.nik',
+                'users.name as nama_anggota',
+                'users.jabatan',
+                'users.email',
+                'users.telepon',
+                DB::raw('COUNT(DISTINCT penjualan_cicilan.penjualan_id) as jumlah_transaksi'),
+                DB::raw('SUM(penjualan_cicilan.total_cicilan) as total_belanja'),
+                DB::raw('SUM(penjualan_cicilan.pokok) as total_pokok'),
+                DB::raw('SUM(penjualan_cicilan.bunga) as total_bunga'),
+                DB::raw('MAX(penjualan_cicilan.created_at) as terakhir_belanja'),
+                DB::raw("CONCAT(users.nik, ' - ', users.name) as nama_lengkap"),
+                DB::raw('COUNT(penjualan_cicilan.id) as jumlah_cicilan'),
+                DB::raw('GROUP_CONCAT(DISTINCT unit.nama_unit SEPARATOR ", ") as daftar_unit'),
+                DB::raw('SUM(penjualan.total) as total_nilai_penjualan'),
+                DB::raw('SUM(penjualan.dibayar) as total_dp')
+            )
+            ->join('users', 'penjualan_cicilan.anggota_id', '=', 'users.id')
+            ->join('penjualan', 'penjualan_cicilan.penjualan_id', '=', 'penjualan.id')
+            ->leftJoin('unit', 'penjualan.unit_id', '=', 'unit.id')
+            ->whereNull('penjualan_cicilan.deleted_at')
+            ->whereNull('penjualan.deleted_at')
+            ->where('penjualan.metode_bayar', 'cicilan')
+            ->where('penjualan_cicilan.periode_tagihan', $periode)
             ->whereBetween(DB::raw('DATE(penjualan_cicilan.created_at)'), [$start_date, $end_date]);
 
         // Filter unit jika dipilih
@@ -733,10 +1023,16 @@ class LaporanController extends Controller
             $query->where('penjualan.unit_id', $unit_id);
         }
 
-        $query->groupBy('users.id', 'users.nik', 'users.name', 'users.jabatan');
+        $query->groupBy('users.id', 'users.nik', 'users.name', 'users.jabatan', 'users.email', 'users.telepon');
 
         return DataTables::of($query)
             ->addIndexColumn()
+            ->addColumn('action', function($row) use ($periode) {
+                return '<a href="' . route('laporan.belanja-anggota.detail', ['anggota_id' => $row->anggota_id, 'periode' => $periode]) . '" 
+                        class="btn btn-sm btn-info">
+                        <i class="bi bi-eye"></i> Detail
+                    </a>';
+            })
             ->editColumn('total_belanja', function($row) {
                 return 'Rp ' . number_format($row->total_belanja, 0, ',', '.');
             })
@@ -746,10 +1042,22 @@ class LaporanController extends Controller
             ->editColumn('total_bunga', function($row) {
                 return 'Rp ' . number_format($row->total_bunga, 0, ',', '.');
             })
+            ->editColumn('total_nilai_penjualan', function($row) {
+                return 'Rp ' . number_format($row->total_nilai_penjualan, 0, ',', '.');
+            })
+            ->editColumn('total_dp', function($row) {
+                return 'Rp ' . number_format($row->total_dp, 0, ',', '.');
+            })
             ->editColumn('terakhir_belanja', function($row) {
                 return $row->terakhir_belanja ? date('d/m/Y H:i', strtotime($row->terakhir_belanja)) : '-';
             })
-            ->rawColumns([])
+            ->editColumn('jabatan', function($row) {
+                return $row->jabatan ?: '-';
+            })
+            ->editColumn('daftar_unit', function($row) {
+                return $row->daftar_unit ?: '-';
+            })
+            ->rawColumns(['action'])
             ->make(true);
     }
 }

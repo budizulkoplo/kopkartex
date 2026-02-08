@@ -336,6 +336,8 @@ Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin
     Route::get('/penjualan-detail/data', [LaporanController::class, 'penjualanDetailData'])->name('laporan.penjualan_detail.data');
     Route::get('/tagihan', [LaporanController::class, 'penjualanTagihan'])->name('laporan.tagihan');
     Route::get('/tagihan/data', [LaporanController::class, 'penjualanTagihanData'])->name('laporan.tagihan.data');
+    Route::get('/laporan/tagihan/statistics', [LaporanController::class, 'getStatistics'])
+        ->name('laporan.tagihan.statistics');
     Route::post('/tagihan/pelunasan', [LaporanController::class, 'pelunasanTagihan'])->name('laporan.tagihan.pelunasan');
     Route::post('/tagihan/pelunasan-semua', [LaporanController::class, 'pelunasanSemuaTagihan'])->name('laporan.tagihan.pelunasan_semua');
 
