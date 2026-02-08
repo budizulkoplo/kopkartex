@@ -28,9 +28,9 @@
                         <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modalBarang" id="btnadd">
                             <i class="bi bi-plus-circle"></i> Tambah Barang
                         </button>
-                        <!-- <button class="btn btn-sm btn-success ms-1" data-bs-toggle="modal" data-bs-target="#modalQuickAdd">
+                        <button class="btn btn-sm btn-success ms-1" data-bs-toggle="modal" data-bs-target="#modalQuickAdd">
                             <i class="bi bi-lightning"></i> Quick Add
-                        </button> -->
+                        </button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -44,7 +44,7 @@
                                 <select class="form-select" id="fkategori">
                                     <option value="all">SEMUA KATEGORI</option>
                                     @foreach ($kategori as $item)
-                                    <option value="{{ $item->name }}">{{ $item->name }}</option>
+                                    <option value="{{ $item->id }}">{{ $item->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -66,12 +66,13 @@
                                 <tr>
                                     <th width="5%">#</th>
                                     <th width="15%">Kode Barang</th>
-                                    <th width="25%">Nama Barang</th>
-                                    <th width="15%">Kategori</th>
+                                    <th width="20%">Nama Barang</th>
+                                    <th width="10%">Kategori</th>
                                     <th width="10%">Satuan</th>
+                                    <th width="10%">Stok</th>
                                     <th width="15%">Harga Beli</th>
                                     <th width="15%">Harga Jual</th>
-                                    <th width="10%">Foto</th>
+                                    <th width="5%">Foto</th>
                                     <th width="10%">Aksi</th>
                                 </tr>
                             </thead>
@@ -115,24 +116,41 @@
                                 <input type="text" class="form-control form-control-sm" name="nama_barang" required>
                             </div>
                             
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label">Kategori <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" name="kategori" required>
-                                    <option value="">Pilih Kategori</option>
-                                    @foreach ($kategori as $item)
-                                    <option value="{{ $item->name }}">{{ $item->name }}</option>
-                                    @endforeach
-                                </select>
+                                <div class="input-group input-group-sm">
+                                    <select class="form-select form-select-sm" name="idkategori" required id="idkategori">
+                                        <option value="">Pilih Kategori</option>
+                                        @foreach ($kategori as $item)
+                                        <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" class="btn btn-outline-success" onclick="showModalKategori()">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
                             </div>
                             
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label">Satuan <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" name="satuan" required>
-                                    <option value="">Pilih Satuan</option>
-                                    @foreach ($satuan as $item)
-                                    <option value="{{ $item->name }}">{{ $item->name }}</option>
-                                    @endforeach
-                                </select>
+                                <div class="input-group input-group-sm">
+                                    <select class="form-select form-select-sm" name="idsatuan" required id="idsatuan">
+                                        <option value="">Pilih Satuan</option>
+                                        @foreach ($satuan as $item)
+                                        <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" class="btn btn-outline-success" onclick="showModalSatuan()">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Stok Unit 5</label>
+                                <input type="number" class="form-control form-control-sm" name="stok" id="stok" 
+                                       min="0" step="1" value="0" readonly>
+                                <div class="form-text text-muted">Stok di unit bengkel (ID: 5)</div>
                             </div>
                             
                             <div class="col-md-6">
@@ -158,7 +176,9 @@
                                 <div class="mt-2 text-center">
                                     <img id="previewImg" src="" style="max-height: 150px; max-width: 200px;" 
                                          class="img-thumbnail d-none border-warning">
+                                    <input type="hidden" name="hapus_gambar" id="hapus_gambar" value="0">
                                 </div>
+                                <div class="form-text">Format: JPG, PNG, JPEG (Max: 2MB)</div>
                             </div>
                         </div>
                     </div>
@@ -171,6 +191,58 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal Kategori --}}
+    <div class="modal fade" id="modalKategori" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-tags"></i> Tambah Kategori
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nama Kategori <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="namaKategori" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-success" onclick="simpanKategori()">
+                        <i class="bi bi-check"></i> Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal Satuan --}}
+    <div class="modal fade" id="modalSatuan" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-box"></i> Tambah Satuan
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nama Satuan <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="namaSatuan" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-success" onclick="simpanSatuan()">
+                        <i class="bi bi-check"></i> Simpan
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -231,6 +303,22 @@
             .img-thumbnail {
                 border: 2px solid #ffc107;
             }
+            .stok-positive {
+                color: #198754;
+                font-weight: bold;
+            }
+            .stok-zero {
+                color: #dc3545;
+                font-weight: bold;
+            }
+            .select2-container--default .select2-selection--single {
+                height: 31px;
+                border: 1px solid #ced4da;
+            }
+            .select2-container--default .select2-selection--single .select2-selection__rendered {
+                line-height: 29px;
+                font-size: 0.875rem;
+            }
         </style>
     </x-slot>
 
@@ -248,7 +336,6 @@
                     type: "GET",
                     data: function(d) {
                         d.kategori = $('#fkategori').val();
-                        // Untuk pencarian global
                         if ($('#searchInput').val()) {
                             d.search = {
                                 value: $('#searchInput').val(),
@@ -281,17 +368,32 @@
                     { 
                         data: 'nama_barang',
                         name: 'nama_barang',
-                        width: '25%'
+                        width: '20%'
                     },
                     { 
-                        data: 'kategori',
-                        name: 'kategori',
-                        width: '15%'
-                    },
-                    { 
-                        data: 'satuan',
-                        name: 'satuan',
+                        data: 'kategori_nama',
+                        name: 'kategori_nama',
                         width: '10%'
+                    },
+                    { 
+                        data: 'satuan_nama',
+                        name: 'satuan_nama',
+                        width: '10%'
+                    },
+                    { 
+                        data: 'stok',
+                        name: 'stok',
+                        orderable: true,
+                        searchable: false,
+                        width: '10%',
+                        render: function(data, type, row) {
+                            if (type === 'display') {
+                                const stokNum = parseInt(data.replace(/\./g, '')) || 0;
+                                const stokClass = stokNum > 0 ? 'stok-positive' : 'stok-zero';
+                                return `<span class="${stokClass}">${data}</span>`;
+                            }
+                            return data;
+                        }
                     },
                     { 
                         data: 'harga_beli_format',
@@ -312,7 +414,7 @@
                         name: 'img',
                         orderable: false,
                         searchable: false,
-                        width: '10%'
+                        width: '5%'
                     },
                     {
                         data: 'aksi',
@@ -342,7 +444,6 @@
                     }
                 },
                 drawCallback: function(settings) {
-                    // Reset nomor urut setelah filter/paging
                     var api = this.api();
                     var startIndex = api.page.info().start;
                     api.column(0, {page: 'current'}).nodes().each(function(cell, i) {
@@ -423,10 +524,9 @@
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         $('#previewImg').removeClass('d-none').attr('src', e.target.result);
+                        $('#hapus_gambar').val('0'); // Reset hapus gambar jika upload baru
                     };
                     reader.readAsDataURL(file);
-                } else {
-                    $('#previewImg').addClass('d-none').attr('src', '');
                 }
             });
 
@@ -453,6 +553,12 @@
                 }
 
                 const formData = new FormData(this);
+                
+                // Ambil stok jika barang baru
+                const idbarang = $('#idbarang').val();
+                if (!idbarang) {
+                    formData.append('stok', $('#stok').val() || 0);
+                }
                 
                 $.ajax({
                     url: "{{ route('barangbengkel.store') }}",
@@ -504,215 +610,201 @@
             });
 
             // Edit button
-            // Edit button - Perbaikan
-$(document).on('click', '.btn-edit', function() {
-    const encryptedId = $(this).data('id');
-    
-    // Reset form dulu
-    resetForm();
-    $('#modalBarang').modal('show');
-    
-    // Show loading dalam modal
-    $('#modalBarang .modal-body').html('<div class="text-center py-5"><div class="spinner-border text-warning"></div><p class="mt-2">Memuat data...</p></div>');
-    
-    $.ajax({
-        url: "{{ route('barangbengkel.getsingledata') }}",
-        method: "GET",
-        data: { id: encryptedId },
-        success: function(response) {
-            if (response.success) {
-                const data = response.data;
+            $(document).on('click', '.btn-edit', function() {
+                const encryptedId = $(this).data('id');
                 
-                // Kembalikan konten modal ke form
-                $('#modalBarang .modal-body').html(`
-                    <input type="hidden" name="idbarang" id="idbarang">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Kode Barang <span class="text-danger">*</span></label>
-                            <div class="input-group input-group-sm">
-                                <input type="text" class="form-control" name="kode_barang" required 
-                                       placeholder="Kode unik barang" id="kodeInput" value="${data.kode_barang}" readonly>
-                                <button type="button" class="btn btn-outline-warning" onclick="generateKode()" disabled>
-                                    <i class="bi bi-magic"></i> Generate
-                                </button>
-                            </div>
-                            <div class="form-text text-muted" id="kodeInfo">Kode tidak dapat diubah saat edit</div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Nama Barang <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" name="nama_barang" required value="${data.nama_barang}">
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Kategori <span class="text-danger">*</span></label>
-                            <select class="form-select form-select-sm" name="kategori" required>
-                                <option value="">Pilih Kategori</option>
-                                @foreach ($kategori as $item)
-                                <option value="{{ $item->name }}" ${data.kategori === '{{ $item->name }}' ? 'selected' : ''}>{{ $item->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Satuan <span class="text-danger">*</span></label>
-                            <select class="form-select form-select-sm" name="satuan" required>
-                                <option value="">Pilih Satuan</option>
-                                @foreach ($satuan as $item)
-                                <option value="{{ $item->name }}" ${data.satuan === '{{ $item->name }}' ? 'selected' : ''}>{{ $item->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Harga Beli</label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text">Rp</span>
-                                <input type="number" class="form-control" name="harga_beli" min="0" step="1000" id="hargaBeli" value="${data.harga_beli}">
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Harga Jual</label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text">Rp</span>
-                                <input type="number" class="form-control" name="harga_jual" min="0" step="1000" id="hargaJual" value="${data.harga_jual}">
-                            </div>
-                            <div class="form-text text-muted" id="hargaInfo"></div>
-                        </div>
-                        
-                        <div class="col-12">
-                            <label class="form-label">Foto Barang (Opsional)</label>
-                            <input type="file" class="form-control form-control-sm" name="img" accept="image/*" id="fileInput">
-                            <div class="mt-2 text-center">
-                                ${data.img ? 
-                                    `<img id="previewImg" src="{{ asset('storage/produk/bengkel') }}/${data.img}" style="max-height: 150px; max-width: 200px;" class="img-thumbnail border-warning">
-                                     <div class="mt-1">
-                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeImage()">
-                                            <i class="bi bi-trash"></i> Hapus Foto
-                                        </button>
-                                     </div>` 
-                                    : 
-                                    `<img id="previewImg" src="" style="max-height: 150px; max-width: 200px;" class="img-thumbnail d-none border-warning">`
-                                }
-                            </div>
-                        </div>
-                    </div>
-                `);
+                resetForm();
+                $('#modalBarang').modal('show');
                 
-                // Set hidden ID
-                $('#idbarang').val(data.id);
+                // Show loading
+                $('#modalBarang .modal-body').html('<div class="text-center py-5"><div class="spinner-border text-warning"></div><p class="mt-2">Memuat data...</p></div>');
                 
-                // Re-attach event handlers
-                attachFormEvents();
-                
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Gagal!',
-                    text: response.message
+                $.ajax({
+                    url: "{{ route('barangbengkel.getsingledata') }}",
+                    method: "GET",
+                    data: { id: encryptedId },
+                    success: function(response) {
+                        if (response.success) {
+                            const data = response.data;
+                            
+                            // Kembalikan konten modal ke form
+                            $('#modalBarang .modal-body').html(`
+                                <input type="hidden" name="idbarang" id="idbarang" value="${data.id}">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Kode Barang <span class="text-danger">*</span></label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" name="kode_barang" required 
+                                                   placeholder="Kode unik barang" id="kodeInput" value="${data.kode_barang}" readonly>
+                                            <button type="button" class="btn btn-outline-warning" onclick="generateKode()" disabled>
+                                                <i class="bi bi-magic"></i> Generate
+                                            </button>
+                                        </div>
+                                        <div class="form-text text-muted">Kode tidak dapat diubah saat edit</div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nama Barang <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" name="nama_barang" required value="${data.nama_barang}">
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <label class="form-label">Kategori <span class="text-danger">*</span></label>
+                                        <div class="input-group input-group-sm">
+                                            <select class="form-select form-select-sm" name="idkategori" required id="idkategori">
+                                                <option value="">Pilih Kategori</option>
+                                                @foreach ($kategori as $item)
+                                                <option value="{{ $item->id }}">${data.idkategori == {{ $item->id }} ? 'selected' : ''}>{{ $item->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <button type="button" class="btn btn-outline-success" onclick="showModalKategori()">
+                                                <i class="bi bi-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <label class="form-label">Satuan <span class="text-danger">*</span></label>
+                                        <div class="input-group input-group-sm">
+                                            <select class="form-select form-select-sm" name="idsatuan" required id="idsatuan">
+                                                <option value="">Pilih Satuan</option>
+                                                @foreach ($satuan as $item)
+                                                <option value="{{ $item->id }}">${data.idsatuan == {{ $item->id }} ? 'selected' : ''}>{{ $item->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <button type="button" class="btn btn-outline-success" onclick="showModalSatuan()">
+                                                <i class="bi bi-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label">Stok Unit 5</label>
+                                        <input type="number" class="form-control form-control-sm" name="stok_display" id="stok" 
+                                               min="0" step="1" value="${data.stok}" readonly>
+                                        <div class="form-text text-muted">Stok di unit bengkel (ID: 5)</div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label">Harga Beli</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">Rp</span>
+                                            <input type="number" class="form-control" name="harga_beli" min="0" step="1000" id="hargaBeli" value="${data.harga_beli}">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label">Harga Jual</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">Rp</span>
+                                            <input type="number" class="form-control" name="harga_jual" min="0" step="1000" id="hargaJual" value="${data.harga_jual}">
+                                        </div>
+                                        <div class="form-text text-muted" id="hargaInfo"></div>
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <label class="form-label">Foto Barang (Opsional)</label>
+                                        <input type="file" class="form-control form-control-sm" name="img" accept="image/*" id="fileInput">
+                                        <div class="mt-2 text-center">
+                                            ${data.img ? 
+                                                `<img id="previewImg" src="{{ asset('storage/produk/bengkel') }}/${data.img}" style="max-height: 150px; max-width: 200px;" class="img-thumbnail border-warning">
+                                                 <div class="mt-1">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeImage()">
+                                                        <i class="bi bi-trash"></i> Hapus Foto
+                                                    </button>
+                                                 </div>` 
+                                                : 
+                                                `<img id="previewImg" src="" style="max-height: 150px; max-width: 200px;" class="img-thumbnail d-none border-warning">`
+                                            }
+                                        </div>
+                                        <input type="hidden" name="hapus_gambar" id="hapus_gambar" value="0">
+                                    </div>
+                                </div>
+                            `);
+                            
+                            // Re-attach event handlers
+                            attachFormEvents();
+                            
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                text: response.message
+                            });
+                            $('#modalBarang').modal('hide');
+                        }
+                    },
+                    error: function() {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Gagal memuat data barang'
+                        });
+                        $('#modalBarang').modal('hide');
+                    }
                 });
-                $('#modalBarang').modal('hide');
-            }
-        },
-        error: function() {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Gagal memuat data barang'
             });
-            $('#modalBarang').modal('hide');
-        }
-    });
-});
 
-// Function untuk re-attach event handlers
-function attachFormEvents() {
-    // Check harga validation
-    $('#hargaBeli, #hargaJual').on('input', function() {
-        validateHarga();
-    });
-    
-    // Preview image
-    $('#fileInput').on('change', function(evt) {
-        const [file] = this.files;
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                $('#previewImg').removeClass('d-none').attr('src', e.target.result);
-            };
-            reader.readAsDataURL(file);
-        } else {
-            $('#previewImg').addClass('d-none').attr('src', '');
-        }
-    });
-    
-    // Harga validation initial
-    validateHarga();
-}
-
-// Function untuk validasi harga
-function validateHarga() {
-    const hargaBeli = parseFloat($('#hargaBeli').val()) || 0;
-    const hargaJual = parseFloat($('#hargaJual').val()) || 0;
-    
-    if (hargaJual > 0 && hargaBeli > 0 && hargaJual < hargaBeli) {
-        $('#hargaInfo').html('<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Harga jual kurang dari harga beli</span>');
-    } else {
-        $('#hargaInfo').html('');
-    }
-}
-
-// Function untuk hapus foto
-function removeImage() {
-    Swal.fire({
-        title: 'Hapus Foto?',
-        text: "Foto akan dihapus dari sistem",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Ya, Hapus!',
-        cancelButtonText: 'Batal'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Tambahkan input hidden untuk menandai foto akan dihapus
-            if ($('#removeImgFlag').length === 0) {
-                $('<input>').attr({
-                    type: 'hidden',
-                    id: 'removeImgFlag',
-                    name: 'remove_img',
-                    value: '1'
-                }).appendTo('#frmbarang');
+            // Function untuk re-attach event handlers
+            function attachFormEvents() {
+                // Check harga validation
+                $('#hargaBeli, #hargaJual').on('input', function() {
+                    validateHarga();
+                });
+                
+                // Preview image
+                $('#fileInput').on('change', function(evt) {
+                    const [file] = this.files;
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            $('#previewImg').removeClass('d-none').attr('src', e.target.result);
+                            $('#hapus_gambar').val('0');
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+                
+                // Harga validation initial
+                validateHarga();
             }
-            
-            // Hapus preview
-            $('#previewImg').addClass('d-none').attr('src', '');
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'Foto akan dihapus saat disimpan',
-                timer: 1500,
-                showConfirmButton: false
-            });
-        }
-    });
-}
 
-// Update resetForm untuk handle remove flag
-function resetForm() {
-    if ($('#frmbarang').length > 0) {
-        $('#frmbarang')[0].reset();
-    }
-    $('#idbarang').val('');
-    $('#kodeInfo').html('');
-    $('#hargaInfo').html('');
-    $('#previewImg').addClass('d-none').attr('src', '');
-    $('#removeImgFlag').remove();
-    if ($('#frmbarang').hasClass('was-validated')) {
-        $('#frmbarang').removeClass('was-validated');
-    }
-}
+            // Function untuk validasi harga
+            function validateHarga() {
+                const hargaBeli = parseFloat($('#hargaBeli').val()) || 0;
+                const hargaJual = parseFloat($('#hargaJual').val()) || 0;
+                
+                if (hargaJual > 0 && hargaBeli > 0 && hargaJual < hargaBeli) {
+                    $('#hargaInfo').html('<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Harga jual kurang dari harga beli</span>');
+                } else {
+                    $('#hargaInfo').html('');
+                }
+            }
+
+            // Function untuk hapus foto
+            function removeImage() {
+                Swal.fire({
+                    title: 'Hapus Foto?',
+                    text: "Foto akan dihapus dari sistem",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $('#hapus_gambar').val('1');
+                        $('#previewImg').addClass('d-none').attr('src', '');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Foto akan dihapus saat disimpan',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    }
+                });
+            }
 
             // Delete button
             $(document).on('click', '.btn-delete', function() {
@@ -779,17 +871,65 @@ function resetForm() {
             // Reset form saat tambah baru
             $('#btnadd').on('click', function() {
                 resetForm();
-                $('#kodeInput').prop('readonly', false);
+                $('#kodeInput').prop('readonly', false).val('');
+                generateKode();
             });
+
+            // Show modal kategori
+            window.showModalKategori = function() {
+                $('#namaKategori').val('');
+                $('#modalKategori').modal('show');
+            }
+
+            // Simpan kategori
+            window.simpanKategori = function() {
+                const nama = $('#namaKategori').val().trim();
+                if (!nama) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Perhatian',
+                        text: 'Nama kategori harus diisi!'
+                    });
+                    return;
+                }
+
+                
+            }
+
+            // Show modal satuan
+            window.showModalSatuan = function() {
+                $('#namaSatuan').val('');
+                $('#modalSatuan').modal('show');
+            }
+
+            // Simpan satuan
+            window.simpanSatuan = function() {
+                const nama = $('#namaSatuan').val().trim();
+                if (!nama) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Perhatian',
+                        text: 'Nama satuan harus diisi!'
+                    });
+                    return;
+                }
+
+                
+            }
         });
 
         function resetForm() {
-            $('#frmbarang')[0].reset();
+            if ($('#frmbarang').length > 0) {
+                $('#frmbarang')[0].reset();
+            }
             $('#idbarang').val('');
             $('#kodeInfo').html('');
             $('#hargaInfo').html('');
             $('#previewImg').addClass('d-none').attr('src', '');
-            $('#frmbarang').removeClass('was-validated');
+            $('#hapus_gambar').val('0');
+            if ($('#frmbarang').hasClass('was-validated')) {
+                $('#frmbarang').removeClass('was-validated');
+            }
         }
 
         // Quick Add functions

@@ -45,4 +45,5 @@ class Barang extends Model
     {
         return $this->belongsTo(Satuan::class, 'idsatuan', 'id');
     }
+    
 }

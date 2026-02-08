@@ -76,18 +76,20 @@
                                         <span class="badge bg-warning">Cicilan 1x</span>
                                     </div>
                                     <div class="card-body p-2">
-                                        <table class="table table-sm table-striped table-bordered mb-0" id="tabelJasa" style="font-size: small;">
-                                            <thead>
-                                                <tr>
-                                                    <th width="70%">Nama Jasa</th>
-                                                    <th width="20%">Harga</th>
-                                                    <th width="10%"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <!-- Row akan ditambahkan via JavaScript -->
-                                            </tbody>
-                                        </table>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-striped table-bordered mb-0" id="tabelJasa" style="font-size: small;">
+                                                <thead>
+                                                    <tr>
+                                                        <th width="70%">Nama Jasa</th>
+                                                        <th width="20%">Harga</th>
+                                                        <th width="10%"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Row akan ditambahkan via JavaScript -->
+                                                </tbody>
+                                            </table>
+                                        </div>
                                         <div class="mt-2">
                                             <button type="button" id="tambahJasa" class="btn btn-sm btn-primary">
                                                 <i class="bi bi-plus"></i> Tambah Jasa
@@ -112,21 +114,23 @@
                                             <input type="text" class="form-control typeahead" id="barcode-search" placeholder="Scan barcode atau cari barang">
                                             <span class="input-group-text bg-primary"><i class="fa-solid fa-barcode text-white"></i></span>
                                         </div>
-                                        <table class="table table-sm table-striped table-bordered mb-0" id="tabelBarang" style="font-size: small;">
-                                            <thead>
-                                                <tr>
-                                                    <th width="30%">Barang</th>
-                                                    <th width="15%">Stok</th>
-                                                    <th width="15%">Qty</th>
-                                                    <th width="20%">Harga</th>
-                                                    <th width="15%">Total</th>
-                                                    <th width="5%"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <!-- Row akan ditambahkan via JavaScript -->
-                                            </tbody>
-                                        </table>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-striped table-bordered mb-0" id="tabelBarang" style="font-size: small;">
+                                                <thead>
+                                                    <tr>
+                                                        <th width="40%">Barang</th>
+                                                        <th width="10%">Stok</th>
+                                                        <th width="15%">Qty</th>
+                                                        <th width="20%">Harga</th>
+                                                        <th width="10%">Total</th>
+                                                        <th width="5%"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Row akan ditambahkan via JavaScript -->
+                                                </tbody>
+                                            </table>
+                                        </div>
                                         <div class="mt-2">
                                             <button type="button" id="tambahBarang" class="btn btn-sm btn-success">
                                                 <i class="bi bi-plus"></i> Tambah Barang
@@ -255,9 +259,13 @@
             background-color: #e7f3ff;
         }
         
-        /* Select2 custom styling */
+        /* Select2 custom styling dengan ukuran lebih besar */
         .select2-results__option {
-            padding: 8px 12px;
+            padding: 12px 15px;
+            font-size: 14px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
             border-bottom: 1px solid #f0f0f0;
         }
         
@@ -271,17 +279,108 @@
         }
         
         .select2-container--default .select2-selection--single {
-            height: 38px;
+            height: 42px;
             border: 1px solid #ced4da;
+            font-size: 14px;
         }
         
         .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 36px;
-            padding-left: 12px;
+            line-height: 40px;
+            padding-left: 15px;
+            font-size: 14px;
         }
         
         .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 36px;
+            height: 40px;
+        }
+        
+        .select2-container--default .select2-results > .select2-results__options {
+            max-height: 350px;
+        }
+        
+        /* Custom styles untuk select2 dropdown yang lebih besar */
+        .select2-container--default .select2-dropdown {
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Template custom untuk barang */
+        .barang-option {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            width: 100% !important;
+        }
+        
+        .barang-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .barang-detail {
+            text-align: right;
+            margin-left: 15px;
+            min-width: 120px;
+        }
+        
+        .barang-code {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 13px;
+        }
+        
+        .barang-name {
+            color: #495057;
+            font-size: 12px;
+            margin-top: 2px;
+            display: block;
+            white-space: normal;
+            line-height: 1.3;
+        }
+        
+        .barang-price {
+            font-weight: 700;
+            color: #28a745;
+            font-size: 13px;
+        }
+        
+        .barang-stock {
+            font-size: 11px;
+            margin-top: 3px;
+        }
+        
+        .barang-stock.success {
+            color: #28a745;
+        }
+        
+        .barang-stock.danger {
+            color: #dc3545;
+        }
+        
+        .barang-cicilan {
+            font-size: 11px;
+            margin-top: 3px;
+        }
+        
+        /* Template custom untuk jasa */
+        .jasa-option {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            width: 100% !important;
+        }
+        
+        .jasa-name {
+            font-weight: 500;
+            color: #2c3e50;
+            font-size: 13px;
+        }
+        
+        .jasa-price {
+            font-weight: 700;
+            color: #28a745;
+            font-size: 13px;
         }
         
         /* Custom styles */
@@ -292,10 +391,22 @@
         .table th {
             background-color: #f8f9fa;
             font-weight: 600;
+            font-size: 13px;
+        }
+        
+        .table td {
+            font-size: 13px;
+            vertical-align: middle;
         }
         
         .card-header {
             background-color: #f8f9fa !important;
+            padding: 0.75rem 1rem;
+        }
+        
+        .table-responsive {
+            max-height: 400px;
+            overflow-y: auto;
         }
         
         /* Responsive */
@@ -308,21 +419,73 @@
                 min-width: 80px;
             }
             
-            #tabelJasa th, #tabelJasa td,
-            #tabelBarang th, #tabelBarang td {
-                padding: 4px;
-                font-size: 11px;
+            .barang-detail {
+                min-width: 100px;
             }
             
             .col-md-6 {
                 padding-right: 0.5rem !important;
                 padding-left: 0.5rem !important;
+                margin-bottom: 1rem;
             }
             
             .ps-3, .pe-3 {
                 padding-right: 0.5rem !important;
                 padding-left: 0.5rem !important;
             }
+            
+            .table-responsive {
+                max-height: 250px;
+            }
+            
+            .barang-option, .jasa-option {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+            
+            .barang-detail {
+                margin-left: 0;
+                margin-top: 5px;
+                text-align: left;
+            }
+        }
+        
+        /* Custom untuk select2 di tabel */
+        #tabelBarang .select2-container,
+        #tabelJasa .select2-container {
+            width: 100% !important;
+        }
+        
+        /* Ukuran dropdown lebih besar */
+        .select2-results__option {
+            min-height: 70px;
+            padding: 10px 15px;
+        }
+        
+        /* Loading state */
+        .select2-results__message {
+            padding: 15px;
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        /* Scrollbar untuk dropdown */
+        .select2-results__options::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .select2-results__options::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .select2-results__options::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+        
+        .select2-results__options::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
         </style>
     </x-slot>
@@ -613,12 +776,32 @@
                 $(context).find('.select2-jasa').select2({
                     placeholder: 'Pilih Jasa',
                     width: '100%',
+                    dropdownCssClass: 'big-dropdown',
                     ajax: {
                         url: "{{ route('bengkel.getjasa') }}",
                         dataType: 'json',
                         delay: 250,
                         data: params => ({ q: params.term }),
                         processResults: data => ({ results: data })
+                    },
+                    templateResult: function(data) {
+                        if (!data.id) {
+                            return data.text;
+                        }
+                        
+                        return $(`
+                            <div class="jasa-option">
+                                <div>
+                                    <div class="jasa-name">${data.text}</div>
+                                </div>
+                                <div class="jasa-price">
+                                    ${formatRupiahWithDecimal(data.harga || 0)}
+                                </div>
+                            </div>
+                        `);
+                    },
+                    templateSelection: function(data) {
+                        return data.text || data.code;
                     }
                 }).on('select2:select', function(e) {
                     let data = e.params.data;
@@ -637,6 +820,7 @@
                 $(context).find('.select2-barang').select2({
                     placeholder: 'Pilih Barang',
                     width: '100%',
+                    dropdownCssClass: 'big-dropdown',
                     ajax: {
                         url: "{{ route('bengkel.getbarang') }}",
                         dataType: 'json',
@@ -660,28 +844,31 @@
                             return data.text;
                         }
                         
-                        let stokInfo = data.stok > 0 ? 
-                            `<span class="text-success">Stok: ${data.stok}</span>` : 
-                            `<span class="text-danger">Stok: ${data.stok}</span>`;
+                        let stokClass = data.stok > 0 ? 'success' : 'danger';
+                        let stokText = data.stok > 0 ? `Stok: ${data.stok}` : `Stok: ${data.stok} (Habis)`;
+                        let cicilanText = data.kategori_cicilan == 0 ? 
+                            '<div class="barang-cicilan"><span class="badge bg-warning">Cicilan 1x</span></div>' : 
+                            '<div class="barang-cicilan"><span class="badge bg-info">Cicilan fleksibel</span></div>';
                         
-                        let cicilanInfo = data.kategori_cicilan == 0 ? 
-                            `<span class="badge bg-warning">Cicilan 1x</span>` : 
-                            `<span class="badge bg-info">Cicilan fleksibel</span>`;
-                        
-                        let harga = formatRupiahWithDecimal(data.harga_jual);
-                        
-                        return $(
-                            `<div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>${data.code}</strong> - ${data.text}
+                        return $(`
+                            <div class="barang-option">
+                                <div class="barang-info">
+                                    <div class="barang-code">${data.code}</div>
+                                    <div class="barang-name">${data.text}</div>
+                                    <div class="barang-stock ${stokClass}">${stokText}</div>
+                                    ${cicilanText}
                                 </div>
-                                <div class="text-end">
-                                    <div class="text-primary fw-bold">${harga}</div>
-                                    <div class="small">${stokInfo}</div>
-                                    <div class="small">${cicilanInfo}</div>
+                                <div class="barang-detail">
+                                    <div class="barang-price">${formatRupiahWithDecimal(data.harga_jual || 0)}</div>
                                 </div>
-                            </div>`
-                        );
+                            </div>
+                        `);
+                    },
+                    templateSelection: function(data) {
+                        if (!data.id) {
+                            return data.text;
+                        }
+                        return data.text;
                     }
                 }).on('select2:select', function(e) {
                     let data = e.params.data;
@@ -716,6 +903,7 @@
                     tr.find('.harga').val(data.harga_jual || 0);
                     tr.find('.stok').val(data.stok || 0);
                     tr.find('.stok-display').text(data.stok || 0);
+                    tr.find('.harga-display').text(formatRupiahWithDecimal(data.harga_jual || 0));
                     tr.find('.qty').val(1).attr('max', data.stok || 999).trigger('input');
                     tr.find('.idbarang').val(data.id);
                     
@@ -745,6 +933,7 @@
                     tr.find('.harga').val(0);
                     tr.find('.stok').val(0);
                     tr.find('.stok-display').text(0);
+                    tr.find('.harga-display').text('Rp. 0');
                     tr.find('.qty').val(0);
                     tr.find('.total').val(0);
                     kalkulasi();
@@ -786,7 +975,7 @@
                                 <option value="${datarow.id}" selected data-cicilan="${datarow.kategori_cicilan || 1}">${datarow.text}</option>
                             </select>
                         </td>
-                        <td>
+                        <td class="text-center">
                             <span class="stok-display">${datarow.stok || 0}</span>
                             <input type="hidden" class="stok" value="${datarow.stok || 0}">
                         </td>
@@ -916,7 +1105,7 @@
                                         harga_jual: item.harga_jual,
                                         stok: item.stok,
                                         kategori_cicilan: item.kategori_cicilan,
-                                        display: `${item.code} - ${item.text} (Stok: ${item.stok})`
+                                        display: `${item.code} - ${item.text} (Stok: ${item.stok}) - ${formatRupiahWithDecimal(item.harga_jual)}`
                                     };
                                 });
                                 process(suggestions);
@@ -1022,7 +1211,7 @@
                             <td>
                                 <select name="idbarang[]" class="form-control select2-barang" required></select>
                             </td>
-                            <td>
+                            <td class="text-center">
                                 <span class="stok-display">0</span>
                                 <input type="hidden" class="stok" value="0">
                             </td>

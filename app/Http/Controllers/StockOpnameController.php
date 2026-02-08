@@ -67,6 +67,13 @@ class StockOpnameController extends Controller
                         ->where('stok_unit.unit_id', '=', $unitId)
                         ->whereNull('stok_unit.deleted_at');
                 })
+                ->where(function ($q) use ($unitId) {
+                    if ($unitId == 5) {
+                        $q->where('barang.kelompok_unit', 'bengkel');
+                    } else {
+                        $q->where('barang.kelompok_unit', '<>', 'bengkel');
+                    }
+                })
                 ->select(
                     'barang.id as id_barang',
                     'barang.kode_barang',
@@ -74,6 +81,7 @@ class StockOpnameController extends Controller
                 )
                 ->orderBy('barang.kode_barang')
                 ->get();
+
 
             // 3. Insert data baru
             foreach ($barangList as $barang) {
