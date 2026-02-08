@@ -184,6 +184,7 @@ class PenjualanController extends Controller
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
         ->join('kategori','kategori.id','barang.idkategori')
         ->where('stok_unit.unit_id',Auth::user()->unit_kerja)
+        ->where('stok_unit.stok', '>', 0)
         ->whereRaw("CONCAT(barang.kode_barang, barang.nama_barang) LIKE ?", ["%{$request->q}%"])
         ->select(
             'barang.id',
@@ -416,18 +417,94 @@ class PenjualanController extends Controller
             $penjualan->tanggal = $date->toDateTimeString();
             $penjualan->grandtotal = $request->grandtotal;
             $penjualan->subtotal = $request->subtotal;
-            $penjualan->metode_bayar = 'tunai'; // Selalu tunai untuk umum
+            $penjualan->metode_bayar = $request->metodebayar; // Ubah: menerima metode bayar dari request
             $penjualan->unit_id = Auth::user()->unit_kerja;
             $penjualan->customer = $request->customer;
-            $penjualan->anggota_id = null;
+            
+            // Cari customer umum dengan nama mengandung 'purchase'
+            if($request->metodebayar == 'cicilan') {
+                $customerUmum = User::where('name', 'like', '%purchase%')
+                    ->first();
+                
+                if(!$customerUmum) {
+                    // Buat customer umum jika belum ada
+                    $customerUmum = new User();
+                    $customerUmum->name = 'Purchase Umum';
+                    $customerUmum->email = 'purchase.umum@' . Auth::user()->unit_kerja . '.com';
+                    $customerUmum->password = bcrypt('purchase123');
+                    $customerUmum->nomor_anggota = 'UMUM-' . date('YmdHis');
+                    $customerUmum->unit_id = Auth::user()->unit_kerja;
+                    $customerUmum->save();
+                }
+                
+                $penjualan->anggota_id = $customerUmum->id;
+            } else {
+                $penjualan->anggota_id = null;
+            }
+            
             $penjualan->diskon = $request->diskon;
             $penjualan->note = $request->note;
-            $penjualan->type_order = 'umum';
-            $penjualan->status = 'lunas';
-            $penjualan->tenor = 0;
-            $penjualan->status_ambil = 'finish';
-            $penjualan->kembali = $request->kembali;
-            $penjualan->dibayar = $request->dibayar;
+            $penjualan->type_order = 'purchase';
+            
+            if($request->metodebayar == 'cicilan'){
+                $bunga = KonfigBunga::select('bunga_barang')->first();
+                $penjualan->status = 'hutang';
+                $penjualan->tenor = $request->jmlcicilan;
+                
+                // Ambil data barang untuk cek kategori
+                $barangIds = $request->idbarang;
+                $qtys = $request->qty;
+                $hargas = $request->harga_jual;
+                
+                // Hitung total per kategori
+                $totalCicilan0 = 0;
+                $totalCicilan1 = 0;
+                
+                for($i = 0; $i < count($barangIds); $i++) {
+                    $barang = DB::table('barang')
+                        ->join('kategori', 'kategori.id', '=', 'barang.idkategori')
+                        ->where('barang.id', $barangIds[$i])
+                        ->select('kategori.cicilan')
+                        ->first();
+                    
+                    if($barang) {
+                        $subtotal = $qtys[$i] * $hargas[$i];
+                        if($barang->cicilan == 0) {
+                            $totalCicilan0 += $subtotal;
+                        } else {
+                            $totalCicilan1 += $subtotal;
+                        }
+                    }
+                }
+
+                // Hitung cicilan pertama untuk kategori 1 menggunakan fungsi toko
+                $cicilanpertamaKategori1 = 0;
+                if($totalCicilan1 > 0 && $request->jmlcicilan > 0) {
+                    $result = DB::select("SELECT hitung_cicilan_toko(?, ?, ?, ?) AS jumlah", [
+                        $totalCicilan1, 
+                        $bunga->bunga_barang, 
+                        $request->jmlcicilan, 
+                        1
+                    ]);
+                    $cicilanpertamaKategori1 = $result[0]->jumlah;
+                }
+                
+                $cicilanpertama = $cicilanpertamaKategori1 + $totalCicilan0; // Tambahkan cicilan 0
+
+                // PERBEDAAN: Tidak ada validasi limit untuk umum
+                
+                // Untuk toko selalu tanpa bunga
+                $penjualan->bunga_barang = 0;
+                $penjualan->status_ambil = 'pesan';
+                $penjualan->kembali = 0;
+                $penjualan->dibayar = 0;
+            }elseif($request->metodebayar == 'tunai'){
+                $penjualan->status = 'lunas';
+                $penjualan->tenor = 0;
+                $penjualan->status_ambil = 'finish';
+                $penjualan->kembali = $request->kembali;
+                $penjualan->dibayar = $request->dibayar;
+            }
             $penjualan->created_user = Auth::user()->id;
             $penjualan->save();
             
@@ -445,6 +522,47 @@ class PenjualanController extends Controller
                 $no++;
             }
             
+            if($request->metodebayar == 'cicilan'){
+                // Buat cicilan untuk kategori 0 (hanya 1 cicilan)
+                if($totalCicilan0 > 0) {
+                    $cicilan0 = new PenjualanCicil();
+                    $cicilan0->penjualan_id = $penjualan->id;
+                    $cicilan0->cicilan = 1;
+                    $cicilan0->anggota_id = $customerUmum->id;
+                    $cicilan0->pokok = $totalCicilan0;
+                    $cicilan0->bunga = 0;
+                    $cicilan0->total_cicilan = $totalCicilan0;
+                    $cicilan0->status = 'hutang';
+                    $cicilan0->kategori = 0;
+                    $cicilan0->save();
+                }
+                
+                // Buat cicilan untuk kategori 1 (sesuai jumlah cicilan) menggunakan fungsi toko
+                if($totalCicilan1 > 0 && $request->jmlcicilan > 0) {
+                    for ($i = 1; $i <= $request->jmlcicilan; $i++) {
+                        $result = DB::select("SELECT hitung_cicilan_toko(?, ?, ?, ?) AS jumlah", [
+                            $totalCicilan1, 
+                            $bunga->bunga_barang, 
+                            $request->jmlcicilan, 
+                            $i
+                        ]);
+                        
+                        $cicilan = new PenjualanCicil();
+                        $cicilan->penjualan_id = $penjualan->id;
+                        $cicilan->cicilan = $i;
+                        $cicilan->anggota_id = $customerUmum->id;
+                        
+                        // Untuk fungsi hitung_cicilan_toko, bunga selalu 0
+                        $cicilan->pokok = $result[0]->jumlah; // Total cicilan = pokok karena tanpa bunga
+                        $cicilan->bunga = 0;
+                        $cicilan->total_cicilan = $result[0]->jumlah;
+                        $cicilan->status = 'hutang';
+                        $cicilan->kategori = 1;
+                        $cicilan->save();
+                    }
+                }
+            }
+            
             DB::commit();
             return response()->json(['message' => 'Order saved successfully.','invoice'=>$penjualan->nomor_invoice]);
         } catch (Exception $e) {
@@ -456,6 +574,42 @@ class PenjualanController extends Controller
                 'line'    => $e->getLine(),
             ], 500);
         }
+    }
+
+    // Tambahkan method untuk get anggota umum
+    public function getAnggotaUmum(Request $request){
+        $query = $request->get('query');
+
+        $users = User::where('name', 'like', '%purchase%')
+            ->leftJoin('penjualan_cicilan', function($join) {
+                $join->on('penjualan_cicilan.anggota_id', '=', 'users.id')
+                    ->where('penjualan_cicilan.status', '=', 'hutang');
+            })
+            ->where(function ($q) use ($query) {
+                $q->where('users.nomor_anggota', 'LIKE', "%{$query}%")
+                ->orWhere('users.name', 'LIKE', "%{$query}%");
+            })
+            ->select(
+                'users.id',
+                'users.name',
+                'users.nomor_anggota',
+                DB::raw('0 as limit_hutang'), // Limit hutang 0 untuk umum
+                DB::raw('SUM(penjualan_cicilan.pokok) as total_pokok')
+            )
+            ->groupBy('users.id', 'users.name', 'users.nomor_anggota')
+            ->get();
+
+        $formatted = $users->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'nomor_anggota' => $user->nomor_anggota,
+                'limit_hutang' => 0, // Tidak ada limit untuk umum
+                'total_pokok' => $user->total_pokok,
+            ];
+        });
+
+        return response()->json($formatted);
     }
 
     public function RiwayatPenjualan(Request $request): View

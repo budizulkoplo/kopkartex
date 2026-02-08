@@ -20,6 +20,14 @@
         <div class="container">
             <form class="needs-validation" novalidate id="frmterima" autocomplete="off">
                 <div class="card card-success card-outline mb-4">
+                    <div class="card-header p-2">
+                        <div class="alert alert-success ps-2 p-0 mb-0" role="alert" id="detailcus" style="display: none">
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle"></i> 
+                                Transaksi umum menggunakan customer khusus "Purchase"
+                            </div>
+                        </div>
+                    </div>
                     <div class="card-body p-3">
                         <div class="row mb-3">
                             <div class="col-md-4">
@@ -105,11 +113,23 @@
 
                             <div class="col-md-4">
                                 <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text label-fixed-width">Metode</span>
+                                    <select class="form-select form-select-sm" id="metodebayar" name="metodebayar" required>
+                                        <option value="tunai" selected>Tunai</option>
+                                        <option value="cicilan">Cicilan</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="input-group input-group-sm mb-2 fieldcicilan" style="display: none">
+                                    <span class="input-group-text label-fixed-width">Jml.Cicilan</span>
+                                    <input type="number" class="form-control form-control-sm" id="jmlcicilan" name="jmlcicilan" min="1" value="1" onfocus="this.select()" onkeyup="cekCicilan()">
+                                </div>
+                                <div class="input-group input-group-sm mb-2 clmetode">
                                     <span class="input-group-text label-fixed-width">Dibayar</span>
                                     <span class="input-group-text">Rp.</span>
                                     <input type="number" class="form-control" value="0" onfocus="this.select()" onkeyup="kalkulasi()" name="dibayar" id="dibayar" required>
                                 </div>
-                                <div class="input-group input-group-sm mb-2">
+                                <div class="input-group input-group-sm mb-2 clmetode">
                                     <span class="input-group-text label-fixed-width">Kembali</span>
                                     <span class="input-group-text">Rp.</span>
                                     <input type="number" class="form-control" value="0" name="kembali" id="kembali" disabled>
@@ -245,6 +265,9 @@
         <script>
             var globtot = 0;
             var barang = [];
+            var existingProducts = {};
+            var typeaheadInstance = null;
+            var enterPressed = false;
             
             function loader(onoff) {
                 if (onoff)
@@ -334,6 +357,37 @@
                 $('#kembali').val(dibayar - window.globtot);
             }
             
+            // Fungsi untuk cek cicilan
+            function cekCicilan() {
+                let jmlCicilan = parseInt($('#jmlcicilan').val()) || 1;
+                
+                // Loop melalui semua item untuk cek kategori cicilan
+                let hasCicilan0 = false;
+                $('#tbterima tbody tr').each(function() {
+                    let selectElement = $(this).find('.namabarang');
+                    let selectedOption = selectElement.find('option:selected');
+                    let kategoriCicilan = selectedOption.data('cicilan') || 1;
+                    
+                    if(kategoriCicilan == 0) {
+                        hasCicilan0 = true;
+                    }
+                });
+                
+                // Jika ada barang kategori cicilan 0, maksimal cicilan adalah 1
+                if(hasCicilan0 && jmlCicilan > 1) {
+                    Swal.fire({
+                        position: 'top-end',
+                        icon: 'warning',
+                        title: 'Ada barang dengan cicilan 1x, cicilan diubah menjadi 1',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                    $('#jmlcicilan').val(1);
+                    return false;
+                }
+                return true;
+            }
+            
             function invoice() {
                 $.ajax({
                     url: '{{ route('jual.umum.getinv') }}',
@@ -348,10 +402,76 @@
                 });
             }
             
-            function addRow(datarow = null) {
-                datarow = datarow || {id: 0, code: '', text: '', harga_jual: 0, stok: 0, type: '', kategori_cicilan: 1};
+            // Fungsi untuk membersihkan input barcode search
+            function clearBarcodeSearch() {
+                $('#barcode-search').val('');
+                if (typeaheadInstance) {
+                    $('#barcode-search').typeahead('val', '');
+                }
+                setTimeout(() => {
+                    $('#barcode-search').focus();
+                }, 100);
+            }
+            
+            // Fungsi untuk menambah produk yang sama (update qty)
+            function incrementExistingProduct(idbarang, rowElement, additionalQty = 1) {
+                const currentQty = parseInt(rowElement.find('.barangqty').val()) || 0;
+                const stok = parseInt(rowElement.find('.stok').val()) || 0;
+                const maxQty = parseInt(rowElement.find('.barangqty').attr('max')) || stok;
                 
-                // Tambah hidden input untuk idbarang
+                let newQty = currentQty + additionalQty;
+                
+                if (newQty > maxQty) {
+                    newQty = maxQty;
+                    Swal.fire({
+                        position: 'top-end',
+                        icon: 'warning',
+                        title: 'Qty melebihi stok!',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                }
+                
+                rowElement.find('.barangqty').val(newQty);
+                kalkulasi();
+            }
+            
+            // Fungsi untuk validasi stok
+            function validateStock(datarow) {
+                if (datarow.stok === 0 || datarow.stok <= 0) {
+                    Swal.fire({
+                        position: 'top-end',
+                        icon: 'warning',
+                        title: 'Stok habis!',
+                        text: `Produk "${datarow.text}" tidak tersedia (stok: ${datarow.stok})`,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                    return false;
+                }
+                return true;
+            }
+            
+            function addRow(datarow = null) {
+                datarow = datarow || {id: 0, code: '', text: '', harga_jual_umum: 0, stok: 0, type: '', kategori_cicilan: 1};
+                
+                // VALIDASI: Cek stok sebelum menambahkan produk
+                if (datarow.id && !validateStock(datarow)) {
+                    clearBarcodeSearch();
+                    return;
+                }
+                
+                // Cek apakah produk sudah ada di tabel
+                if (datarow.id && existingProducts[datarow.id]) {
+                    const existingRow = existingProducts[datarow.id];
+                    incrementExistingProduct(datarow.id, existingRow);
+                    clearBarcodeSearch();
+                    return;
+                }
+                
+                // Gunakan harga_jual_umum untuk umum
+                let hargaJualUmum = datarow.harga_jual_umum || datarow.harga_jual || 0;
+                
                 let newRow = $(`
                     <tr data-id="${datarow.id}" class="align-middle">
                         <td></td>
@@ -362,27 +482,27 @@
                             </select>
                             <input type="hidden" class="idbarang" name="idbarang[]" value="${datarow.id}">
                         </td>
-                        <td class="hargajualtext">${datarow.harga_jual ? formatRupiahWithDecimal(datarow.harga_jual) : ''}</td>
+                        <td class="hargajualtext">${hargaJualUmum ? formatRupiahWithDecimal(hargaJualUmum) : ''}</td>
                         <td>
                             <span class="stoktext">${datarow.stok}</span>
                             <input type="hidden" class="stok" name="stok[]" value="${datarow.stok}">
                         </td>
                         <td>
                             <input type="number" class="form-control form-control-sm w-auto barangqty" 
-                                onfocus="this.select()" 
-                                min="1" 
-                                max="${datarow.stok}" 
-                                name="qty[]" 
-                                onkeyup="kalkulasi(this)" 
-                                value="1" 
-                                data-id="${datarow.id}" 
-                                required>
+                                   onfocus="this.select()" 
+                                   min="1" 
+                                   max="${datarow.stok}" 
+                                   name="qty[]" 
+                                   onkeyup="kalkulasi(this)" 
+                                   value="1" 
+                                   data-id="${datarow.id}" 
+                                   required>
                             <input type="hidden" name="harga_beli[]" class="hargabeli" value="${datarow.harga_beli || 0}">
-                            <input type="hidden" name="harga_jual[]" class="hargajual" value="${datarow.harga_jual || 0}">
+                            <input type="hidden" name="harga_jual[]" class="hargajual" value="${hargaJualUmum}">
                         </td>
                         <td class="totalitm"></td>
                         <td>
-                            <span class="badge btn bg-danger dellist" onclick="$(this).closest('tr').remove(); kalkulasi(); numbering();">
+                            <span class="badge btn bg-danger dellist" onclick="removeProductRow($(this).closest('tr'))">
                                 <i class="bi bi-trash3-fill"></i>
                             </span>
                         </td>
@@ -393,7 +513,11 @@
                 numbering();
                 kalkulasi();
                 
-                // Inisialisasi select2 untuk row baru dengan template detail
+                if (datarow.id) {
+                    existingProducts[datarow.id] = newRow;
+                }
+                
+                // Inisialisasi select2 untuk row baru
                 newRow.find('.namabarang').select2({
                     placeholder: "Pilih barang",
                     width: '100%',
@@ -412,7 +536,8 @@
                                     code: b.code,
                                     text: b.text, 
                                     harga_beli: b.harga_beli, 
-                                    harga_jual: b.harga_jual, 
+                                    harga_jual: b.harga_jual_umum, // Gunakan harga_jual_umum
+                                    harga_jual_umum: b.harga_jual_umum,
                                     stok: b.stok,
                                     type: b.type,
                                     kategori_cicilan: b.kategori_cicilan
@@ -430,6 +555,10 @@
                             `<span class="text-success">Stok: ${data.stok}</span>` : 
                             `<span class="text-danger">Stok: ${data.stok}</span>`;
                         
+                        let cicilanInfo = data.kategori_cicilan == 0 ? 
+                            `<span class="badge bg-warning">Cicilan 1x</span>` : 
+                            `<span class="badge bg-info">Cicilan fleksibel</span>`;
+                        
                         let harga = formatRupiahWithDecimal(data.harga_jual);
                         
                         return $(
@@ -441,7 +570,8 @@
                                 <div class="text-end">
                                     <div class="text-primary fw-bold">${harga}</div>
                                     <div class="small">${stokInfo}</div>
-                                    <div class="small text-muted">Harga Umum</div>
+                                    <div class="small">${cicilanInfo}</div>
+                                    <div class="small text-success">Harga Umum</div>
                                 </div>
                             </div>`
                         );
@@ -453,6 +583,23 @@
                     let data = e.params.data;
                     let row = $(this).closest('tr');
                     
+                    // VALIDASI: Cek stok
+                    if (!validateStock(data)) {
+                        $(this).val(null).trigger('change');
+                        clearBarcodeSearch();
+                        return;
+                    }
+                    
+                    // Cek apakah produk sudah ada di tabel
+                    if (data.id && existingProducts[data.id] && existingProducts[data.id] !== row) {
+                        incrementExistingProduct(data.id, existingProducts[data.id]);
+                        row.remove();
+                        numbering();
+                        clearBarcodeSearch();
+                        return;
+                    }
+                    
+                    // Update row dengan data baru
                     row.attr("data-id", data.id);
                     row.find('.kodebarangtext').text(data.code);
                     row.find('.hargajual').val(data.harga_jual);
@@ -465,13 +612,29 @@
                     row.find('.barangqty').attr("data-id", data.id);
                     row.find('.idbarang').val(data.id);
                     
-                    // Update atribut data-cicilan
                     $(this).attr('data-cicilan', data.kategori_cicilan);
                     $(this).find('option:selected').attr('data-cicilan', data.kategori_cicilan);
                     
+                    if (data.id && !existingProducts[data.id]) {
+                        existingProducts[data.id] = row;
+                    }
+                    
                     kalkulasi();
+                    
+                    if($('#metodebayar').val() == 'cicilan') {
+                        cekCicilan();
+                    }
+                    
+                    clearBarcodeSearch();
+                    
                 }).on('select2:clear', function() {
                     let row = $(this).closest('tr');
+                    let idbarang = row.find('.idbarang').val();
+                    
+                    if (idbarang && existingProducts[idbarang]) {
+                        delete existingProducts[idbarang];
+                    }
+                    
                     row.attr("data-id", 0);
                     row.find('.kodebarangtext').text('');
                     row.find('.hargajual').val('');
@@ -482,17 +645,34 @@
                     row.find('.idbarang').val('');
                     row.find('.hargabeli').val('');
                     kalkulasi();
+                    
+                    if($('#metodebayar').val() == 'cicilan') {
+                        cekCicilan();
+                    }
                 });
 
-                // Tombol hapus
                 newRow.find('.dellist').on('click', function() {
-                    $(this).closest('tr').remove();
-                    numbering();
-                    kalkulasi();
+                    removeProductRow($(this).closest('tr'));
                 });
                 
-                $('#barcode-search').val('');
-                $('#barcode-search').typeahead('val', '');
+                clearBarcodeSearch();
+            }
+            
+            // Fungsi untuk menghapus row produk
+            function removeProductRow(row) {
+                let idbarang = row.find('.idbarang').val();
+                
+                if (idbarang && existingProducts[idbarang]) {
+                    delete existingProducts[idbarang];
+                }
+                
+                row.remove();
+                numbering();
+                kalkulasi();
+                
+                if($('#metodebayar').val() == 'cicilan') {
+                    cekCicilan();
+                }
             }
             
             function clearform() {
@@ -506,11 +686,14 @@
                 $('#dibayar').val(0);
                 $('#kembali').val(0);
                 $('#tbterima tbody').empty();
+                $('#metodebayar').val('tunai').trigger('change');
                 
-                // Reset tanggal ke hari ini
+                existingProducts = {};
+                
                 $('.datepicker').datepicker('setDate', new Date());
                 
-                // Refresh invoice
+                clearBarcodeSearch();
+                
                 invoice();
             }
             
@@ -524,13 +707,50 @@
                 
                 // Tombol tambah barang manual
                 $('#tambahBarang').on('click', function() {
-                    addRow({id: 0, code: '', text: '', harga_jual: 0, stok: 0});
+                    addRow({id: 0, code: '', text: '', harga_jual_umum: 0, stok: 0});
+                });
+                
+                // Handle metode bayar change
+                $('#metodebayar').on('change', function() {
+                    if($(this).val() == 'cicilan'){
+                        $('.fieldcicilan').show();
+                        
+                        if(!cekCicilan()) {
+                            $('#jmlcicilan').val(1);
+                        }
+                        
+                        // Untuk cicilan, sembunyikan input pembayaran tunai
+                        $('.clmetode').hide().find('input, select').prop('required', false).val('');
+                        
+                        // Otomatis set customer untuk umum
+                        $.ajax({
+                            url: '{{ route('jual.umum.getanggota') }}',
+                            method: 'GET',
+                            data: { query: 'purchase' },
+                            success: function(data) {
+                                if(data.length > 0) {
+                                    $('#customer').val(data[0].name);
+                                    $('#idcustomer').val(data[0].id);
+                                }
+                            }
+                        });
+                    } else {
+                        $('.fieldcicilan').hide();
+                        $('#jmlcicilan').val('');
+
+                        $('.clmetode').show().find('input, select').prop('required', true);
+                    }
+                });
+                
+                // Update juga ketika cicilan diubah
+                $('#jmlcicilan').on('change keyup', function() {
+                    cekCicilan();
                 });
                 
                 let currentRequest = null;
                 
-                // Typeahead yang benar untuk pencarian barcode/nama barang
-                $('#barcode-search').typeahead({
+                // Typeahead untuk pencarian barcode/nama barang
+                typeaheadInstance = $('#barcode-search').typeahead({
                     minLength: 1,
                     highlight: true,
                     source: function(query, process) {
@@ -545,16 +765,17 @@
                             dataType: 'json',
                             success: function(data) {
                                 barang = data;
-                                // Format data untuk typeahead
                                 let suggestions = data.map(function(item) {
                                     return {
                                         id: item.id,
                                         code: item.code,
                                         text: item.text,
-                                        harga_jual: item.harga_jual,
+                                        harga_jual: item.harga_jual_umum, // Gunakan harga_jual_umum
+                                        harga_jual_umum: item.harga_jual_umum,
                                         stok: item.stok,
                                         type: item.type,
-                                        display: `${item.code} - ${item.text}`
+                                        kategori_cicilan: item.kategori_cicilan,
+                                        display: `${item.code} - ${item.text} (Stok: ${item.stok})`
                                     };
                                 });
                                 process(suggestions);
@@ -564,42 +785,55 @@
                     displayText: function(item) {
                         return item.display || item.text;
                     },
+                    afterSelect: function(item) {
+                        setTimeout(() => {
+                            clearBarcodeSearch();
+                        }, 10);
+                    },
                     updater: function(item) {
-                        // Ketika item dipilih, tambahkan ke tabel
+                        if (enterPressed) {
+                            enterPressed = false;
+                            return '';
+                        }
+                        
+                        // VALIDASI: Cek stok
+                        if (item.stok === 0 || item.stok <= 0) {
+                            Swal.fire({
+                                position: 'top-end',
+                                icon: 'warning',
+                                title: 'Stok habis!',
+                                text: `Produk "${item.text}" tidak tersedia (stok: ${item.stok})`,
+                                showConfirmButton: false,
+                                timer: 2000
+                            });
+                            setTimeout(() => {
+                                clearBarcodeSearch();
+                            }, 10);
+                            return '';
+                        }
+                        
                         addRow({
                             id: item.id,
                             code: item.code,
                             text: item.text,
-                            harga_jual: item.harga_jual,
+                            harga_jual_umum: item.harga_jual_umum,
+                            harga_jual: item.harga_jual_umum,
                             stok: item.stok,
-                            type: item.type
-                        });
-                        return item.display;
-                    }
-                });
-                
-                // Custom template untuk typeahead (jika didukung)
-                if ($.fn.typeahead.Constructor.prototype.render) {
-                    $.fn.typeahead.Constructor.prototype.render = function(items) {
-                        var that = this;
-                        items = $(items).map(function (i, item) {
-                            i = $(that.options.item).attr('data-value', item);
-                            i.find('a').html(that.highlighter(item));
-                            return i[0];
+                            type: item.type,
+                            kategori_cicilan: item.kategori_cicilan
                         });
                         
-                        // Tambahkan template custom jika ada
-                        items.first().before('<li class="dropdown-header">Hasil Pencarian</li>');
-                        this.$menu.html(items);
-                        return this;
-                    };
-                }
+                        return '';
+                    }
+                });
                 
                 // Enter untuk barcode search
                 $('#barcode-search').on('keydown', function(e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         let barcode = $(this).val().trim();
+                        
+                        enterPressed = true;
                         
                         if(barcode) {
                             $.ajax({
@@ -609,10 +843,27 @@
                                 dataType: 'json',
                                 beforeSend: function(xhr) { loader(true); },
                                 success: function(response) {
-                                    addRow(response);
+                                    if (response.stok === 0 || response.stok <= 0) {
+                                        Swal.fire({
+                                            position: "top-end",
+                                            icon: "warning",
+                                            title: "Stok habis!",
+                                            text: `Produk "${response.text}" tidak tersedia (stok: ${response.stok})`,
+                                            showConfirmButton: false,
+                                            timer: 2000
+                                        });
+                                        clearBarcodeSearch();
+                                        loader(false);
+                                        return;
+                                    }
+                                    
+                                    // Gunakan harga_jual_umum
+                                    addRow({
+                                        ...response,
+                                        harga_jual: response.harga_jual_umum
+                                    });
                                     loader(false);
-                                    $('#barcode-search').val('');
-                                    $('#barcode-search').typeahead('val', '');
+                                    clearBarcodeSearch();
                                 },
                                 error: function(xhr, status, error) {
                                     Swal.fire({
@@ -622,17 +873,20 @@
                                         showConfirmButton: false,
                                         timer: 1500
                                     });
-                                    $('#barcode-search').val('');
-                                    $('#barcode-search').typeahead('val', '');
+                                    clearBarcodeSearch();
                                     loader(false);
                                 }
                             });
                         }
+                        
+                        setTimeout(() => {
+                            enterPressed = false;
+                        }, 100);
                     }
                 });
                 
-                // Disable enter key submit
-                $(window).keydown(function(event) {
+                // Nonaktifkan Enter di seluruh form kecuali untuk input barcode
+                $(window).keydown(function (event) {
                     if (event.key === "Enter") {
                         event.preventDefault();
                         return false;
@@ -682,18 +936,44 @@
                         return;
                     }
                     
-                    // Validasi pembayaran
-                    let dibayar = parseFloat($('#dibayar').val()) || 0;
-                    let grandtotal = parseFloat($('#grandtotal').val()) || 0;
-                    
-                    if (dibayar < grandtotal) {
-                        Swal.fire({
-                            icon: "warning",
-                            title: "Pembayaran kurang",
-                            text: "Jumlah dibayar kurang dari total pembayaran",
-                            showConfirmButton: true
-                        });
-                        return;
+                    // Validasi khusus untuk cicilan
+                    if ($('#metodebayar').val() === 'cicilan') {
+                        // Cek cicilan sebelum submit
+                        if(!cekCicilan()) {
+                            Swal.fire({
+                                icon: "warning",
+                                title: "Periksa jumlah cicilan",
+                                text: "Ada barang yang hanya boleh dicicil 1x",
+                                showConfirmButton: true
+                            });
+                            return;
+                        }
+                        
+                        // Validasi jumlah cicilan
+                        let jmlCicilan = parseInt($('#jmlcicilan').val()) || 0;
+                        if (jmlCicilan <= 0) {
+                            Swal.fire({
+                                icon: "warning",
+                                title: "Jumlah cicilan tidak valid",
+                                text: "Masukkan jumlah cicilan yang valid",
+                                showConfirmButton: true
+                            });
+                            return;
+                        }
+                    } else {
+                        // Validasi pembayaran untuk tunai
+                        let dibayar = parseFloat($('#dibayar').val()) || 0;
+                        let grandtotal = parseFloat($('#grandtotal').val()) || 0;
+                        
+                        if (dibayar < grandtotal) {
+                            Swal.fire({
+                                icon: "warning",
+                                title: "Pembayaran kurang",
+                                text: "Jumlah dibayar kurang dari total pembayaran",
+                                showConfirmButton: true
+                            });
+                            return;
+                        }
                     }
                     
                     // Konfirmasi transaksi

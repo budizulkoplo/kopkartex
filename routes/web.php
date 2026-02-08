@@ -153,6 +153,7 @@ Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|ad
 Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [PenjualanController::class, 'index'])->name('jual.form');
     Route::get('/umum', [PenjualanController::class, 'indexUmum'])->name('jual.umum.form');
+    Route::get('/umum/getanggota', [PenjualanController::class, 'getAnggotaUmum'])->name('jual.umum.getanggota'); 
     
     Route::get('/getbarang', [PenjualanController::class, 'getBarang'])->name('jual.getbarang');
     Route::get('/getbarang-umum', [PenjualanController::class, 'getBarangUmum'])->name('jual.umum.getbarang');
