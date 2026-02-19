@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="pagetitle">Penjualans</x-slot>
+    <x-slot name="pagetitle">Penjualan</x-slot>
     <div class="app-content-header">
         <div class="container-fluid">
             <div class="row mb-3">
@@ -25,7 +25,6 @@
                     </div>
                     <div class="card-body p-3">
                         <div class="row mb-3">
-                            <div class="row mb-3">
                             <div class="col-md-4">
                                 <div class="input-group input-group-sm mb-2"> 
                                     <span class="input-group-text label-fixed-width">Tanggal</span>
@@ -62,23 +61,6 @@
                                     <div class="fs-6 fw-bold txtinv">{{ $invoice }}</div>
                                 </div>
                                 <div class="fs-3 fw-bold text-success topgrandtotal">Rp. 0</div>
-                            </div>
-                        </div>
-
-                        <!-- POIN 2: Input Qty di atas tabel - VERSI SEDERHANA -->
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <div class="d-flex align-items-center bg-light p-2 rounded border">
-                                    <div class="me-3 fw-bold text-primary" style="min-width: 100px;">
-                                        <i class="bi bi-plus-circle"></i> QTY JUAL:
-                                    </div>
-                                    <div style="width: 150px;">
-                                        <input type="number" class="form-control form-control-sm" id="input-qty-jual" value="1" min="1" onfocus="this.select()">
-                                    </div>
-                                    <div class="ms-3 text-muted small">
-                                        <i class="bi bi-arrow-return-left"></i> isi qty, lalu Enter untuk input produk
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -413,22 +395,15 @@
             
             // Fungsi untuk membersihkan input barcode search
             function clearBarcodeSearch() {
+                // Kosongkan nilai input
                 $('#barcode-search').val('');
                 
+                // Clear typeahead value jika instance tersedia
                 if (typeaheadInstance) {
                     $('#barcode-search').typeahead('val', '');
                 }
-            }
-            
-            // POIN 3: Fungsi untuk fokus ke input qty
-            function focusToQtyInput() {
-                setTimeout(() => {
-                    $('#input-qty-jual').focus().select();
-                }, 100);
-            }
-            
-            // POIN 3: Fungsi untuk fokus kembali ke barcode
-            function focusToBarcode() {
+                
+                // Fokus kembali ke input
                 setTimeout(() => {
                     $('#barcode-search').focus();
                 }, 100);
@@ -442,6 +417,7 @@
                 
                 let newQty = currentQty + additionalQty;
                 
+                // Cek jika melebihi stok
                 if (newQty > maxQty) {
                     newQty = maxQty;
                     Swal.fire({
@@ -473,23 +449,20 @@
                 return true;
             }
             
-            // POIN 1 & 3: Fungsi addRow dimodifikasi untuk menempatkan produk baru di atas
-            function addRow(datarow = null, qty = 1) {
+            function addRow(datarow = null) {
                 datarow = datarow || {id: 0, code: '', text: '', harga_jual: 0, stok: 0, type: '', kategori_cicilan: 1};
                 
                 // VALIDASI: Cek stok sebelum menambahkan produk
                 if (datarow.id && !validateStock(datarow)) {
-                    clearBarcodeSearch();
-                    focusToBarcode();
+                    clearBarcodeSearch(); // Kosongkan pencarian
                     return;
                 }
                 
-                // Cek apakah produk sudah ada di tabel
+                // PERBAIKAN #2: Cek apakah produk sudah ada di tabel
                 if (datarow.id && existingProducts[datarow.id]) {
                     const existingRow = existingProducts[datarow.id];
-                    incrementExistingProduct(datarow.id, existingRow, qty);
-                    clearBarcodeSearch();
-                    focusToBarcode(); // POIN 3: Kembali ke barcode
+                    incrementExistingProduct(datarow.id, existingRow);
+                    clearBarcodeSearch(); // PERBAIKAN #1: Kosongkan pencarian
                     return;
                 }
                 
@@ -516,7 +489,7 @@
                                    max="${datarow.stok}" 
                                    name="qty[]" 
                                    onkeyup="kalkulasi(this)" 
-                                   value="${qty}" 
+                                   value="1" 
                                    data-id="${datarow.id}" 
                                    required>
                             <input type="hidden" name="harga_beli[]" class="hargabeli" value="${datarow.harga_beli || 0}">
@@ -531,8 +504,7 @@
                     </tr>
                 `);
                 
-                // POIN 1: Menempatkan row baru di paling atas
-                $('#tbterima tbody').prepend(newRow);
+                $('#tbterima tbody').append(newRow);
                 numbering();
                 kalkulasi();
                 
@@ -541,7 +513,7 @@
                     existingProducts[datarow.id] = newRow;
                 }
                 
-                // Inisialisasi select2 untuk row baru
+                // Inisialisasi select2 untuk row baru dengan template detail
                 newRow.find('.namabarang').select2({
                     placeholder: "Pilih barang",
                     width: '100%',
@@ -605,18 +577,24 @@
                     let data = e.params.data;
                     let row = $(this).closest('tr');
                     
+                    // VALIDASI: Cek stok sebelum menambahkan produk
                     if (!validateStock(data)) {
                         $(this).val(null).trigger('change');
                         clearBarcodeSearch();
                         return;
                     }
                     
+                    // PERBAIKAN #2: Cek apakah produk sudah ada di tabel
                     if (data.id && existingProducts[data.id] && existingProducts[data.id] !== row) {
+                        // Produk sudah ada di tabel lain, tambahkan qty
                         incrementExistingProduct(data.id, existingProducts[data.id]);
+                        
+                        // Hapus row baru yang kosong
                         row.remove();
                         numbering();
+                        
+                        // PERBAIKAN #1: Kosongkan pencarian
                         clearBarcodeSearch();
-                        focusToBarcode();
                         return;
                     }
                     
@@ -633,26 +611,30 @@
                     row.find('.barangqty').attr("data-id", data.id);
                     row.find('.idbarang').val(data.id);
                     
+                    // Update atribut data-cicilan
                     $(this).attr('data-cicilan', data.kategori_cicilan);
                     $(this).find('option:selected').attr('data-cicilan', data.kategori_cicilan);
                     
+                    // Tambahkan ke existingProducts jika belum ada
                     if (data.id && !existingProducts[data.id]) {
                         existingProducts[data.id] = row;
                     }
                     
                     kalkulasi();
                     
+                    // Cek cicilan jika metode cicilan dipilih
                     if($('#metodebayar').val() == 'cicilan') {
                         cekCicilan();
                     }
                     
+                    // PERBAIKAN #1: Kosongkan pencarian barcode
                     clearBarcodeSearch();
-                    focusToBarcode();
                     
                 }).on('select2:clear', function() {
                     let row = $(this).closest('tr');
                     let idbarang = row.find('.idbarang').val();
                     
+                    // Hapus dari existingProducts jika ada
                     if (idbarang && existingProducts[idbarang]) {
                         delete existingProducts[idbarang];
                     }
@@ -668,23 +650,26 @@
                     row.find('.hargabeli').val('');
                     kalkulasi();
                     
+                    // Cek cicilan jika metode cicilan dipilih
                     if($('#metodebayar').val() == 'cicilan') {
                         cekCicilan();
                     }
                 });
 
+                // Tombol hapus
                 newRow.find('.dellist').on('click', function() {
                     removeProductRow($(this).closest('tr'));
                 });
                 
+                // PERBAIKAN #1: Kosongkan pencarian
                 clearBarcodeSearch();
-                focusToBarcode(); // POIN 3: Kembali ke barcode
             }
             
             // Fungsi untuk menghapus row produk
             function removeProductRow(row) {
                 let idbarang = row.find('.idbarang').val();
                 
+                // Hapus dari existingProducts jika ada
                 if (idbarang && existingProducts[idbarang]) {
                     delete existingProducts[idbarang];
                 }
@@ -693,11 +678,10 @@
                 numbering();
                 kalkulasi();
                 
+                // Cek cicilan jika metode cicilan dipilih
                 if($('#metodebayar').val() == 'cicilan') {
                     cekCicilan();
                 }
-                
-                focusToBarcode(); // POIN 3: Kembali ke barcode
             }
             
             function clearform() {
@@ -714,7 +698,6 @@
                 $('#kembali').val(0);
                 $('#tbterima tbody').empty();
                 $('#metodebayar').val('tunai').trigger('change');
-                $('#input-qty-jual').val('1'); // Reset qty ke 1
                 
                 // Reset existingProducts
                 existingProducts = {};
@@ -847,15 +830,19 @@
                     }
                 });
 
-                // Nonaktifkan Enter di seluruh form kecuali untuk input barcode dan qty
+                // Nonaktifkan Enter di seluruh form kecuali untuk input barcode
                 $(window).keydown(function (event) {
                     if (event.key === "Enter") {
-                        // Izinkan Enter di input barcode dan input qty
-                        if ($(event.target).is('#barcode-search') || $(event.target).is('#input-qty-jual')) {
-                            return true;
-                        }
                         event.preventDefault();
                         return false;
+                    }
+                });
+                
+                // Kecuali untuk input barcode
+                $('#barcode-search').on('keydown', function(e) {
+                    if (e.key === "Enter") {
+                        // Biarkan event Enter berjalan untuk input barcode
+                        return true;
                     }
                 });
                 
@@ -928,41 +915,30 @@
                                 showConfirmButton: false,
                                 timer: 2000
                             });
+                            // Kosongkan input
                             setTimeout(() => {
                                 clearBarcodeSearch();
                             }, 10);
                             return '';
                         }
                         
-                        // POIN 3: Simpan data item dan fokus ke input qty
-                        $('#barcode-search').data('selected-item', item);
-                        focusToQtyInput();
+                        // Ketika item dipilih, tambahkan ke tabel
+                        addRow({
+                            id: item.id,
+                            code: item.code,
+                            text: item.text,
+                            harga_jual: item.harga_jual,
+                            stok: item.stok,
+                            type: item.type,
+                            kategori_cicilan: item.kategori_cicilan
+                        });
                         
                         // PERBAIKAN: Return string kosong agar tidak mengisi input
                         return '';
                     }
                 });
                 
-                // POIN 3: Handle Enter di input qty
-                $('#input-qty-jual').on('keydown', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        
-                        let selectedItem = $('#barcode-search').data('selected-item');
-                        let qty = parseInt($(this).val()) || 1;
-                        
-                        if (selectedItem) {
-                            addRow(selectedItem, qty);
-                            $('#barcode-search').removeData('selected-item');
-                            $(this).val(1); // Reset qty ke 1
-                        } else {
-                            // Jika tidak ada item yang dipilih, fokus ke barcode
-                            focusToBarcode();
-                        }
-                    }
-                });
-                
-                // POIN 3: Handle Enter untuk barcode search
+                // Enter untuk barcode search - PERBAIKAN: Tambah flag untuk mencegah double
                 $('#barcode-search').on('keydown', function(e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
@@ -990,16 +966,15 @@
                                             timer: 2000
                                         });
                                         clearBarcodeSearch();
-                                        focusToBarcode();
                                         loader(false);
                                         return;
                                     }
                                     
-                                    // POIN 3: Simpan data dan fokus ke qty
-                                    $('#barcode-search').data('selected-item', response);
-                                    focusToQtyInput();
-                                    
+                                    addRow(response);
                                     loader(false);
+                                    
+                                    // PERBAIKAN #1: Kosongkan pencarian setelah berhasil
+                                    clearBarcodeSearch();
                                 },
                                 error: function(xhr, status, error) {
                                     Swal.fire({
@@ -1012,7 +987,6 @@
                                     
                                     // PERBAIKAN #1: Tetap kosongkan pencarian meski error
                                     clearBarcodeSearch();
-                                    focusToBarcode();
                                     
                                     loader(false);
                                 }
@@ -1023,6 +997,20 @@
                         setTimeout(() => {
                             enterPressed = false;
                         }, 100);
+                    }
+                });
+                
+                // Blur event untuk mengosongkan barcode search jika tidak ada input
+                $('#barcode-search').on('blur', function() {
+                    // Tidak perlu dikosongkan otomatis saat blur
+                    // Biarkan user bisa melihat apa yang mereka ketik
+                });
+                
+                // Click event untuk mengosongkan jika diklik dan ada nilai
+                $('#barcode-search').on('click', function() {
+                    if ($(this).val()) {
+                        // Optional: Select all text untuk memudahkan edit
+                        $(this).select();
                     }
                 });
                 
