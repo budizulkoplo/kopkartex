@@ -1282,8 +1282,8 @@ public function exportPinbrgDbf(Request $request)
             mkdir(storage_path('app/temp'), 0777, true);
         }
         
-        // Panggil method createDbfFileNavicat dengan parameter yang benar
-        $this->createDbfFileNavicat($tempPath, null, $data); // struct tidak perlu dikirim karena sudah didefinisikan di dalam method
+        // Panggil method createDbfFileNavicat
+        $this->createDbfFileNavicat($tempPath, $data);
         
         // Download file
         return response()->download($tempPath, $filename, [
@@ -1303,10 +1303,6 @@ public function exportPinbrgDbf(Request $request)
         ], 500);
     }
 }
-
-/**
- * Create DBF file dengan format persis Navicat
- */
 /**
  * Create DBF file dengan format persis Navicat - Nama Field Max 10 Karakter
  */
