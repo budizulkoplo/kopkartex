@@ -127,7 +127,6 @@ Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|ad
     Route::post('/revisi', [PenerimaanController::class, 'prosesRevisi'])->name('penerimaan.revisi');
     Route::post('/batalkan/{id}', [PenerimaanController::class, 'batalkanPenerimaan'])->name('penerimaan.batalkan');
     Route::post('/update-status/{id}', [PenerimaanController::class, 'updateStatusBayar'])->name('penerimaan.update-status');
-    // Tambahkan route edit jika diperlukan
     Route::get('/edit/{id}', [PenerimaanController::class, 'edit'])->name('penerimaan.edit');
     Route::post('/update/{id}', [PenerimaanController::class, 'update'])->name('penerimaan.update');
 
@@ -135,10 +134,7 @@ Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|ad
     Route::get('/kategori', [PenerimaanController::class, 'getKategori'])->name('penerimaan.kategori');
 });
 
-// routes/web.php atau di grup route penerimaan
 Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
-    // ... route yang sudah ada
-    
     Route::post('/store-supplier', [PenerimaanController::class, 'storeSupplier'])->name('penerimaan.store-supplier');
 });
 
@@ -209,7 +205,6 @@ Route::prefix('simpanan')->middleware(['auth', 'verified', 'role:superadmin|admi
         Route::post('/store', [SimpananController::class,'store'])->name('simpanan.store');
     });
 
-
 Route::prefix('users')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->namespace('Users')->group(function () {
     Route::get('/list', [UsersController::class, 'index'])->name('users.list');
     Route::get('/permission', [UserRoleController::class, 'PermissionByRole']);
@@ -246,8 +241,7 @@ Route::prefix('barang')->middleware(['auth', 'verified', 'role:superadmin|admin'
     Route::delete('/hapus', [BarangController::class, 'Hapus'])->name('barang.hapus');
 });
 
-    
-    // Barang Bengkel
+
 Route::prefix('barangbengkel')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
         Route::get('/', [BarangBengkelController::class, 'index'])->name('barangbengkel.index');
         Route::get('/getdata', [BarangBengkelController::class, 'getdata'])->name('barangbengkel.getdata');
@@ -260,7 +254,6 @@ Route::prefix('barangbengkel')->middleware(['auth', 'verified', 'role:superadmin
     });
 
     
-
 Route::prefix('supplier')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [SupplierController::class, 'index'])->name('supplier.list');
     Route::get('/getdata', [SupplierController::class, 'getdata'])->name('supplier.getdata');
@@ -356,8 +349,6 @@ Route::middleware(['auth'])->prefix('mobile/belanja')->name('mobile.belanja.')->
     Route::get('/history', [BelanjaController::class, 'history'])->name('history');
     Route::get('/history/{id}', [BelanjaController::class, 'historyDetail'])->name('history.detail');
     Route::delete('/cancel/{id}', [BelanjaController::class, 'cancelOrder'])->name('cancel');
-    // Route untuk mendapatkan detail penjualan
-
 
 });
 
@@ -379,16 +370,9 @@ Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function (
 
 
 Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function () {
-    // Halaman scan opname
     Route::get('/stokopname', [MobileStokOpnameController::class, 'index'])->name('stokopname.index');
-
-    // Hasil scan barcode (post)
     Route::post('/stokopname/scan', [MobileStokOpnameController::class, 'scanResult'])->name('stokopname.scan');
-
-    // Form opname barang hasil scan
     Route::get('/stokopname/create/{id}', [MobileStokOpnameController::class, 'create'])->name('stokopname.create');
-
-    // Simpan opname
     Route::post('/stokopname/store', [MobileStokOpnameController::class, 'store'])->name('stokopname.store');
 });
 
