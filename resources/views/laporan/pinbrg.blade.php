@@ -243,7 +243,7 @@
                         }
                     },
                     responsive: true,
-                    pageLength: 10,
+                    pageLength: 100,
                     lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Semua"]],
                     drawCallback: function(settings) {
                         updateStatistics();
