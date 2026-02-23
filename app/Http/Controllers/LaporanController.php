@@ -9,9 +9,11 @@ use App\Models\Penerimaan;
 use App\Models\PenjualanCicil;
 use App\Exports\LaporanPenerimaanExport;
 use App\Models\Barang;
+use App\Models\Pinbrg;
 use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Support\Facades\Log;
 
 class LaporanController extends Controller
 {
@@ -422,7 +424,7 @@ class LaporanController extends Controller
     public function penjualanDetail(Request $request)
     {
         // default filter
-        $start_date   = $request->get('start_date', date('Y-m-01'));
+        $start_date   = $request->get('start_date', date('Y-m-d'));
         $end_date     = $request->get('end_date', date('Y-m-d'));
         $unit_id      = $request->get('unit', 'all');
         $metode_bayar = $request->get('metode', 'all');
@@ -1060,4 +1062,349 @@ class LaporanController extends Controller
             ->rawColumns(['action'])
             ->make(true);
     }
+
+    public function pinbrg(Request $request)
+{
+    if ($request->ajax()) {
+        return $this->getDataPinbrg($request);
+    }
+    
+    return view('laporan.pinbrg');
+}
+
+/**
+ * Get data for pinbrg report
+ */
+private function getDataPinbrg(Request $request)
+{
+    $period = $request->input('period', date('Y-m'));
+    
+    $query = Pinbrg::query();
+    
+    // Filter by period
+    if ($request->filled('period')) {
+        $query->where('period', $period);
+    }
+    
+    return DataTables::eloquent($query)
+        ->addIndexColumn()
+        ->addColumn('TG_PIN_formatted', function($row) {
+            return $row->TG_PIN ? date('d/m/Y', strtotime($row->TG_PIN)) : '-';
+        })
+        ->addColumn('TOTAL_HARGA_formatted', function($row) {
+            return 'Rp ' . number_format($row->TOTAL_HARGA, 0, ',', '.');
+        })
+        ->addColumn('JUM_PIN_formatted', function($row) {
+            return 'Rp ' . number_format($row->JUM_PIN, 0, ',', '.');
+        })
+        ->addColumn('SISA_PIN_formatted', function($row) {
+            return 'Rp ' . number_format($row->SISA_PIN, 0, ',', '.');
+        })
+        ->addColumn('ANGS_X_formatted', function($row) {
+            return 'Rp ' . number_format($row->ANGS_X, 0, ',', '.');
+        })
+        ->addColumn('ANGSUR1_formatted', function($row) {
+            return $row->ANGSUR1 > 0 ? 'Rp ' . number_format($row->ANGSUR1, 0, ',', '.') : '-';
+        })
+        ->addColumn('ANGSUR2_formatted', function($row) {
+            return $row->ANGSUR2 > 0 ? 'Rp ' . number_format($row->ANGSUR2, 0, ',', '.') : '-';
+        })
+        ->addColumn('STATUS_badge', function($row) {
+            $badgeClass = $row->STATUS == '1' ? 'bg-success' : 'bg-warning';
+            $statusText = $row->STATUS == '1' ? 'Aktif' : 'Non-Aktif';
+            return '<span class="badge ' . $badgeClass . '">' . $statusText . '</span>';
+        })
+        ->rawColumns(['STATUS_badge'])
+        ->make(true);
+}
+
+/**
+ * Generate data pinbrg from penjualan
+ */
+/**
+ * Generate data pinbrg from penjualan
+ */
+public function generatePinbrg(Request $request)
+{
+    try {
+        DB::beginTransaction();
+        
+        // Validasi input
+        $request->validate([
+            'period' => 'required|date_format:Y-m'
+        ]);
+        
+        // Ambil period dari request
+        $period = $request->input('period');
+        $tahun = substr($period, 0, 4);
+        $bulan = substr($period, 5, 2);
+        
+        // Hapus data lama untuk periode yang sama
+        Pinbrg::where('period', $period)->delete();
+        
+        // QUERY PERSIS SEPERTI ASLI ANDA - TANPA FILTER BULAN/TAHUN
+        $sql = "
+            SELECT
+                ? AS period,
+                u.unit_usaha AS unit_usaha,
+                u.id AS lokasi,
+                usr.nomor_anggota AS NO_AGT,
+                p.nomor_invoice AS NOPIN,
+                CONCAT(LEFT(u.nama_unit, 3), RIGHT(p.nomor_invoice, 5)) AS NO_PIN,
+                DATE(p.tanggal) AS TG_PIN,
+                p.grandtotal AS TOTAL_HARGA,
+                SUM(pc.total_cicilan) AS JUM_PIN,
+                SUM(CASE WHEN pc.status_bayar = '0' THEN pc.total_cicilan ELSE 0 END) AS SISA_PIN,
+                MAX(pc.cicilan) AS ANGS_X,
+                SUM(CASE WHEN pc.cicilan = 1 THEN pc.total_cicilan ELSE 0 END) AS ANGSUR1,
+                SUM(CASE WHEN pc.cicilan = 2 THEN pc.total_cicilan ELSE 0 END) AS ANGSUR2,
+                CASE 
+                    WHEN pc.kategori = 0 THEN '1' 
+                    WHEN pc.kategori = 1 THEN '2' 
+                END AS JENIS,
+                MIN(CASE WHEN pc.status_bayar = '0' THEN pc.cicilan END) AS ANGS_KE,
+                u.id AS UNIT,
+                '1' AS STATUS,
+                usr.nik AS NO_BADGE,
+                CASE 
+                    WHEN pc.kategori = 0 THEN 'NB' 
+                    WHEN pc.kategori = 1 THEN 'BP' 
+                END AS KEL,
+                '2' AS jenis_penjualan
+            FROM
+                penjualan p
+                LEFT JOIN users usr ON usr.id = p.anggota_id
+                LEFT JOIN unit u ON u.id = p.unit_id
+                LEFT JOIN penjualan_cicilan pc ON pc.penjualan_id = p.id
+            WHERE
+                p.metode_bayar = 'cicilan'
+                AND p.STATUS = 'hutang'
+            GROUP BY
+                p.id, u.id, u.unit_usaha, u.nama_unit, usr.nomor_anggota, usr.nik, 
+                p.nomor_invoice, p.tanggal, p.grandtotal, pc.kategori
+        ";
+        
+        // Log query untuk debugging
+        Log::info('SQL Query:', ['sql' => $sql, 'period' => $period]);
+        
+        $results = DB::select($sql, [$period]);
+        
+        // Log hasil query
+        Log::info('Query Results:', [
+            'count' => count($results),
+            'first_row' => count($results) > 0 ? (array)$results[0] : null
+        ]);
+        
+        $inserted = 0;
+        foreach ($results as $row) {
+            $data = [
+                'period' => $period,
+                'unit_usaha' => $row->unit_usaha,
+                'lokasi' => $row->lokasi,
+                'NO_AGT' => $row->NO_AGT,
+                'NOPIN' => $row->NOPIN,
+                'NO_PIN' => $row->NO_PIN,
+                'TG_PIN' => $row->TG_PIN,
+                'TOTAL_HARGA' => $row->TOTAL_HARGA ?? 0,
+                'JUM_PIN' => $row->JUM_PIN ?? 0,
+                'SISA_PIN' => $row->SISA_PIN ?? 0,
+                'ANGS_X' => $row->ANGS_X ?? 0,
+                'ANGSUR1' => $row->ANGSUR1 ?? 0,
+                'ANGSUR2' => $row->ANGSUR2 ?? 0,
+                'JENIS' => $row->JENIS,
+                'ANGS_KE' => $row->ANGS_KE,
+                'UNIT' => $row->UNIT,
+                'STATUS' => $row->STATUS,
+                'NO_BADGE' => $row->NO_BADGE,
+                'KEL' => $row->KEL,
+                'jenis_penjualan' => $row->jenis_penjualan,
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
+            
+            Pinbrg::create($data);
+            $inserted++;
+        }
+        
+        DB::commit();
+        
+        return response()->json([
+            'success' => true,
+            'message' => "Data pinbrg periode {$period} berhasil digenerate. Total: {$inserted} data",
+            'total' => $inserted,
+            'debug' => [
+                'query_result_count' => count($results),
+                'sample' => count($results) > 0 ? (array)$results[0] : null
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error generating pinbrg:', [
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal generate data: ' . $e->getMessage(),
+            'error_detail' => $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Export pinbrg to DBF
+ */
+/**
+ * Export pinbrg to DBF - format persis seperti export Navicat
+ */
+public function exportPinbrgDbf(Request $request)
+{
+    try {
+        $period = $request->input('period', date('Y-m'));
+        
+        // Ambil data pinbrg
+        $data = Pinbrg::where('period', $period)->get();
+        
+        if ($data->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => "Tidak ada data untuk periode {$period}"
+            ]);
+        }
+        
+        // Buat temporary file
+        $filename = "PINBRG_" . str_replace('-', '', $period) . "_" . date('YmdHis') . ".dbf";
+        $tempPath = storage_path("app/temp/{$filename}");
+        
+        // Pastikan direktori temp ada
+        if (!file_exists(storage_path('app/temp'))) {
+            mkdir(storage_path('app/temp'), 0777, true);
+        }
+        
+        // Definisikan struktur DBF persis seperti tabel di database (tanpa period)
+        $dbfStruct = [
+            ['field' => 'UNIT_USAHA', 'type' => 'C', 'length' => 100],
+            ['field' => 'LOKASI', 'type' => 'C', 'length' => 50],
+            ['field' => 'NO_AGT', 'type' => 'C', 'length' => 50],
+            ['field' => 'NOPIN', 'type' => 'C', 'length' => 50],
+            ['field' => 'NO_PIN', 'type' => 'C', 'length' => 50],
+            ['field' => 'TG_PIN', 'type' => 'D', 'length' => 8],
+            ['field' => 'TOTAL_HARGA', 'type' => 'N', 'length' => 15, 'decimal' => 2],
+            ['field' => 'JUM_PIN', 'type' => 'N', 'length' => 15, 'decimal' => 2],
+            ['field' => 'SISA_PIN', 'type' => 'N', 'length' => 15, 'decimal' => 2],
+            ['field' => 'ANGS_X', 'type' => 'N', 'length' => 15, 'decimal' => 2],
+            ['field' => 'ANGSUR1', 'type' => 'N', 'length' => 15, 'decimal' => 2],
+            ['field' => 'ANGSUR2', 'type' => 'N', 'length' => 15, 'decimal' => 2],
+            ['field' => 'JENIS', 'type' => 'C', 'length' => 10],
+            ['field' => 'ANGS_KE', 'type' => 'N', 'length' => 5],
+            ['field' => 'UNIT', 'type' => 'C', 'length' => 50],
+            ['field' => 'STATUS', 'type' => 'C', 'length' => 10],
+            ['field' => 'NO_BADGE', 'type' => 'C', 'length' => 50],
+            ['field' => 'KEL', 'type' => 'C', 'length' => 10],
+            ['field' => 'JENIS_PENJUALAN', 'type' => 'C', 'length' => 10],
+        ];
+        
+        // Buat file DBF
+        $this->createDbfFileNavicat($tempPath, $dbfStruct, $data);
+        
+        // Download file
+        return response()->download($tempPath, $filename, [
+            'Content-Type' => 'application/octet-stream',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"'
+        ])->deleteFileAfterSend(true);
+        
+    } catch (\Exception $e) {
+        Log::error('Error exporting pinbrg to DBF:', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal export ke DBF: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Create DBF file dengan format persis Navicat
+ */
+private function createDbfFileNavicat($filePath, $struct, $data)
+{
+    // Cek apakah fungsi dbase tersedia
+    if (!function_exists('dbase_create')) {
+        throw new \Exception('Extension dbase tidak tersedia. Install dengan: pecl install dbase');
+    }
+    
+    // Buat file DBF
+    $dbf = dbase_create($filePath, $struct);
+    
+    if (!$dbf) {
+        throw new \Exception('Gagal membuat file DBF');
+    }
+    
+    // Set karakter encoding (CP850 untuk kompatibilitas dengan Windows/Excel)
+    // dbase extension tidak mendukung encoding secara langsung, jadi kita biarkan default
+    
+    foreach ($data as $row) {
+        // Format tanggal untuk TG_PIN (DBF menggunakan format Ymd tanpa separator)
+        $tglPinjam = '';
+        if ($row->TG_PIN) {
+            $date = new \DateTime($row->TG_PIN);
+            $tglPinjam = $date->format('Ymd'); // Format: YYYYMMDD
+        }
+        
+        // Siapkan record dengan urutan yang sama persis dengan struct
+        $record = [
+            $this->formatDbfField($row->unit_usaha ?? '', 100),      // UNIT_USAHA
+            $this->formatDbfField($row->lokasi ?? '', 50),            // LOKASI
+            $this->formatDbfField($row->NO_AGT ?? '', 50),            // NO_AGT
+            $this->formatDbfField($row->NOPIN ?? '', 50),             // NOPIN
+            $this->formatDbfField($row->NO_PIN ?? '', 50),            // NO_PIN
+            $tglPinjam,                                                // TG_PIN (sudah format Ymd)
+            floatval($row->TOTAL_HARGA ?? 0),                          // TOTAL_HARGA
+            floatval($row->JUM_PIN ?? 0),                              // JUM_PIN
+            floatval($row->SISA_PIN ?? 0),                             // SISA_PIN
+            floatval($row->ANGS_X ?? 0),                               // ANGS_X
+            floatval($row->ANGSUR1 ?? 0),                              // ANGSUR1
+            floatval($row->ANGSUR2 ?? 0),                              // ANGSUR2
+            $this->formatDbfField($row->JENIS ?? '', 10),              // JENIS
+            intval($row->ANGS_KE ?? 0),                                // ANGS_KE
+            $this->formatDbfField($row->UNIT ?? '', 50),               // UNIT
+            $this->formatDbfField($row->STATUS ?? '1', 10),            // STATUS
+            $this->formatDbfField($row->NO_BADGE ?? '', 50),           // NO_BADGE
+            $this->formatDbfField($row->KEL ?? '', 10),                // KEL
+            $this->formatDbfField($row->jenis_penjualan ?? '2', 10),   // JENIS_PENJUALAN
+        ];
+        
+        // Tambahkan record ke DBF
+        if (!dbase_add_record($dbf, $record)) {
+            throw new \Exception('Gagal menambah record ke DBF');
+        }
+    }
+    
+    dbase_close($dbf);
+}
+
+/**
+ * Format field untuk DBF (memotong string sesuai panjang maksimal)
+ */
+private function formatDbfField($value, $maxLength)
+{
+    if (empty($value)) {
+        return '';
+    }
+    
+    // Konversi ke string dan potong jika terlalu panjang
+    $stringValue = (string)$value;
+    if (strlen($stringValue) > $maxLength) {
+        $stringValue = substr($stringValue, 0, $maxLength);
+    }
+    
+    return $stringValue;
+}
 }

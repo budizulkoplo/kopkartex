@@ -15,6 +15,7 @@ class Kategori extends Model
     protected $fillable = [
         'kode',
         'name',
-        'cicilan'
+        'cicilan',
+        'isbengkel'
     ];
 }

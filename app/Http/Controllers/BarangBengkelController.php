@@ -16,14 +16,17 @@ use Yajra\DataTables\Facades\DataTables;
 
 class BarangBengkelController extends Controller
 {
-    public function index(Request $request): View
-    {
-        return view('master.barangbengkel.list', [
-            'satuan'   => Satuan::orderBy('name')->get(),
-            'kategori' => Kategori::orderBy('name')->get(),
-        ]);
-    }
-
+public function index(Request $request): View
+{
+    return view('master.barangbengkel.list', [
+        'satuan'   => Satuan::where('isbengkel', 1)  // FILTER: hanya satuan dengan isbengkel=1
+                    ->orderBy('name')
+                    ->get(),
+        'kategori' => Kategori::where('isbengkel', 1)  // FILTER: hanya kategori dengan isbengkel=1
+                    ->orderBy('name')
+                    ->get(),
+    ]);
+}
     public function getdata(Request $request)
     {
         try {
@@ -458,11 +461,13 @@ class BarangBengkelController extends Controller
         }
     }
 
-    public function getKategoriOptions()
-    {
-        $kategori = Kategori::orderBy('name')->get();
-        return response()->json($kategori);
-    }
+public function getKategoriOptions()
+{
+    $kategori = Kategori::where('isbengkel', 1)  // FILTER: hanya kategori dengan isbengkel=1
+                ->orderBy('name')
+                ->get(['id', 'kode', 'name']);
+    return response()->json($kategori);
+}
 
     public function getSatuanOptions()
     {

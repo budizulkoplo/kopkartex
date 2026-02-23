@@ -113,14 +113,6 @@ Route::prefix('master/jasabengkel')
         Route::post('/hapus', [JasaBengkelController::class, 'hapus'])->name('hapus'); // hapus data
     });
 
-// Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
-//     Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.form');
-//     Route::get('/getbarang', [StockOpnameController::class, 'getBarang'])->name('stockopname.getbarang');
-//     Route::get('/getbarangbycode', [StockOpnameController::class, 'getBarangByCode'])->name('stockopname.getbarangbycode');
-//     Route::post('/store', [StockOpnameController::class, 'store'])->name('stockopname.store');
-//     // Route::get('/datatable', [ReturController::class, 'getDataTable'])->name('retur.datatable');
-//     // Route::get('/list', [ReturController::class, 'ListData'])->name('retur.list');
-// });
 Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [PenerimaanController::class, 'index'])->name('penerimaan.form');
     Route::get('/getbarang', [PenerimaanController::class, 'getBarang'])->name('penerimaan.getbarang');
@@ -341,7 +333,9 @@ Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin
         ->name('laporan.tagihan.statistics');
     Route::post('/tagihan/pelunasan', [LaporanController::class, 'pelunasanTagihan'])->name('laporan.tagihan.pelunasan');
     Route::post('/tagihan/pelunasan-semua', [LaporanController::class, 'pelunasanSemuaTagihan'])->name('laporan.tagihan.pelunasan_semua');
-
+    Route::get('/pinbrg', [LaporanController::class, 'pinbrg'])->name('laporan.pinbrg');
+    Route::post('/pinbrg/generate', [LaporanController::class, 'generatePinbrg'])->name('laporan.pinbrg.generate');
+    Route::post('/pinbrg/export-dbf', [LaporanController::class, 'exportPinbrgDbf'])->name('laporan.pinbrg.export.dbf');
 });
 
 Route::middleware(['auth'])->prefix('mobile/belanja')->name('mobile.belanja.')->group(function () {

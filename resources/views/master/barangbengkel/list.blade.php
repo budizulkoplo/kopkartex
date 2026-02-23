@@ -118,32 +118,22 @@
                             
                             <div class="col-md-4">
                                 <label class="form-label">Kategori <span class="text-danger">*</span></label>
-                                <div class="input-group input-group-sm">
-                                    <select class="form-select form-select-sm" name="idkategori" required id="idkategori">
-                                        <option value="">Pilih Kategori</option>
-                                        @foreach ($kategori as $item)
-                                        <option value="{{ $item->id }}">{{ $item->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <button type="button" class="btn btn-outline-success" onclick="showModalKategori()">
-                                        <i class="bi bi-plus"></i>
-                                    </button>
-                                </div>
+                                <select class="form-select form-select-sm" name="idkategori" required id="idkategori">
+                                    <option value="">Pilih Kategori</option>
+                                    @foreach ($kategori as $item)
+                                    <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                    @endforeach
+                                </select>
                             </div>
                             
                             <div class="col-md-4">
                                 <label class="form-label">Satuan <span class="text-danger">*</span></label>
-                                <div class="input-group input-group-sm">
-                                    <select class="form-select form-select-sm" name="idsatuan" required id="idsatuan">
-                                        <option value="">Pilih Satuan</option>
-                                        @foreach ($satuan as $item)
-                                        <option value="{{ $item->id }}">{{ $item->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <button type="button" class="btn btn-outline-success" onclick="showModalSatuan()">
-                                        <i class="bi bi-plus"></i>
-                                    </button>
-                                </div>
+                                <select class="form-select form-select-sm" name="idsatuan" required id="idsatuan">
+                                    <option value="">Pilih Satuan</option>
+                                    @foreach ($satuan as $item)
+                                    <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <div class="col-md-4">
@@ -195,87 +185,63 @@
         </div>
     </div>
 
-    {{-- Modal Kategori --}}
-    <div class="modal fade" id="modalKategori" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-tags"></i> Tambah Kategori
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Nama Kategori <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-sm" id="namaKategori" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="button" class="btn btn-success" onclick="simpanKategori()">
-                        <i class="bi bi-check"></i> Simpan
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Modal Satuan --}}
-    <div class="modal fade" id="modalSatuan" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-box"></i> Tambah Satuan
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Nama Satuan <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-sm" id="namaSatuan" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="button" class="btn btn-success" onclick="simpanSatuan()">
-                        <i class="bi bi-check"></i> Simpan
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     {{-- Modal Quick Add --}}
     <div class="modal fade" id="modalQuickAdd" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-sm">
+        <div class="modal-dialog modal-md">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title">
-                        <i class="bi bi-lightning"></i> Quick Add
+                        <i class="bi bi-lightning"></i> Quick Add Barang
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Kode Barang <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-sm" id="quickKode" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Nama Barang <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-sm" id="quickNama" required>
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="form-label">Harga Beli</label>
-                            <input type="number" class="form-control form-control-sm" id="quickHargaBeli" value="0">
+                    <form id="frmQuickAdd">
+                        <div class="mb-3">
+                            <label class="form-label">Kode Barang <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="quickKode" required>
+                            <div class="form-text" id="quickKodeInfo"></div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Harga Jual</label>
-                            <input type="number" class="form-control form-control-sm" id="quickHargaJual" value="0">
+                        <div class="mb-3">
+                            <label class="form-label">Nama Barang <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="quickNama" required>
                         </div>
-                    </div>
+                        <div class="mb-3">
+                            <label class="form-label">Kategori <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="quickKategori" required>
+                                <option value="">Pilih Kategori</option>
+                                @foreach ($kategori as $item)
+                                <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Satuan <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="quickSatuan" required>
+                                <option value="">Pilih Satuan</option>
+                                @foreach ($satuan as $item)
+                                <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Harga Beli</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">Rp</span>
+                                    <input type="number" class="form-control" id="quickHargaBeli" value="0" min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Harga Jual</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">Rp</span>
+                                    <input type="number" class="form-control" id="quickHargaJual" value="0" min="0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-text text-muted mt-2" id="quickHargaInfo"></div>
+                    </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -650,32 +616,22 @@
                                     
                                     <div class="col-md-4">
                                         <label class="form-label">Kategori <span class="text-danger">*</span></label>
-                                        <div class="input-group input-group-sm">
-                                            <select class="form-select form-select-sm" name="idkategori" required id="idkategori">
-                                                <option value="">Pilih Kategori</option>
-                                                @foreach ($kategori as $item)
-                                                <option value="{{ $item->id }}">${data.idkategori == {{ $item->id }} ? 'selected' : ''}>{{ $item->name }}</option>
-                                                @endforeach
-                                            </select>
-                                            <button type="button" class="btn btn-outline-success" onclick="showModalKategori()">
-                                                <i class="bi bi-plus"></i>
-                                            </button>
-                                        </div>
+                                        <select class="form-select form-select-sm" name="idkategori" required id="idkategori">
+                                            <option value="">Pilih Kategori</option>
+                                            @foreach ($kategori as $item)
+                                            <option value="{{ $item->id }}" ${data.idkategori == {{ $item->id }} ? 'selected' : ''}>{{ $item->name }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     
                                     <div class="col-md-4">
                                         <label class="form-label">Satuan <span class="text-danger">*</span></label>
-                                        <div class="input-group input-group-sm">
-                                            <select class="form-select form-select-sm" name="idsatuan" required id="idsatuan">
-                                                <option value="">Pilih Satuan</option>
-                                                @foreach ($satuan as $item)
-                                                <option value="{{ $item->id }}">${data.idsatuan == {{ $item->id }} ? 'selected' : ''}>{{ $item->name }}</option>
-                                                @endforeach
-                                            </select>
-                                            <button type="button" class="btn btn-outline-success" onclick="showModalSatuan()">
-                                                <i class="bi bi-plus"></i>
-                                            </button>
-                                        </div>
+                                        <select class="form-select form-select-sm" name="idsatuan" required id="idsatuan">
+                                            <option value="">Pilih Satuan</option>
+                                            @foreach ($satuan as $item)
+                                            <option value="{{ $item->id }}" ${data.idsatuan == {{ $item->id }} ? 'selected' : ''}>{{ $item->name }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
 
                                     <div class="col-md-4">
@@ -782,7 +738,7 @@
             }
 
             // Function untuk hapus foto
-            function removeImage() {
+            window.removeImage = function() {
                 Swal.fire({
                     title: 'Hapus Foto?',
                     text: "Foto akan dihapus dari sistem",
@@ -804,7 +760,7 @@
                         });
                     }
                 });
-            }
+            };
 
             // Delete button
             $(document).on('click', '.btn-delete', function() {
@@ -875,47 +831,38 @@
                 generateKode();
             });
 
-            // Show modal kategori
-            window.showModalKategori = function() {
-                $('#namaKategori').val('');
-                $('#modalKategori').modal('show');
-            }
-
-            // Simpan kategori
-            window.simpanKategori = function() {
-                const nama = $('#namaKategori').val().trim();
-                if (!nama) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Perhatian',
-                        text: 'Nama kategori harus diisi!'
-                    });
-                    return;
-                }
-
+            // Quick Add validation
+            $('#quickHargaBeli, #quickHargaJual').on('input', function() {
+                const hargaBeli = parseFloat($('#quickHargaBeli').val()) || 0;
+                const hargaJual = parseFloat($('#quickHargaJual').val()) || 0;
                 
-            }
-
-            // Show modal satuan
-            window.showModalSatuan = function() {
-                $('#namaSatuan').val('');
-                $('#modalSatuan').modal('show');
-            }
-
-            // Simpan satuan
-            window.simpanSatuan = function() {
-                const nama = $('#namaSatuan').val().trim();
-                if (!nama) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Perhatian',
-                        text: 'Nama satuan harus diisi!'
-                    });
-                    return;
+                if (hargaJual > 0 && hargaBeli > 0 && hargaJual < hargaBeli) {
+                    $('#quickHargaInfo').html('<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Harga jual kurang dari harga beli</span>');
+                } else {
+                    $('#quickHargaInfo').html('');
                 }
+            });
 
-                
-            }
+            // Quick Add check kode
+            $('#quickKode').on('blur', function() {
+                const kode = $(this).val().trim();
+                if (kode) {
+                    $.ajax({
+                        url: "{{ route('barangbengkel.cekcode') }}",
+                        data: { code: kode },
+                        success: function(count) {
+                            if (count > 0) {
+                                $('#quickKodeInfo').html('<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Kode sudah digunakan</span>');
+                            } else {
+                                $('#quickKodeInfo').html('<span class="text-success"><i class="bi bi-check-circle"></i> Kode tersedia</span>');
+                            }
+                        },
+                        error: function() {
+                            $('#quickKodeInfo').html('<span class="text-warning"><i class="bi bi-question-circle"></i> Gagal validasi kode</span>');
+                        }
+                    });
+                }
+            });
         });
 
         function resetForm() {
@@ -932,18 +879,20 @@
             }
         }
 
-        // Quick Add functions
+        // Quick Add function
         function saveQuickAdd() {
             const kode = $('#quickKode').val().trim();
             const nama = $('#quickNama').val().trim();
+            const idkategori = $('#quickKategori').val();
+            const idsatuan = $('#quickSatuan').val();
             const hargaBeli = parseFloat($('#quickHargaBeli').val()) || 0;
             const hargaJual = parseFloat($('#quickHargaJual').val()) || 0;
 
-            if (!kode || !nama) {
+            if (!kode || !nama || !idkategori || !idsatuan) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Perhatian',
-                    text: 'Kode dan Nama harus diisi!'
+                    text: 'Semua field yang bertanda * harus diisi!'
                 });
                 return;
             }
@@ -963,6 +912,8 @@
                 data: {
                     kode_barang: kode,
                     nama_barang: nama,
+                    idkategori: idkategori,
+                    idsatuan: idsatuan,
                     harga_beli: hargaBeli,
                     harga_jual: hargaJual,
                     _token: "{{ csrf_token() }}"
@@ -985,8 +936,12 @@
                             // Reset form quick add
                             $('#quickKode').val('');
                             $('#quickNama').val('');
+                            $('#quickKategori').val('');
+                            $('#quickSatuan').val('');
                             $('#quickHargaBeli').val(0);
                             $('#quickHargaJual').val(0);
+                            $('#quickKodeInfo').html('');
+                            $('#quickHargaInfo').html('');
                         });
                     } else {
                         Swal.fire({
@@ -1013,5 +968,5 @@
             });
         }
     </script>
-</x-slot>
+    </x-slot>
 </x-app-layout>
