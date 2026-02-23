@@ -159,15 +159,22 @@
                         url: "{{ route('laporan.pinbrg') }}",
                         type: "GET",
                         data: function(d) {
+                            // DataTables otomatis mengirim parameter: 
+                            // draw, start, length, search[value], order, columns, dll
+                            
+                            // Tambahkan parameter custom
                             d.period = $('#period').val();
-                            d.search = $('#search').val();
+                            
+                            // Untuk pencarian, gunakan parameter search bawaan DataTables
+                            // Tidak perlu d.search manual karena sudah ada d.search.value
                         },
                         error: function(xhr, error, thrown) {
                             console.error('DataTables error:', error, thrown);
+                            console.error('Response:', xhr.responseJSON);
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Error!',
-                                text: 'Gagal memuat data pinbrg'
+                                text: 'Gagal memuat data pinbrg: ' + (xhr.responseJSON?.message || error)
                             });
                         }
                     },
@@ -248,6 +255,21 @@
                     drawCallback: function(settings) {
                         updateStatistics();
                     }
+                });
+
+                // Filter form submit - Gunakan untuk reload dengan parameter period
+                $('#filterForm').submit(function(e) {
+                    e.preventDefault();
+                    tbPinbrg.ajax.reload();
+                });
+
+                // Search otomatis menggunakan fitur bawaan DataTables
+                // Hapus event handler search manual karena sudah ditangani DataTables
+                $('#search').off('keyup');
+
+                // Ganti dengan event untuk filter period saja
+                $('#period').on('change', function() {
+                    tbPinbrg.ajax.reload();
                 });
                 
                 // Update statistics

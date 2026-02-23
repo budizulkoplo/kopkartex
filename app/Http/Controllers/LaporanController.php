@@ -1063,9 +1063,16 @@ class LaporanController extends Controller
             ->make(true);
     }
 
-    public function pinbrg(Request $request)
+public function pinbrg(Request $request)
 {
     if ($request->ajax()) {
+        // Cek apakah ini request untuk check_data atau get_totals
+        if ($request->has('check_data')) {
+            return $this->getDataPinbrg($request);
+        }
+        if ($request->has('get_totals')) {
+            return $this->getDataPinbrg($request);
+        }
         return $this->getDataPinbrg($request);
     }
     
@@ -1075,15 +1082,48 @@ class LaporanController extends Controller
 /**
  * Get data for pinbrg report
  */
+/**
+ * Get data for pinbrg report
+ */
 private function getDataPinbrg(Request $request)
 {
     $period = $request->input('period', date('Y-m'));
+    $search = $request->input('search.value'); // Parameter pencarian dari DataTables
     
     $query = Pinbrg::query();
     
     // Filter by period
     if ($request->filled('period')) {
         $query->where('period', $period);
+    }
+    
+    // Filter by search - menggunakan parameter dari DataTables
+    if (!empty($search)) {
+        $query->where(function($q) use ($search) {
+            $q->where('NO_AGT', 'like', "%{$search}%")
+              ->orWhere('NOPIN', 'like', "%{$search}%")
+              ->orWhere('NO_BADGE', 'like', "%{$search}%")
+              ->orWhere('unit_usaha', 'like', "%{$search}%")
+              ->orWhere('lokasi', 'like', "%{$search}%");
+        });
+    }
+    
+    // Untuk cek data
+    if ($request->input('check_data') == 'true') {
+        return response()->json([
+            'total_data' => $query->count()
+        ]);
+    }
+    
+    // Untuk get totals
+    if ($request->input('get_totals') == 'true') {
+        $totals = [
+            'total_jum_pin' => $query->sum('JUM_PIN'),
+            'total_sisa_pin' => $query->sum('SISA_PIN'),
+            'aktif' => (clone $query)->where('STATUS', '1')->count(),
+            'non_aktif' => (clone $query)->where('STATUS', '!=', '1')->count()
+        ];
+        return response()->json(['totals' => $totals]);
     }
     
     return DataTables::eloquent($query)
@@ -1118,12 +1158,6 @@ private function getDataPinbrg(Request $request)
         ->make(true);
 }
 
-/**
- * Generate data pinbrg from penjualan
- */
-/**
- * Generate data pinbrg from penjualan
- */
 public function generatePinbrg(Request $request)
 {
     try {
