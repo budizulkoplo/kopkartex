@@ -1,5 +1,4 @@
 <?php
-// app/Models/Pinbrg.php
 
 namespace App\Models;
 
@@ -15,23 +14,23 @@ class Pinbrg extends Model
         'period',
         'unit_usaha',
         'lokasi',
-        'NO_AGT',        // Sesuai query: NO_AGT
-        'NOPIN',          // Sesuai query: NOPIN
-        'NO_PIN',         // Sesuai query: NO_PIN
-        'TG_PIN',         // Sesuai query: TG_PIN
-        'TOTAL_HARGA',    // Sesuai query: TOTAL_HARGA
-        'JUM_PIN',        // Sesuai query: JUM_PIN
-        'SISA_PIN',       // Sesuai query: SISA_PIN
-        'ANGS_X',         // Sesuai query: ANGS_X
-        'ANGSUR1',        // Sesuai query: ANGSUR1
-        'ANGSUR2',        // Sesuai query: ANGSUR2
-        'JENIS',          // Sesuai query: JENIS
-        'ANGS_KE',        // Sesuai query: ANGS_KE
-        'UNIT',           // Sesuai query: UNIT
-        'STATUS',         // Sesuai query: STATUS
-        'NO_BADGE',       // Sesuai query: NO_BADGE
-        'KEL',            // Sesuai query: KEL
-        'jenis_penjualan' // Sesuai query: jenis_penjualan
+        'NO_AGT',        
+        'NOPIN',          
+        'NO_PIN',         
+        'TG_PIN',         
+        'TOTAL_HARGA',    
+        'JUM_PIN',        
+        'SISA_PIN',       
+        'ANGS_X',         
+        'ANGSUR1',        
+        'ANGSUR2',        
+        'JENIS',         
+        'ANGS_KE',        
+        'UNIT',          
+        'STATUS',         
+        'NO_BADGE',      
+        'KEL',            
+        'jenis_penjualan' 
     ];
 
     protected $casts = [

@@ -1163,20 +1163,16 @@ public function generatePinbrg(Request $request)
     try {
         DB::beginTransaction();
         
-        // Validasi input
         $request->validate([
             'period' => 'required|date_format:Y-m'
         ]);
         
-        // Ambil period dari request
         $period = $request->input('period');
         $tahun = substr($period, 0, 4);
         $bulan = substr($period, 5, 2);
         
-        // Hapus data lama untuk periode yang sama
         Pinbrg::where('period', $period)->delete();
         
-        // QUERY PERSIS SEPERTI ASLI ANDA - TANPA FILTER BULAN/TAHUN
         $sql = "
             SELECT
                 ? AS period,
@@ -1218,12 +1214,10 @@ public function generatePinbrg(Request $request)
                 p.nomor_invoice, p.tanggal, p.grandtotal, pc.kategori
         ";
         
-        // Log query untuk debugging
         Log::info('SQL Query:', ['sql' => $sql, 'period' => $period]);
         
         $results = DB::select($sql, [$period]);
         
-        // Log hasil query
         Log::info('Query Results:', [
             'count' => count($results),
             'first_row' => count($results) > 0 ? (array)$results[0] : null
@@ -1289,15 +1283,11 @@ public function generatePinbrg(Request $request)
     }
 }
 
-/**
- * Export pinbrg to DBF
- */
 public function exportPinbrgDbf(Request $request)
 {
     try {
         $period = $request->input('period', date('Y-m'));
         
-        // Ambil data pinbrg
         $data = Pinbrg::where('period', $period)->get();
         
         if ($data->isEmpty()) {
@@ -1307,19 +1297,15 @@ public function exportPinbrgDbf(Request $request)
             ]);
         }
         
-        // Buat temporary file
         $filename = "PINBRG_" . str_replace('-', '', $period) . "_" . date('YmdHis') . ".dbf";
         $tempPath = storage_path("app/temp/{$filename}");
-        
-        // Pastikan direktori temp ada
+
         if (!file_exists(storage_path('app/temp'))) {
             mkdir(storage_path('app/temp'), 0777, true);
         }
-        
-        // Panggil method createDbfFileNavicat
+
         $this->createDbfFileNavicat($tempPath, $data);
         
-        // Download file
         return response()->download($tempPath, $filename, [
             'Content-Type' => 'application/octet-stream',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"'
@@ -1337,40 +1323,36 @@ public function exportPinbrgDbf(Request $request)
         ], 500);
     }
 }
-/**
- * Create DBF file dengan format persis Navicat - Nama Field Max 10 Karakter
- */
+
 private function createDbfFileNavicat($filePath, $data)
 {
-    // Cek apakah fungsi dbase tersedia
+
     if (!function_exists('dbase_create')) {
         throw new \Exception('Extension dbase tidak tersedia. Install dengan: pecl install dbase');
     }
     
-    // Definisikan struktur dengan nama field max 10 karakter
     $dbfDefinition = [
-        ['UNIT_USAHA', 'C', 20],    // UNIT_USAHA (10 karakter) - disingkat jadi UNIT_USAHA masih 10? 
-        ['LOKASI', 'C', 10],        // LOKASI (6 karakter) OK
-        ['NO_AGT', 'C', 15],        // NO_AGT (6 karakter) OK
-        ['NOPIN', 'C', 15],         // NOPIN (5 karakter) OK
-        ['NO_PIN', 'C', 15],        // NO_PIN (6 karakter) OK
-        ['TG_PIN', 'D', 8],         // TG_PIN (6 karakter) OK
-        ['TOTAL_HRG', 'N', 15, 2],  // TOTAL_HARGA -> TOTAL_HRG (9 karakter)
-        ['JUM_PIN', 'N', 15, 2],    // JUM_PIN (7 karakter) OK
-        ['SISA_PIN', 'N', 15, 2],   // SISA_PIN (8 karakter) OK
-        ['ANGS_X', 'N', 15, 2],     // ANGS_X (6 karakter) OK
-        ['ANGSUR1', 'N', 15, 2],    // ANGSUR1 (7 karakter) OK
-        ['ANGSUR2', 'N', 15, 2],    // ANGSUR2 (7 karakter) OK
-        ['JENIS', 'C', 5],          // JENIS (5 karakter) OK
-        ['ANGS_KE', 'N', 5, 0],     // ANGS_KE (7 karakter) OK
-        ['UNIT', 'C', 10],           // UNIT (4 karakter) OK
-        ['STATUS', 'C', 5],          // STATUS (6 karakter) OK
-        ['NO_BADGE', 'C', 15],       // NO_BADGE (8 karakter) OK
-        ['KEL', 'C', 5],             // KEL (3 karakter) OK
-        ['JENIS_PJ', 'C', 10],       // JENIS_PENJUALAN -> JENIS_PJ (8 karakter)
+        ['UNIT_USAHA', 'C', 20],    
+        ['LOKASI', 'C', 10],        
+        ['NO_AGT', 'C', 15],        
+        ['NOPIN', 'C', 15],         
+        ['NO_PIN', 'C', 15],       
+        ['TG_PIN', 'D', 8],         
+        ['TOTAL_HRG', 'N', 15, 2],  
+        ['JUM_PIN', 'N', 15, 2],   
+        ['SISA_PIN', 'N', 15, 2],   
+        ['ANGS_X', 'N', 15, 2],    
+        ['ANGSUR1', 'N', 15, 2],    
+        ['ANGSUR2', 'N', 15, 2],    
+        ['JENIS', 'C', 5],          
+        ['ANGS_KE', 'N', 5, 0],     
+        ['UNIT', 'C', 10],           
+        ['STATUS', 'C', 5],         
+        ['NO_BADGE', 'C', 15],       
+        ['KEL', 'C', 5],             
+        ['JENIS_PJ', 'C', 10],       
     ];
     
-    // Buat file DBF
     $dbf = dbase_create($filePath, $dbfDefinition);
     
     if (!$dbf) {
@@ -1378,7 +1360,7 @@ private function createDbfFileNavicat($filePath, $data)
     }
     
     foreach ($data as $row) {
-        // Format tanggal untuk TG_PIN
+
         $tglPinjam = '';
         if ($row->TG_PIN) {
             $date = new \DateTime($row->TG_PIN);
