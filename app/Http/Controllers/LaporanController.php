@@ -1258,9 +1258,6 @@ public function generatePinbrg(Request $request)
 /**
  * Export pinbrg to DBF
  */
-/**
- * Export pinbrg to DBF - format persis seperti export Navicat
- */
 public function exportPinbrgDbf(Request $request)
 {
     try {
@@ -1285,31 +1282,8 @@ public function exportPinbrgDbf(Request $request)
             mkdir(storage_path('app/temp'), 0777, true);
         }
         
-        // Definisikan struktur DBF persis seperti tabel di database (tanpa period)
-        $dbfStruct = [
-            ['field' => 'UNIT_USAHA', 'type' => 'C', 'length' => 100],
-            ['field' => 'LOKASI', 'type' => 'C', 'length' => 50],
-            ['field' => 'NO_AGT', 'type' => 'C', 'length' => 50],
-            ['field' => 'NOPIN', 'type' => 'C', 'length' => 50],
-            ['field' => 'NO_PIN', 'type' => 'C', 'length' => 50],
-            ['field' => 'TG_PIN', 'type' => 'D', 'length' => 8],
-            ['field' => 'TOTAL_HARGA', 'type' => 'N', 'length' => 15, 'decimal' => 2],
-            ['field' => 'JUM_PIN', 'type' => 'N', 'length' => 15, 'decimal' => 2],
-            ['field' => 'SISA_PIN', 'type' => 'N', 'length' => 15, 'decimal' => 2],
-            ['field' => 'ANGS_X', 'type' => 'N', 'length' => 15, 'decimal' => 2],
-            ['field' => 'ANGSUR1', 'type' => 'N', 'length' => 15, 'decimal' => 2],
-            ['field' => 'ANGSUR2', 'type' => 'N', 'length' => 15, 'decimal' => 2],
-            ['field' => 'JENIS', 'type' => 'C', 'length' => 10],
-            ['field' => 'ANGS_KE', 'type' => 'N', 'length' => 5],
-            ['field' => 'UNIT', 'type' => 'C', 'length' => 50],
-            ['field' => 'STATUS', 'type' => 'C', 'length' => 10],
-            ['field' => 'NO_BADGE', 'type' => 'C', 'length' => 50],
-            ['field' => 'KEL', 'type' => 'C', 'length' => 10],
-            ['field' => 'JENIS_PENJUALAN', 'type' => 'C', 'length' => 10],
-        ];
-        
-        // Buat file DBF
-        $this->createDbfFileNavicat($tempPath, $dbfStruct, $data);
+        // Panggil method createDbfFileNavicat dengan parameter yang benar
+        $this->createDbfFileNavicat($tempPath, null, $data); // struct tidak perlu dikirim karena sudah didefinisikan di dalam method
         
         // Download file
         return response()->download($tempPath, $filename, [
@@ -1333,6 +1307,9 @@ public function exportPinbrgDbf(Request $request)
 /**
  * Create DBF file dengan format persis Navicat
  */
+/**
+ * Create DBF file dengan format persis Navicat - Versi Sederhana
+ */
 private function createDbfFileNavicat($filePath, $struct, $data)
 {
     // Cek apakah fungsi dbase tersedia
@@ -1340,48 +1317,66 @@ private function createDbfFileNavicat($filePath, $struct, $data)
         throw new \Exception('Extension dbase tidak tersedia. Install dengan: pecl install dbase');
     }
     
+    // Definisikan struktur langsung dalam format yang benar
+    $dbfDefinition = [
+        ['UNIT_USAHA', 'C', 100],
+        ['LOKASI', 'C', 50],
+        ['NO_AGT', 'C', 50],
+        ['NOPIN', 'C', 50],
+        ['NO_PIN', 'C', 50],
+        ['TG_PIN', 'D', 8],
+        ['TOTAL_HARGA', 'N', 15, 2],
+        ['JUM_PIN', 'N', 15, 2],
+        ['SISA_PIN', 'N', 15, 2],
+        ['ANGS_X', 'N', 15, 2],
+        ['ANGSUR1', 'N', 15, 2],
+        ['ANGSUR2', 'N', 15, 2],
+        ['JENIS', 'C', 10],
+        ['ANGS_KE', 'N', 5, 0],
+        ['UNIT', 'C', 50],
+        ['STATUS', 'C', 10],
+        ['NO_BADGE', 'C', 50],
+        ['KEL', 'C', 10],
+        ['JENIS_PENJUALAN', 'C', 10],
+    ];
+    
     // Buat file DBF
-    $dbf = dbase_create($filePath, $struct);
+    $dbf = dbase_create($filePath, $dbfDefinition);
     
     if (!$dbf) {
         throw new \Exception('Gagal membuat file DBF');
     }
     
-    // Set karakter encoding (CP850 untuk kompatibilitas dengan Windows/Excel)
-    // dbase extension tidak mendukung encoding secara langsung, jadi kita biarkan default
-    
     foreach ($data as $row) {
-        // Format tanggal untuk TG_PIN (DBF menggunakan format Ymd tanpa separator)
+        // Format tanggal untuk TG_PIN
         $tglPinjam = '';
         if ($row->TG_PIN) {
             $date = new \DateTime($row->TG_PIN);
-            $tglPinjam = $date->format('Ymd'); // Format: YYYYMMDD
+            $tglPinjam = $date->format('Ymd');
         }
         
-        // Siapkan record dengan urutan yang sama persis dengan struct
         $record = [
-            $this->formatDbfField($row->unit_usaha ?? '', 100),      // UNIT_USAHA
-            $this->formatDbfField($row->lokasi ?? '', 50),            // LOKASI
-            $this->formatDbfField($row->NO_AGT ?? '', 50),            // NO_AGT
-            $this->formatDbfField($row->NOPIN ?? '', 50),             // NOPIN
-            $this->formatDbfField($row->NO_PIN ?? '', 50),            // NO_PIN
-            $tglPinjam,                                                // TG_PIN (sudah format Ymd)
-            floatval($row->TOTAL_HARGA ?? 0),                          // TOTAL_HARGA
-            floatval($row->JUM_PIN ?? 0),                              // JUM_PIN
-            floatval($row->SISA_PIN ?? 0),                             // SISA_PIN
-            floatval($row->ANGS_X ?? 0),                               // ANGS_X
-            floatval($row->ANGSUR1 ?? 0),                              // ANGSUR1
-            floatval($row->ANGSUR2 ?? 0),                              // ANGSUR2
-            $this->formatDbfField($row->JENIS ?? '', 10),              // JENIS
-            intval($row->ANGS_KE ?? 0),                                // ANGS_KE
-            $this->formatDbfField($row->UNIT ?? '', 50),               // UNIT
-            $this->formatDbfField($row->STATUS ?? '1', 10),            // STATUS
-            $this->formatDbfField($row->NO_BADGE ?? '', 50),           // NO_BADGE
-            $this->formatDbfField($row->KEL ?? '', 10),                // KEL
-            $this->formatDbfField($row->jenis_penjualan ?? '2', 10),   // JENIS_PENJUALAN
+            $this->formatDbfField($row->unit_usaha ?? '', 100),
+            $this->formatDbfField($row->lokasi ?? '', 50),
+            $this->formatDbfField($row->NO_AGT ?? '', 50),
+            $this->formatDbfField($row->NOPIN ?? '', 50),
+            $this->formatDbfField($row->NO_PIN ?? '', 50),
+            $tglPinjam,
+            floatval($row->TOTAL_HARGA ?? 0),
+            floatval($row->JUM_PIN ?? 0),
+            floatval($row->SISA_PIN ?? 0),
+            floatval($row->ANGS_X ?? 0),
+            floatval($row->ANGSUR1 ?? 0),
+            floatval($row->ANGSUR2 ?? 0),
+            $this->formatDbfField($row->JENIS ?? '', 10),
+            intval($row->ANGS_KE ?? 0),
+            $this->formatDbfField($row->UNIT ?? '', 50),
+            $this->formatDbfField($row->STATUS ?? '1', 10),
+            $this->formatDbfField($row->NO_BADGE ?? '', 50),
+            $this->formatDbfField($row->KEL ?? '', 10),
+            $this->formatDbfField($row->jenis_penjualan ?? '2', 10),
         ];
         
-        // Tambahkan record ke DBF
         if (!dbase_add_record($dbf, $record)) {
             throw new \Exception('Gagal menambah record ke DBF');
         }
