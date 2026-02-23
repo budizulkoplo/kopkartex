@@ -1308,36 +1308,36 @@ public function exportPinbrgDbf(Request $request)
  * Create DBF file dengan format persis Navicat
  */
 /**
- * Create DBF file dengan format persis Navicat - Versi Sederhana
+ * Create DBF file dengan format persis Navicat - Nama Field Max 10 Karakter
  */
-private function createDbfFileNavicat($filePath, $struct, $data)
+private function createDbfFileNavicat($filePath, $data)
 {
     // Cek apakah fungsi dbase tersedia
     if (!function_exists('dbase_create')) {
         throw new \Exception('Extension dbase tidak tersedia. Install dengan: pecl install dbase');
     }
     
-    // Definisikan struktur langsung dalam format yang benar
+    // Definisikan struktur dengan nama field max 10 karakter
     $dbfDefinition = [
-        ['UNIT_USAHA', 'C', 100],
-        ['LOKASI', 'C', 50],
-        ['NO_AGT', 'C', 50],
-        ['NOPIN', 'C', 50],
-        ['NO_PIN', 'C', 50],
-        ['TG_PIN', 'D', 8],
-        ['TOTAL_HARGA', 'N', 15, 2],
-        ['JUM_PIN', 'N', 15, 2],
-        ['SISA_PIN', 'N', 15, 2],
-        ['ANGS_X', 'N', 15, 2],
-        ['ANGSUR1', 'N', 15, 2],
-        ['ANGSUR2', 'N', 15, 2],
-        ['JENIS', 'C', 10],
-        ['ANGS_KE', 'N', 5, 0],
-        ['UNIT', 'C', 50],
-        ['STATUS', 'C', 10],
-        ['NO_BADGE', 'C', 50],
-        ['KEL', 'C', 10],
-        ['JENIS_PENJUALAN', 'C', 10],
+        ['UNIT_USAHA', 'C', 20],    // UNIT_USAHA (10 karakter) - disingkat jadi UNIT_USAHA masih 10? 
+        ['LOKASI', 'C', 10],        // LOKASI (6 karakter) OK
+        ['NO_AGT', 'C', 15],        // NO_AGT (6 karakter) OK
+        ['NOPIN', 'C', 15],         // NOPIN (5 karakter) OK
+        ['NO_PIN', 'C', 15],        // NO_PIN (6 karakter) OK
+        ['TG_PIN', 'D', 8],         // TG_PIN (6 karakter) OK
+        ['TOTAL_HRG', 'N', 15, 2],  // TOTAL_HARGA -> TOTAL_HRG (9 karakter)
+        ['JUM_PIN', 'N', 15, 2],    // JUM_PIN (7 karakter) OK
+        ['SISA_PIN', 'N', 15, 2],   // SISA_PIN (8 karakter) OK
+        ['ANGS_X', 'N', 15, 2],     // ANGS_X (6 karakter) OK
+        ['ANGSUR1', 'N', 15, 2],    // ANGSUR1 (7 karakter) OK
+        ['ANGSUR2', 'N', 15, 2],    // ANGSUR2 (7 karakter) OK
+        ['JENIS', 'C', 5],          // JENIS (5 karakter) OK
+        ['ANGS_KE', 'N', 5, 0],     // ANGS_KE (7 karakter) OK
+        ['UNIT', 'C', 10],           // UNIT (4 karakter) OK
+        ['STATUS', 'C', 5],          // STATUS (6 karakter) OK
+        ['NO_BADGE', 'C', 15],       // NO_BADGE (8 karakter) OK
+        ['KEL', 'C', 5],             // KEL (3 karakter) OK
+        ['JENIS_PJ', 'C', 10],       // JENIS_PENJUALAN -> JENIS_PJ (8 karakter)
     ];
     
     // Buat file DBF
@@ -1356,11 +1356,11 @@ private function createDbfFileNavicat($filePath, $struct, $data)
         }
         
         $record = [
-            $this->formatDbfField($row->unit_usaha ?? '', 100),
-            $this->formatDbfField($row->lokasi ?? '', 50),
-            $this->formatDbfField($row->NO_AGT ?? '', 50),
-            $this->formatDbfField($row->NOPIN ?? '', 50),
-            $this->formatDbfField($row->NO_PIN ?? '', 50),
+            $this->formatDbfField($row->unit_usaha ?? '', 20),
+            $this->formatDbfField($row->lokasi ?? '', 10),
+            $this->formatDbfField($row->NO_AGT ?? '', 15),
+            $this->formatDbfField($row->NOPIN ?? '', 15),
+            $this->formatDbfField($row->NO_PIN ?? '', 15),
             $tglPinjam,
             floatval($row->TOTAL_HARGA ?? 0),
             floatval($row->JUM_PIN ?? 0),
@@ -1368,12 +1368,12 @@ private function createDbfFileNavicat($filePath, $struct, $data)
             floatval($row->ANGS_X ?? 0),
             floatval($row->ANGSUR1 ?? 0),
             floatval($row->ANGSUR2 ?? 0),
-            $this->formatDbfField($row->JENIS ?? '', 10),
+            $this->formatDbfField($row->JENIS ?? '', 5),
             intval($row->ANGS_KE ?? 0),
-            $this->formatDbfField($row->UNIT ?? '', 50),
-            $this->formatDbfField($row->STATUS ?? '1', 10),
-            $this->formatDbfField($row->NO_BADGE ?? '', 50),
-            $this->formatDbfField($row->KEL ?? '', 10),
+            $this->formatDbfField($row->UNIT ?? '', 10),
+            $this->formatDbfField($row->STATUS ?? '1', 5),
+            $this->formatDbfField($row->NO_BADGE ?? '', 15),
+            $this->formatDbfField($row->KEL ?? '', 5),
             $this->formatDbfField($row->jenis_penjualan ?? '2', 10),
         ];
         
