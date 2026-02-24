@@ -77,9 +77,17 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::get('/', [ReturController::class, 'index'])->name('retur.form');
     Route::get('/getbarang', [ReturController::class, 'getBarang'])->name('retur.getbarang');
     Route::get('/getbarangbycode', [ReturController::class, 'getBarangByCode'])->name('retur.getbarangbycode');
+    Route::get('/getsupplier', [ReturController::class, 'getSupplier'])->name('retur.getsupplier');
+    Route::post('/store-supplier', [ReturController::class, 'storeSupplier'])->name('retur.store-supplier');
+    Route::post('/store-barang', [ReturController::class, 'storeBarang'])->name('retur.store-barang');
+    Route::get('/getinvoice', [ReturController::class, 'getInvoice'])->name('retur.getinvoice');
+    Route::get('/kategori', [ReturController::class, 'getKategori'])->name('retur.kategori');
     Route::post('/store', [ReturController::class, 'store'])->name('retur.store');
     Route::get('/datatable', [ReturController::class, 'getDataTable'])->name('retur.datatable');
     Route::get('/list', [ReturController::class, 'ListData'])->name('retur.list');
+    Route::get('/detail/{id}', [ReturController::class, 'getDetail'])->name('retur.detail');
+    Route::get('/nota/{invoice}', [ReturController::class, 'nota'])->name('retur.nota');
+    Route::post('/batalkan/{id}', [ReturController::class, 'batalkanRetur'])->name('retur.batalkan');
 });
 Route::prefix('ambilbarang')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [AmbilBarangController::class, 'index'])->name('ambil.list');
