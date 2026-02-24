@@ -241,18 +241,19 @@ Route::prefix('barang')->middleware(['auth', 'verified', 'role:superadmin|admin'
     Route::delete('/hapus', [BarangController::class, 'Hapus'])->name('barang.hapus');
 });
 
-
-Route::prefix('barangbengkel')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
-        Route::get('/', [BarangBengkelController::class, 'index'])->name('barangbengkel.index');
-        Route::get('/getdata', [BarangBengkelController::class, 'getdata'])->name('barangbengkel.getdata');
-        Route::get('/getcode', [BarangBengkelController::class, 'getCode'])->name('barangbengkel.getcode');
-        Route::post('/cekcode', [BarangBengkelController::class, 'CekCode'])->name('barangbengkel.cekcode');
-        Route::post('/store', [BarangBengkelController::class, 'Store'])->name('barangbengkel.store');
-        Route::post('/quickadd', [BarangBengkelController::class, 'quickAdd'])->name('barangbengkel.quickadd');
-        Route::delete('/hapus', [BarangBengkelController::class, 'Hapus'])->name('barangbengkel.hapus');
-        Route::get('/getsingledata', [BarangBengkelController::class, 'getSingleData'])->name('barangbengkel.getsingledata');
-    });
-
+Route::prefix('barangbengkel')->name('barangbengkel.')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/', [BarangBengkelController::class, 'index'])->name('index');
+    Route::get('/getdata', [BarangBengkelController::class, 'getdata'])->name('getdata');
+    Route::get('/getdetail', [BarangBengkelController::class, 'getDetail'])->name('getdetail');
+    Route::get('/getcode', [BarangBengkelController::class, 'getCode'])->name('getcode');
+    Route::get('/cekcode', [BarangBengkelController::class, 'CekCode'])->name('cekcode');
+    Route::post('/store', [BarangBengkelController::class, 'Store'])->name('store');
+    Route::delete('/hapus', [BarangBengkelController::class, 'Hapus'])->name('hapus');
+    Route::post('/quickadd', [BarangBengkelController::class, 'quickAdd'])->name('quickadd');
+    Route::post('/updatestok', [BarangBengkelController::class, 'updateStok'])->name('updatestok');
+    Route::get('/kategori-options', [BarangBengkelController::class, 'getKategoriOptions'])->name('kategori.options');
+    Route::get('/satuan-options', [BarangBengkelController::class, 'getSatuanOptions'])->name('satuan.options');
+});
     
 Route::prefix('supplier')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [SupplierController::class, 'index'])->name('supplier.list');
