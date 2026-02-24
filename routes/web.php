@@ -330,7 +330,13 @@ Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin
     Route::get('/pinbrg', [LaporanController::class, 'pinbrg'])->name('laporan.pinbrg');
     Route::post('/pinbrg/generate', [LaporanController::class, 'generatePinbrg'])->name('laporan.pinbrg.generate');
     Route::post('/pinbrg/export-dbf', [LaporanController::class, 'exportPinbrgDbf'])->name('laporan.pinbrg.export.dbf');
+
+    Route::get('/penjualan-bengkel-detail', [LaporanController::class, 'penjualanBengkelDetail'])->name('penjualan-bengkel-detail');
+    Route::get('/penjualan-bengkel-detail/data', [LaporanController::class, 'penjualanBengkelDetailData'])->name('penjualan-bengkel-detail.data');
+    Route::get('/penjualan-bengkel-detail/print', [LaporanController::class, 'penjualanBengkelDetailPrint'])->name('penjualan-bengkel-detail.print');
+    Route::get('/penjualan-bengkel-detail/export', [LaporanController::class, 'penjualanBengkelDetailExport'])->name('penjualan-bengkel-detail.export');
 });
+
 
 Route::middleware(['auth'])->prefix('mobile/belanja')->name('mobile.belanja.')->group(function () {
     Route::get('/', [BelanjaController::class, 'index'])->name('toko');
