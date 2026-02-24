@@ -16,17 +16,18 @@ use Yajra\DataTables\Facades\DataTables;
 
 class BarangBengkelController extends Controller
 {
-public function index(Request $request): View
-{
-    return view('master.barangbengkel.list', [
-        'satuan'   => Satuan::where('isbengkel', 1)  // FILTER: hanya satuan dengan isbengkel=1
-                    ->orderBy('name')
-                    ->get(),
-        'kategori' => Kategori::where('isbengkel', 1)  // FILTER: hanya kategori dengan isbengkel=1
-                    ->orderBy('name')
-                    ->get(),
-    ]);
-}
+    public function index(Request $request): View
+    {
+        return view('master.barangbengkel.list', [
+            'satuan'   => Satuan::where('isbengkel', '1')
+                        ->orderBy('name')
+                        ->get(),
+            'kategori' => Kategori::where('isbengkel', '1')
+                        ->orderBy('name')
+                        ->get(),
+        ]);
+    }
+
     public function getdata(Request $request)
     {
         try {
@@ -36,7 +37,7 @@ public function index(Request $request): View
 
             if ($request->has('kategori') && $request->kategori != 'all') {
                 $barang->whereHas('kategoriRelation', function ($query) use ($request) {
-                    $query->where('name', $request->kategori);
+                    $query->where('kategori.id', $request->kategori);
                 });
             }
 
@@ -48,7 +49,7 @@ public function index(Request $request): View
                 })
                 ->addColumn('stok', function($row) {
                     $stok = StokUnit::where('barang_id', $row->id)
-                        ->where('unit_id', 5) // Unit bengkel
+                        ->where('unit_id', 5)
                         ->value('stok') ?? 0;
                     return number_format($stok, 0, ',', '.');
                 })
@@ -73,32 +74,27 @@ public function index(Request $request): View
                 ->addColumn('satuan_nama', function ($row) {
                     return $row->satuanRelation ? $row->satuanRelation->name : '-';
                 })
-                ->addColumn('harga_beli_format', function ($q) {
+                ->editColumn('harga_beli', function ($q) {
                     return 'Rp ' . number_format($q->harga_beli, 0, ',', '.');
                 })
-                ->addColumn('harga_jual_format', function ($q) {
+                ->editColumn('harga_jual', function ($q) {
                     return 'Rp ' . number_format($q->harga_jual, 0, ',', '.');
                 })
-                ->addColumn('foto', function ($q) {
-                    if ($q->img) {
-                        return '<img src="' . asset('storage/produk/bengkel/' . $q->img) . '" class="img-thumbnail" style="max-height:50px; max-width:60px;">';
-                    }
-                    return '<span class="badge bg-secondary">No Image</span>';
+                ->editColumn('img', function ($q) {
+                    return $q->img;
                 })
                 ->addColumn('aksi', function ($q) {
                     $encryptedId = Crypt::encryptString($q->id);
                     return '
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-warning btn-edit" data-id="' . $encryptedId . '" title="Edit">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-outline-danger btn-delete" data-id="' . $encryptedId . '" title="Hapus">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
+                        <button class="btn btn-sm btn-warning editbtn" data-id="' . $encryptedId . '" title="Edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger deletebtn" data-id="' . $encryptedId . '" title="Hapus">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
                     ';
                 })
-                ->rawColumns(['foto', 'aksi'])
+                ->rawColumns(['aksi'])
                 ->make(true);
                 
         } catch (\Exception $e) {
@@ -112,7 +108,7 @@ public function index(Request $request): View
         }
     }
 
-    public function getSingleData(Request $request)
+    public function getDetail(Request $request)
     {
         try {
             $id = Crypt::decryptString($request->id);
@@ -120,7 +116,6 @@ public function index(Request $request): View
                 ->where('kelompok_unit', 'bengkel')
                 ->findOrFail($id);
             
-            // Ambil stok dari unit 5 (bengkel)
             $stok = StokUnit::where('barang_id', $barang->id)
                 ->where('unit_id', 5)
                 ->value('stok') ?? 0;
@@ -128,7 +123,7 @@ public function index(Request $request): View
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'id' => Crypt::encryptString($barang->id),
+                    'id' => $barang->id,
                     'kode_barang' => $barang->kode_barang,
                     'nama_barang' => $barang->nama_barang,
                     'idkategori' => $barang->idkategori,
@@ -138,15 +133,14 @@ public function index(Request $request): View
                     'harga_beli' => $barang->harga_beli,
                     'harga_jual' => $barang->harga_jual,
                     'img' => $barang->img,
-                    'stok' => $stok,
-                    'kelompok_unit' => $barang->kelompok_unit
+                    'stok' => $stok
                 ]
             ]);
             
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Data tidak ditemukan: ' . $e->getMessage()
+                'message' => 'Data tidak ditemukan'
             ], 404);
         }
     }
@@ -168,10 +162,10 @@ public function index(Request $request): View
 
     public function CekCode(Request $request)
     {
-        $barang = Barang::where('kode_barang', $request->code)
+        $count = Barang::where('kode_barang', $request->code)
             ->where('kelompok_unit', 'bengkel')
             ->count();
-        return response()->json($barang, 200);
+        return response()->json($count, 200);
     }
 
     public function Store(Request $request)
@@ -240,7 +234,6 @@ public function index(Request $request): View
 
             // Handle upload image
             if ($request->hasFile('img')) {
-                // Hapus gambar lama (kalau ada)
                 if ($barang->img && Storage::disk('public')->exists('produk/bengkel/' . $barang->img)) {
                     Storage::disk('public')->delete('produk/bengkel/' . $barang->img);
                 }
@@ -248,7 +241,6 @@ public function index(Request $request): View
                 $path = $request->file('img')->store('produk/bengkel', 'public');
                 $barang->img = basename($path);
             } elseif ($request->has('hapus_gambar') && $request->hapus_gambar == '1') {
-                // Hapus gambar jika diminta
                 if ($barang->img && Storage::disk('public')->exists('produk/bengkel/' . $barang->img)) {
                     Storage::disk('public')->delete('produk/bengkel/' . $barang->img);
                 }
@@ -257,7 +249,7 @@ public function index(Request $request): View
 
             $barang->save();
 
-            // Jika barang baru, buat stok untuk semua unit (termasuk unit 5)
+            // Jika barang baru, buat stok untuk semua unit
             if (empty($request->idbarang)) {
                 $units = Unit::all();
                 foreach ($units as $unit) {
@@ -266,9 +258,7 @@ public function index(Request $request): View
                             'barang_id' => $barang->id,
                             'unit_id' => $unit->id
                         ],
-                        [
-                            'stok' => 0
-                        ]
+                        ['stok' => 0]
                     );
                 }
             }
@@ -277,7 +267,8 @@ public function index(Request $request): View
 
             return response()->json([
                 'success' => true,
-                'message' => 'Barang bengkel berhasil disimpan'
+                'message' => 'Barang bengkel berhasil disimpan',
+                'data' => $barang
             ], 200);
 
         } catch (\Exception $e) {
@@ -296,22 +287,11 @@ public function index(Request $request): View
             $id = Crypt::decryptString($request->id);
             $barang = Barang::where('kelompok_unit', 'bengkel')->findOrFail($id);
 
-            // Pastikan hanya barang bengkel yang dihapus
-            if ($barang->kelompok_unit != 'bengkel') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Hanya barang bengkel yang dapat dihapus dari menu ini'
-                ], 403);
-            }
-
-            // Hapus file gambar juga
             if ($barang->img && Storage::disk('public')->exists('produk/bengkel/' . $barang->img)) {
                 Storage::disk('public')->delete('produk/bengkel/' . $barang->img);
             }
 
-            // Hapus stok terkait
             StokUnit::where('barang_id', $barang->id)->delete();
-            
             $barang->delete();
 
             DB::commit();
@@ -337,44 +317,18 @@ public function index(Request $request): View
             'nama_barang' => 'required|string|max:255',
             'harga_beli'  => 'nullable|numeric|min:0',
             'harga_jual'  => 'nullable|numeric|min:0',
-            'kategori'    => 'nullable|string|max:100',
-            'satuan'      => 'nullable|string|max:50',
+            'idkategori'  => 'required|exists:kategori,id',
+            'idsatuan'    => 'required|exists:satuan,id',
         ]);
 
         DB::beginTransaction();
         try {
-            // Cari atau buat kategori
-            $kategoriId = null;
-            if ($request->kategori) {
-                $kategori = Kategori::firstOrCreate(
-                    ['name' => $request->kategori],
-                    ['name' => $request->kategori]
-                );
-                $kategoriId = $kategori->id;
-            } else {
-                // Default kategori untuk bengkel
-                $kategori = Kategori::where('name', 'Sparepart')->first();
-                if (!$kategori) {
-                    $kategori = Kategori::create(['name' => 'Sparepart']);
-                }
-                $kategoriId = $kategori->id;
-            }
-
-            // Cari atau buat satuan
-            $satuanId = null;
-            if ($request->satuan) {
-                $satuan = Satuan::firstOrCreate(
-                    ['name' => $request->satuan],
-                    ['name' => $request->satuan]
-                );
-                $satuanId = $satuan->id;
-            } else {
-                // Default satuan untuk bengkel
-                $satuan = Satuan::where('name', 'PCS')->first();
-                if (!$satuan) {
-                    $satuan = Satuan::create(['name' => 'PCS']);
-                }
-                $satuanId = $satuan->id;
+            // Validasi harga
+            if ($request->harga_jual > 0 && $request->harga_beli > 0 && $request->harga_jual < $request->harga_beli) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Harga jual tidak boleh kurang dari harga beli'
+                ], 422);
             }
 
             $barang = new Barang();
@@ -383,8 +337,8 @@ public function index(Request $request): View
             $barang->harga_beli = $request->harga_beli ?? 0;
             $barang->harga_jual = $request->harga_jual ?? 0;
             $barang->kelompok_unit = 'bengkel';
-            $barang->idkategori = $kategoriId;
-            $barang->idsatuan = $satuanId;
+            $barang->idkategori = $request->idkategori;
+            $barang->idsatuan = $request->idsatuan;
             $barang->save();
 
             // Tambah ke stok unit untuk semua unit
@@ -432,7 +386,6 @@ public function index(Request $request): View
             $id = Crypt::decryptString($request->id);
             $barang = Barang::where('kelompok_unit', 'bengkel')->findOrFail($id);
             
-            // Update stok untuk unit 5 (bengkel)
             $stokUnit = StokUnit::updateOrCreate(
                 [
                     'barang_id' => $barang->id,
@@ -461,51 +414,19 @@ public function index(Request $request): View
         }
     }
 
-public function getKategoriOptions()
-{
-    $kategori = Kategori::where('isbengkel', 1)  // FILTER: hanya kategori dengan isbengkel=1
-                ->orderBy('name')
-                ->get(['id', 'kode', 'name']);
-    return response()->json($kategori);
-}
+    public function getKategoriOptions()
+    {
+        $kategori = Kategori::where('isbengkel', 1)
+                    ->orderBy('name')
+                    ->get(['id', 'kode', 'name']);
+        return response()->json($kategori);
+    }
 
     public function getSatuanOptions()
     {
-        $satuan = Satuan::orderBy('name')->get();
+        $satuan = Satuan::where('isbengkel', 1)
+                  ->orderBy('name')
+                  ->get(['id', 'name']);
         return response()->json($satuan);
-    }
-
-    public function createKategori(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:100|unique:kategori,name',
-        ]);
-
-        $kategori = Kategori::create([
-            'name' => $request->name
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'kategori' => $kategori,
-            'message' => 'Kategori berhasil ditambahkan'
-        ]);
-    }
-
-    public function createSatuan(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:50|unique:satuan,name',
-        ]);
-
-        $satuan = Satuan::create([
-            'name' => $request->name
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'satuan' => $satuan,
-            'message' => 'Satuan berhasil ditambahkan'
-        ]);
     }
 }
