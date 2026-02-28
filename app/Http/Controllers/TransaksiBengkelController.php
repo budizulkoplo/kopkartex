@@ -143,6 +143,7 @@ class TransaksiBengkelController extends Controller
         ]);
 
         DB::beginTransaction();
+
         try {
 
             $date = Carbon::parse($request->tanggal)->setTimeFrom(Carbon::now());
@@ -159,7 +160,7 @@ class TransaksiBengkelController extends Controller
             $transaksi->created_user = Auth::id();
 
             // =============================
-            // TUNAI
+            // SET STATUS
             // =============================
 
             if ($request->metodebayar == 'tunai') {
@@ -168,37 +169,30 @@ class TransaksiBengkelController extends Controller
                 $transaksi->tenor = 0;
                 $transaksi->kembali = $request->kembali;
                 $transaksi->dibayar = $request->dibayar;
-                $transaksi->save();
 
-                DB::commit();
-                return response()->json([
-                    'message'=>'Transaksi berhasil',
-                    'invoice'=>$transaksi->nomor_invoice
-                ]);
+            } else {
+
+                if (!$request->idcustomer) {
+                    DB::rollBack();
+                    return response()->json('Anggota wajib diisi untuk cicilan',500);
+                }
+
+                $transaksi->status = 'hutang';
+                $transaksi->tenor = $request->jmlcicilan;
+                $transaksi->bunga_barang = 0;
+                $transaksi->kembali = 0;
+                $transaksi->dibayar = 0;
             }
 
-            // =============================
-            // CICILAN
-            // =============================
-
-            if (!$request->idcustomer) {
-                DB::rollBack();
-                return response()->json('Anggota wajib diisi untuk cicilan',500);
-            }
-
-            $transaksi->status = 'hutang';
-            $transaksi->tenor = $request->jmlcicilan;
-            $transaksi->bunga_barang = 0;
-            $transaksi->kembali = 0;
-            $transaksi->dibayar = 0;
             $transaksi->save();
 
             // =============================
-            // SIMPAN DETAIL
+            // SIMPAN DETAIL (UNTUK SEMUA)
             // =============================
 
             // Simpan jasa
             if (!empty($request->jasa_id)) {
+
                 foreach ($request->jasa_id as $i => $idJasa) {
 
                     $harga = $request->jasa_harga[$i] ?? 0;
@@ -214,7 +208,7 @@ class TransaksiBengkelController extends Controller
                 }
             }
 
-            // Simpan barang + validasi stok
+            // Simpan barang + kurangi stok
             if (!empty($request->idbarang)) {
 
                 foreach ($request->idbarang as $i => $idBarang) {
@@ -222,7 +216,6 @@ class TransaksiBengkelController extends Controller
                     $qty   = $request->qty[$i];
                     $harga = $request->harga_jual[$i];
 
-                    // Ambil stok per unit
                     $stok = StokUnit::where('unit_id', Auth::user()->unit_kerja)
                         ->where('barang_id', $idBarang)
                         ->lockForUpdate()
@@ -233,7 +226,6 @@ class TransaksiBengkelController extends Controller
                         return response()->json('Stok tidak mencukupi', 500);
                     }
 
-                    // Simpan detail
                     TransaksiBengkelDetail::create([
                         'transaksi_bengkel_id' => $transaksi->id,
                         'jenis'     => 'barang',
@@ -243,126 +235,135 @@ class TransaksiBengkelController extends Controller
                         'total'     => $qty * $harga,
                     ]);
 
-                    // Kurangi stok
                     $stok->decrement('stok', $qty);
                 }
             }
 
             // =============================
-            // KELOMPOK CICILAN
+            // JIKA CICILAN → LANJUT LOGIC
             // =============================
 
-            $details = TransaksiBengkelDetail::where('transaksi_bengkel_id',$transaksi->id)->get();
+            if ($request->metodebayar == 'cicilan') {
 
-            $totalCicilan0 = 0;
-            $totalCicilan1 = 0;
+                $details = TransaksiBengkelDetail::where(
+                    'transaksi_bengkel_id',
+                    $transaksi->id
+                )->get();
 
-            foreach ($details as $item) {
+                $totalCicilan0 = 0;
+                $totalCicilan1 = 0;
 
-                if ($item->jenis == 'jasa') {
-                    $totalCicilan0 += $item->total;
-                    continue;
-                }
+                foreach ($details as $item) {
 
-                $barang = DB::table('barang')
-                    ->join('kategori','kategori.id','=','barang.idkategori')
-                    ->where('barang.id',$item->barang_id)
-                    ->select('kategori.cicilan')
-                    ->first();
-
-                if ($barang) {
-                    if ($barang->cicilan == 0)
+                    if ($item->jenis == 'jasa') {
                         $totalCicilan0 += $item->total;
-                    else
-                        $totalCicilan1 += $item->total;
+                        continue;
+                    }
+
+                    $barang = DB::table('barang')
+                        ->join('kategori','kategori.id','=','barang.idkategori')
+                        ->where('barang.id',$item->barang_id)
+                        ->select('kategori.cicilan')
+                        ->first();
+
+                    if ($barang) {
+                        if ($barang->cicilan == 0)
+                            $totalCicilan0 += $item->total;
+                        else
+                            $totalCicilan1 += $item->total;
+                    }
                 }
-            }
 
-            $bunga = KonfigBunga::select('bunga_barang')->first();
+                $bunga = KonfigBunga::select('bunga_barang')->first();
 
-            $cicilanpertamaKategori1 = 0;
+                $cicilanpertamaKategori1 = 0;
 
-            if ($totalCicilan1 > 0 && $request->jmlcicilan > 0) {
+                if ($totalCicilan1 > 0 && $request->jmlcicilan > 0) {
 
-                $result = DB::select("SELECT hitung_cicilan_toko(?, ?, ?, ?) AS jumlah",[
-                    $totalCicilan1,
-                    $bunga->bunga_barang,
-                    $request->jmlcicilan,
-                    1
-                ]);
+                    $result = DB::select(
+                        "SELECT hitung_cicilan_toko(?, ?, ?, ?) AS jumlah",
+                        [
+                            $totalCicilan1,
+                            $bunga->bunga_barang,
+                            $request->jmlcicilan,
+                            1
+                        ]
+                    );
 
-                $cicilanpertamaKategori1 = $result[0]->jumlah;
-            }
+                    $cicilanpertamaKategori1 = $result[0]->jumlah;
+                }
 
-            $cicilanpertama = $cicilanpertamaKategori1 + $totalCicilan0;
+                $cicilanpertama = $cicilanpertamaKategori1 + $totalCicilan0;
 
-            // =============================
-            // VALIDASI LIMIT (GABUNG TOKO + BENGKEL)
-            // =============================
+                // VALIDASI LIMIT
 
-            $user = User::find($request->idcustomer);
+                $user = User::find($request->idcustomer);
 
-            $totalToko = PenjualanCicil::where([
-                'anggota_id'=>$request->idcustomer,
-                'status'=>'hutang'
-            ])->sum('total_cicilan');
+                $totalToko = PenjualanCicil::where([
+                    'anggota_id'=>$request->idcustomer,
+                    'status'=>'hutang'
+                ])->sum('total_cicilan');
 
-            $totalBengkel = TransaksiBengkelCicilan::where([
-                'anggota_id'=>$request->idcustomer,
-                'status'=>'hutang'
-            ])->sum('total_cicilan');
+                $totalBengkel = TransaksiBengkelCicilan::where([
+                    'anggota_id'=>$request->idcustomer,
+                    'status'=>'hutang'
+                ])->sum('total_cicilan');
 
-            $totalcicilan = $totalToko + $totalBengkel;
+                $totalcicilan = $totalToko + $totalBengkel;
 
-            $batas = (!empty($user->limit_hutang) && $user->limit_hutang > 0)
-                ? $user->limit_hutang
-                : 0.35 * $user->gaji;
+                $batas = (!empty($user->limit_hutang) && $user->limit_hutang > 0)
+                    ? $user->limit_hutang
+                    : 0.35 * $user->gaji;
 
-            if (($totalcicilan + $cicilanpertama) > $batas) {
-                DB::rollBack();
-                return response()->json('Tidak dapat diproses, Melebihi batas limit',500);
-            }
+                if (($totalcicilan + $cicilanpertama) > $batas) {
+                    DB::rollBack();
+                    return response()->json(
+                        'Tidak dapat diproses, Melebihi batas limit',
+                        500
+                    );
+                }
 
-            // =============================
-            // GENERATE CICILAN BENGKEL
-            // =============================
+                // GENERATE CICILAN
 
-            // kategori 0 → 1x
-            if ($totalCicilan0 > 0) {
-                TransaksiBengkelCicilan::create([
-                    'transaksi_bengkel_id' => $transaksi->id,
-                    'cicilan'       => 1,
-                    'anggota_id'    => $request->idcustomer,
-                    'pokok'         => $totalCicilan0,
-                    'bunga'         => 0,
-                    'total_cicilan' => $totalCicilan0,
-                    'status'        => 'hutang',
-                    'kategori'      => 0
-                ]);
-            }
-
-            // kategori 1 → sesuai tenor
-            if ($totalCicilan1 > 0) {
-
-                for ($i = 1; $i <= $request->jmlcicilan; $i++) {
-
-                    $result = DB::select("SELECT hitung_cicilan_toko(?, ?, ?, ?) AS jumlah",[
-                        $totalCicilan1,
-                        $bunga->bunga_barang,
-                        $request->jmlcicilan,
-                        $i
-                    ]);
+                if ($totalCicilan0 > 0) {
 
                     TransaksiBengkelCicilan::create([
                         'transaksi_bengkel_id' => $transaksi->id,
-                        'cicilan'       => $i,
+                        'cicilan'       => 1,
                         'anggota_id'    => $request->idcustomer,
-                        'pokok'         => $result[0]->jumlah,
+                        'pokok'         => $totalCicilan0,
                         'bunga'         => 0,
-                        'total_cicilan' => $result[0]->jumlah,
+                        'total_cicilan' => $totalCicilan0,
                         'status'        => 'hutang',
-                        'kategori'      => 1
+                        'kategori'      => 0
                     ]);
+                }
+
+                if ($totalCicilan1 > 0) {
+
+                    for ($i = 1; $i <= $request->jmlcicilan; $i++) {
+
+                        $result = DB::select(
+                            "SELECT hitung_cicilan_toko(?, ?, ?, ?) AS jumlah",
+                            [
+                                $totalCicilan1,
+                                $bunga->bunga_barang,
+                                $request->jmlcicilan,
+                                $i
+                            ]
+                        );
+
+                        TransaksiBengkelCicilan::create([
+                            'transaksi_bengkel_id' => $transaksi->id,
+                            'cicilan'       => $i,
+                            'anggota_id'    => $request->idcustomer,
+                            'pokok'         => $result[0]->jumlah,
+                            'bunga'         => 0,
+                            'total_cicilan' => $result[0]->jumlah,
+                            'status'        => 'hutang',
+                            'kategori'      => 1
+                        ]);
+                    }
                 }
             }
 
