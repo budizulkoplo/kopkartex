@@ -330,6 +330,78 @@
                 min-width: 80px;
             }
         }
+
+
+        /* tambahan untuk dropdown bengkel */
+        /* Perbaikan untuk Select2 - dropdown melebar keluar tabel */
+        .select2-container {
+            width: 100% !important;
+        }
+
+        /* Container dropdown harus bisa overflow */
+        .select2-container--default .select2-selection--single {
+            height: 31px;
+            border: 1px solid #ced4da;
+            background-color: #fff;
+        }
+
+        /* Dropdown container - ini yang muncul saat diklik */
+        .select2-dropdown {
+            border: 1px solid #ced4da;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.175);
+            min-width: 500px !important; /* Lebar dropdown 500px */
+            width: auto !important;
+            z-index: 9999; /* Pastikan di atas elemen lain */
+        }
+
+        /* Pastikan dropdown tidak terpotong tabel */
+        .table-responsive {
+            overflow-x: visible !important;
+            overflow-y: visible !important;
+        }
+
+        /* Tabel tetap normal, tapi container-nya boleh overflow */
+        .table {
+            overflow: visible !important;
+        }
+
+        /* Sel yang berisi select2 */
+        #tabelJasa td:nth-child(2),
+        #tabelBarang td:nth-child(3) {
+            overflow: visible !important;
+            position: relative; /* Untuk z-index context */
+        }
+
+        /* Select2 di dalam tabel */
+        #tabelJasa .select2-container,
+        #tabelBarang .select2-container {
+            width: 100% !important;
+            min-width: 150px; /* Ukuran normal di tabel */
+        }
+
+        /* Dropdown hasil pencarian */
+        .select2-results__options {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Styling untuk option di dropdown */
+        .select2-results__option {
+            padding: 10px 12px !important;
+            border-bottom: 1px solid #f0f0f0;
+            white-space: normal !important;
+            line-height: 1.5;
+            font-size: 13px;
+        }
+
+        .select2-results__option:hover {
+            background-color: #e9ecef !important;
+        }
+
+        /* Untuk memastikan dropdown muncul di atas modal atau elemen lain */
+        .select2-container--open {
+            z-index: 99999 !important;
+        }
         </style>
     </x-slot>
 
