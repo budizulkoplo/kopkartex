@@ -394,38 +394,33 @@
             }
 
             function cekCicilan() {
-                let jmlCicilan = parseInt($('#jmlcicilan').val()) || 1;
+
                 let hasCicilan0 = false;
-                
+
                 // Cek barang dengan kategori cicilan 0
                 $('#tabelBarang tbody tr').each(function() {
                     let selectElement = $(this).find('.namabarang');
                     let selectedOption = selectElement.find('option:selected');
                     let kategoriCicilan = selectedOption.data('cicilan') || 1;
-                    
+
                     if(kategoriCicilan == 0) {
                         hasCicilan0 = true;
                     }
                 });
-                
-                // Cek jasa (selalu cicilan 1x)
+
+                // Cek jasa (selalu kategori 0)
                 let hasJasa = $('#tabelJasa tbody tr').length > 0;
-                
-                if((hasJasa || hasCicilan0) && jmlCicilan > 1) {
-                    Swal.fire({
-                        position: 'top-end',
-                        icon: 'warning',
-                        title: 'Ada jasa/barang cicilan 1x, cicilan diubah menjadi 1',
-                        showConfirmButton: false,
-                        timer: 1500
-                    });
-                    $('#jmlcicilan').val(1);
+
+                if(hasJasa || hasCicilan0) {
                     $('#infoCicilan').show();
-                    return false;
+                    $('#textInfoCicilan').text(
+                        'Ada jasa/barang cicilan 1x. Sistem akan split otomatis.'
+                    );
+                } else {
+                    $('#infoCicilan').hide();
                 }
-                
-                $('#infoCicilan').hide();
-                return true;
+
+                return true; // TIDAK PERNAH menolak lagi
             }
 
             function clearBarcodeSearch() {

@@ -3,143 +3,194 @@
     <title>Cetak Nota <?= $hdr->nomor_invoice ?></title>
     <style>
         @page { margin: 0 }
-        body { margin: 0; font-size:10px; font-family: monospace; }
-        td { font-size:10px; vertical-align: top; }
-        .sheet {
+        body {
             margin: 0;
-            overflow: hidden;
-            position: relative;
-            box-sizing: border-box;
-            page-break-after: always;
+            font-family: monospace;
+            font-size: 11px;
+            width: 9.5cm;
         }
 
-        /** Paper sizes **/
-        body.struk .sheet { width: 58mm; padding: 2mm; }
-        .txt-left { text-align: left; }
-        .txt-center { text-align: center; }
-        .txt-right { text-align: right; }
+        .sheet { width: 9.5cm; padding: 5px; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .left { text-align: left; }
 
-        /** Wrap panjang nama barang **/
-        .nama-barang {
-            word-wrap: break-word;
-            white-space: normal;
+        .line {
+            border-bottom: 1px dashed #000;
+            margin: 3px 0;
         }
 
-        /** For screen preview **/
-        @media screen {
-            body { background: #e0e0e0; font-family: monospace; }
-            .sheet {
-                background: white;
-                box-shadow: 0 .5mm 2mm rgba(0,0,0,.3);
-                margin: 5mm;
-            }
-        }
+        table { width: 100%; border-collapse: collapse; }
+        td { vertical-align: top; }
 
-        /** Print mode **/
-        @media print {
-            body.struk { width: 58mm; }
-            .sheet { padding: 2mm; }
-        }
+        @media print { body { width: 9.5cm; } }
     </style>
 </head>
-<body class="struk" onload="printOut()">
-<section class="sheet">
+
+<body onload="window.print(); setTimeout(()=>window.close(),1000);">
+<div class="sheet">
+
 <?php
-// Header toko
-echo '<table cellpadding="0" cellspacing="0" style="width:100%">
-    <tr><td>NOTA BENGKEL: '.$hdr->nomor_invoice.'</td></tr>
-    <tr><td>'.$hdr->name.'</td></tr>
-</table>';
-echo str_repeat("=", 40)."<br/>";
+$isCicilan = $hdr->metode_bayar == 'cicilan';
 
-// Info nota
-echo '<table cellpadding="0" cellspacing="0" style="width:100%">
-    <tr>
-        <td class="txt-left">Nota</td><td>:</td><td class="txt-left">'.$hdr->nomor_invoice.'</td>
-    </tr>
-    <tr>
-        <td class="txt-left">Kasir</td><td>:</td><td class="txt-left">'.$hdr->kasir.'</td>
-    </tr>
-    <tr>
-        <td class="txt-left">Tgl.</td><td>:</td><td class="txt-left">'.$hdr->tanggal.'</td>
-    </tr>
-    <tr>
-        <td colspan="3" class="txt-left">'.$hdr->customer.'</td>
-    </tr>
-</table><br/>';
+$totalBP = 0;      // jasa + kategori 0
+$totalNonBP = 0;   // kategori 1
 
-// Header kolom item
-echo '<table cellpadding="0" cellspacing="0" style="width:100%">
-    <tr>
-        <td style="width:50%;" class="txt-left"><b>Item</b></td>
-        <td style="width:10%;" class="txt-right"><b>Qty</b></td>
-        <td style="width:20%;" class="txt-right"><b>Harga</b></td>
-        <td style="width:20%;" class="txt-right"><b>Total</b></td>
-    </tr>
-    <tr><td colspan="4" style="border-bottom:1px solid #000;"></td></tr>';
+// Kelompokkan total
+if($isCicilan){
+    foreach($dtl as $v){
 
-if (!empty($dtl)) {
-    foreach ($dtl as $v) {
-        $nama = $v->nama_barang;
-        $qty  = $v->qty;
-        $harga = format_rupiah($v->harga);
-        $total = format_rupiah($v->harga * $v->qty);
+        $totalItem = $v->harga * $v->qty;
 
-        echo "<tr>
-            <td class='txt-left nama-barang'>$nama</td>
-            <td class='txt-right'>$qty</td>
-            <td class='txt-right'>$harga</td>
-            <td class='txt-right'>$total</td>
-        </tr>";
+        if($v->jenis == 'jasa'){
+            $totalBP += $totalItem;
+        } else {
+            $kategoriCicilan = $v->barang?->kategori?->cicilan ?? 1;
+
+            if($kategoriCicilan == 0)
+                $totalBP += $totalItem;
+            else
+                $totalNonBP += $totalItem;
+        }
     }
-    echo '<tr><td colspan="4" style="border-top:1px solid #000;"></td></tr>';
-
-    // Sub Total
-    echo "<tr>
-        <td colspan='2' class='txt-right'>Sub Total</td>
-        <td colspan='2' class='txt-right'>".format_rupiah($hdr->subtotal)."</td>
-    </tr>";
-
-    // Diskon
-    echo "<tr>
-        <td colspan='2' class='txt-right'>Diskon</td>
-        <td colspan='2' class='txt-right'>".$hdr->diskon."%</td>
-    </tr>";
-
-    // Grand Total
-    echo "<tr>
-        <td colspan='2' class='txt-right'><b>Grand Total</b></td>
-        <td colspan='2' class='txt-right'><b>".format_rupiah($hdr->grandtotal)."</b></td>
-    </tr>";
-
-    // Bayar
-    echo "<tr>
-        <td colspan='2' class='txt-right'>Bayar</td>
-        <td colspan='2' class='txt-right'>".format_rupiah($hdr->dibayar)."</td>
-    </tr>";
-
-    // Kembali
-    echo "<tr>
-        <td colspan='2' class='txt-right'>Kembali</td>
-        <td colspan='2' class='txt-right'>".format_rupiah($hdr->kembali)."</td>
-    </tr>";
 }
-echo '</table><br/>';
-
-// Footer
-$footer = 'Terima kasih atas kunjungan anda';
-$starSpace = ( 32 - strlen($footer) ) / 2;
-$starFooter = str_repeat('*', $starSpace+1);
-echo $starFooter.' '.$footer.' '.$starFooter."<br/><br/><br/>";
 ?>
-</section>
+
+<!-- HEADER -->
+<div class="center">
+    <b>CV MANDIRI SEJAHTERA</b><br>
+    UNIT BENGKEL<br><br>
+    <b><?= $isCicilan ? 'NOTA PENJUALAN KREDIT' : 'NOTA PENJUALAN' ?></b>
+</div>
+
+<div class="line"></div>
+
+<table>
+<tr><td>Nama</td><td>:</td><td><?= $hdr->customer ?></td></tr>
+<tr><td>No Nota</td><td>:</td><td><?= $hdr->nomor_invoice ?></td></tr>
+<tr><td>Tanggal</td><td>:</td><td><?= date('d-m-Y H:i', strtotime($hdr->tanggal)) ?></td></tr>
+<tr><td>Kasir</td><td>:</td><td><?= $hdr->kasir ?></td></tr>
+</table>
+
+<div class="line"></div>
+
+<table>
+<tr>
+    <td width="45%"><b>NAMA</b></td>
+    <td width="10%" class="right"><b>QTY</b></td>
+    <td width="20%" class="right"><b>HARGA</b></td>
+    <td width="25%" class="right"><b>JML</b></td>
+</tr>
+</table>
+
+<div class="line"></div>
+
+<?php foreach($dtl as $v): ?>
+
+<?php
+$nama = '-';
+if($v->jenis == 'barang' && $v->barang){
+    $nama = $v->barang->nama_barang;
+}
+if($v->jenis == 'jasa' && $v->jasa){
+    $nama = $v->jasa->nama_jasa;
+}
+?>
+
+<table>
+<tr>
+    <td width="45%"><?= strtoupper($nama) ?></td>
+    <td width="10%" class="right"><?= $v->qty ?></td>
+    <td width="20%" class="right"><?= number_format($v->harga,0,',','.') ?></td>
+    <td width="25%" class="right"><?= number_format($v->harga * $v->qty,0,',','.') ?></td>
+</tr>
+</table>
+
+<?php endforeach; ?>
+
+<div class="line"></div>
+
+<table>
+<tr>
+    <td class="right">Sub Total :</td>
+    <td class="right"><?= number_format($hdr->subtotal,0,',','.') ?></td>
+</tr>
+<tr>
+    <td class="right">Diskon :</td>
+    <td class="right"><?= $hdr->diskon ?> %</td>
+</tr>
+<tr>
+    <td class="right"><b>Grand Total :</b></td>
+    <td class="right"><b><?= number_format($hdr->grandtotal,0,',','.') ?></b></td>
+</tr>
+
+<?php if(!$isCicilan): ?>
+<tr>
+    <td class="right">Dibayar :</td>
+    <td class="right"><?= number_format($hdr->dibayar,0,',','.') ?></td>
+</tr>
+<tr>
+    <td class="right">Kembali :</td>
+    <td class="right"><?= number_format($hdr->kembali,0,',','.') ?></td>
+</tr>
+<?php endif; ?>
+</table>
+
+<?php if($isCicilan): ?>
+<div class="line"></div>
+
+<table>
+<tr>
+    <td class="right">TOTAL BP :</td>
+    <td class="right"><?= number_format($totalBP,0,',','.') ?></td>
+</tr>
+<tr>
+    <td class="right">TOTAL NON BP :</td>
+    <td class="right"><?= number_format($totalNonBP,0,',','.') ?></td>
+</tr>
+<tr>
+    <td class="right">Tenor :</td>
+    <td class="right"><?= $hdr->tenor ?> Kali</td>
+</tr>
+</table>
+
+<?php if(isset($cicilan) && $cicilan->count() > 0): ?>
+
+<div class="line"></div>
+<b>RINCIAN CICILAN NON BP</b><br>
+
+<?php
+$nonbp = $cicilan->where('kategori',1);
+?>
+
+<?php foreach($nonbp as $c): ?>
+Cicilan <?= $c->cicilan ?> :
+Rp. <?= number_format($c->total_cicilan,0,',','.') ?><br>
+<?php endforeach; ?>
+
+<?php endif; ?>
+
+<?php endif; ?>
+
+<div class="line"></div>
+
+<div class="center">
+    Terima kasih atas kunjungan anda
+</div>
+
+<br><br><br>
+
+<table width="100%">
+<tr>
+    <td class="center">Sales</td>
+    <td class="center">Pembeli</td>
+</tr>
+<tr>
+    <td class="center">(__________)</td>
+    <td class="center">(__________)</td>
+</tr>
+</table>
+
+</div>
 </body>
-<script>
-    var lama = 1000;
-    var t = null;
-    function printOut(){
-        window.print();
-        t = setTimeout("self.close()", lama);
-    }
-</script>
 </html>
