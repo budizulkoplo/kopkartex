@@ -1414,4 +1414,115 @@ private function formatDbfField($value, $maxLength)
     
     return $stringValue;
 }
+
+    public function penjualanBengkelDetail(Request $request)
+    {
+        // default filter
+        $start_date   = $request->get('start_date', date('Y-m-01'));
+        $end_date     = $request->get('end_date', date('Y-m-d'));
+        $metode_bayar = $request->get('metode', 'all');
+        $jenis_item   = $request->get('jenis_item', 'all');
+
+        return view('laporan.penjualan_bengkel_detail', compact(
+            'start_date', 'end_date', 'metode_bayar', 'jenis_item'
+        ));
+    }
+
+    /**
+     * Data untuk Laporan Penjualan Bengkel Detail
+     */
+    public function penjualanBengkelDetailData(Request $request)
+    {
+        $start_date   = $request->input('start_date', date('Y-m-01'));
+        $end_date     = $request->input('end_date', date('Y-m-d'));
+        $metode_bayar = $request->input('metode', 'all');
+        $jenis_item   = $request->input('jenis_item', 'all');
+
+        // Query untuk data BARANG - TANPA JOIN KE UNIT
+        $barangQuery = DB::table('transaksi_bengkels as tb')
+            ->join('transaksi_bengkel_details as tbd', 'tb.id', '=', 'tbd.transaksi_bengkel_id')
+            ->leftJoin('barang as b', 'tbd.barang_id', '=', 'b.id')
+            ->select(
+                'tb.tanggal',
+                'tb.nomor_invoice',
+                'tb.customer',
+                'tb.metode_bayar',
+                DB::raw("'Bengkel' as nama_unit"), // Fixed value
+                DB::raw("'BARANG' as tipe_item"),
+                'b.kode_barang',
+                'b.nama_barang',
+                'tbd.qty',
+                'tbd.harga',
+                DB::raw('(tbd.qty * tbd.harga) as total')
+            )
+            ->whereBetween(DB::raw('DATE(tb.tanggal)'), [$start_date, $end_date])
+            ->whereNull('tb.deleted_at')
+            ->whereNull('tbd.deleted_at')
+            ->where('tbd.jenis', 'barang');
+
+        // Query untuk data JASA - TANPA JOIN KE UNIT
+        $jasaQuery = DB::table('transaksi_bengkels as tb')
+            ->join('transaksi_bengkel_details as tbd', 'tb.id', '=', 'tbd.transaksi_bengkel_id')
+            ->leftJoin('jasa_bengkel as jb', 'tbd.jasa_id', '=', 'jb.id')
+            ->select(
+                'tb.tanggal',
+                'tb.nomor_invoice',
+                'tb.customer',
+                'tb.metode_bayar',
+                DB::raw("'Bengkel' as nama_unit"), // Fixed value
+                DB::raw("'JASA' as tipe_item"),
+                'jb.kode_jasa as kode_barang',
+                'jb.nama_jasa as nama_barang',
+                'tbd.qty',
+                'tbd.harga',
+                DB::raw('(tbd.qty * tbd.harga) as total')
+            )
+            ->whereBetween(DB::raw('DATE(tb.tanggal)'), [$start_date, $end_date])
+            ->whereNull('tb.deleted_at')
+            ->whereNull('tbd.deleted_at')
+            ->where('tbd.jenis', 'jasa');
+
+        // Filter metode bayar
+        if ($metode_bayar != 'all') {
+            $barangQuery->where('tb.metode_bayar', $metode_bayar);
+            $jasaQuery->where('tb.metode_bayar', $metode_bayar);
+        }
+
+        // Filter jenis item
+        if ($jenis_item == 'barang') {
+            $data = $barangQuery->orderBy('tb.tanggal')->orderBy('tb.nomor_invoice')->get();
+        } elseif ($jenis_item == 'jasa') {
+            $data = $jasaQuery->orderBy('tb.tanggal')->orderBy('tb.nomor_invoice')->get();
+        } else {
+            // Ambil kedua data dan gabungkan
+            $barangData = $barangQuery->get();
+            $jasaData = $jasaQuery->get();
+            $data = $barangData->concat($jasaData)->sortBy(function($item) {
+                return $item->tanggal . ' ' . $item->nomor_invoice;
+            })->values();
+        }
+
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->editColumn('tanggal', function($row) {
+                return date('d/m/Y', strtotime($row->tanggal));
+            })
+            ->editColumn('qty', function($row) {
+                return number_format($row->qty, 0, ',', '.');
+            })
+            ->editColumn('harga', function($row) {
+                return number_format($row->harga, 0, ',', '.');
+            })
+            ->editColumn('total', function($row) {
+                return number_format($row->total, 0, ',', '.');
+            })
+            ->editColumn('metode_bayar', function($row) {
+                return ucfirst($row->metode_bayar);
+            })
+            ->editColumn('customer', function($row) {
+                return $row->customer ?: 'Umum';
+            })
+            ->make(true);
+    }
+
 }

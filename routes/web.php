@@ -78,9 +78,17 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin',
     Route::get('/', [ReturController::class, 'index'])->name('retur.form');
     Route::get('/getbarang', [ReturController::class, 'getBarang'])->name('retur.getbarang');
     Route::get('/getbarangbycode', [ReturController::class, 'getBarangByCode'])->name('retur.getbarangbycode');
+    Route::get('/getsupplier', [ReturController::class, 'getSupplier'])->name('retur.getsupplier');
+    Route::post('/store-supplier', [ReturController::class, 'storeSupplier'])->name('retur.store-supplier');
+    Route::post('/store-barang', [ReturController::class, 'storeBarang'])->name('retur.store-barang');
+    Route::get('/getinvoice', [ReturController::class, 'getInvoice'])->name('retur.getinvoice');
+    Route::get('/kategori', [ReturController::class, 'getKategori'])->name('retur.kategori');
     Route::post('/store', [ReturController::class, 'store'])->name('retur.store');
     Route::get('/datatable', [ReturController::class, 'getDataTable'])->name('retur.datatable');
     Route::get('/list', [ReturController::class, 'ListData'])->name('retur.list');
+    Route::get('/detail/{id}', [ReturController::class, 'getDetail'])->name('retur.detail');
+    Route::get('/nota/{invoice}', [ReturController::class, 'nota'])->name('retur.nota');
+    Route::post('/batalkan/{id}', [ReturController::class, 'batalkanRetur'])->name('retur.batalkan');
 });
 Route::prefix('ambilbarang')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [AmbilBarangController::class, 'index'])->name('ambil.list');
@@ -248,18 +256,19 @@ Route::prefix('barang')->middleware(['auth', 'verified', 'role:superadmin|admin'
     Route::delete('/hapus', [BarangController::class, 'Hapus'])->name('barang.hapus');
 });
 
-
-Route::prefix('barangbengkel')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
-        Route::get('/', [BarangBengkelController::class, 'index'])->name('barangbengkel.index');
-        Route::get('/getdata', [BarangBengkelController::class, 'getdata'])->name('barangbengkel.getdata');
-        Route::get('/getcode', [BarangBengkelController::class, 'getCode'])->name('barangbengkel.getcode');
-        Route::post('/cekcode', [BarangBengkelController::class, 'CekCode'])->name('barangbengkel.cekcode');
-        Route::post('/store', [BarangBengkelController::class, 'Store'])->name('barangbengkel.store');
-        Route::post('/quickadd', [BarangBengkelController::class, 'quickAdd'])->name('barangbengkel.quickadd');
-        Route::delete('/hapus', [BarangBengkelController::class, 'Hapus'])->name('barangbengkel.hapus');
-        Route::get('/getsingledata', [BarangBengkelController::class, 'getSingleData'])->name('barangbengkel.getsingledata');
-    });
-
+Route::prefix('barangbengkel')->name('barangbengkel.')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/', [BarangBengkelController::class, 'index'])->name('index');
+    Route::get('/getdata', [BarangBengkelController::class, 'getdata'])->name('getdata');
+    Route::get('/getdetail', [BarangBengkelController::class, 'getDetail'])->name('getdetail');
+    Route::get('/getcode', [BarangBengkelController::class, 'getCode'])->name('getcode');
+    Route::get('/cekcode', [BarangBengkelController::class, 'CekCode'])->name('cekcode');
+    Route::post('/store', [BarangBengkelController::class, 'Store'])->name('store');
+    Route::delete('/hapus', [BarangBengkelController::class, 'Hapus'])->name('hapus');
+    Route::post('/quickadd', [BarangBengkelController::class, 'quickAdd'])->name('quickadd');
+    Route::post('/updatestok', [BarangBengkelController::class, 'updateStok'])->name('updatestok');
+    Route::get('/kategori-options', [BarangBengkelController::class, 'getKategoriOptions'])->name('kategori.options');
+    Route::get('/satuan-options', [BarangBengkelController::class, 'getSatuanOptions'])->name('satuan.options');
+});
     
 Route::prefix('supplier')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [SupplierController::class, 'index'])->name('supplier.list');
@@ -336,7 +345,13 @@ Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin
     Route::get('/pinbrg', [LaporanController::class, 'pinbrg'])->name('laporan.pinbrg');
     Route::post('/pinbrg/generate', [LaporanController::class, 'generatePinbrg'])->name('laporan.pinbrg.generate');
     Route::post('/pinbrg/export-dbf', [LaporanController::class, 'exportPinbrgDbf'])->name('laporan.pinbrg.export.dbf');
+
+    Route::get('/penjualan-bengkel-detail', [LaporanController::class, 'penjualanBengkelDetail'])->name('penjualan-bengkel-detail');
+    Route::get('/penjualan-bengkel-detail/data', [LaporanController::class, 'penjualanBengkelDetailData'])->name('penjualan-bengkel-detail.data');
+    Route::get('/penjualan-bengkel-detail/print', [LaporanController::class, 'penjualanBengkelDetailPrint'])->name('penjualan-bengkel-detail.print');
+    Route::get('/penjualan-bengkel-detail/export', [LaporanController::class, 'penjualanBengkelDetailExport'])->name('penjualan-bengkel-detail.export');
 });
+
 
 Route::middleware(['auth'])->prefix('mobile/belanja')->name('mobile.belanja.')->group(function () {
     Route::get('/', [BelanjaController::class, 'index'])->name('toko');

@@ -1,3 +1,4 @@
+
 # Kopkartex
 
 Aplikasi sistem manajemen koperasi berbasis web untuk membantu pengelolaan transaksi, anggota, dan laporan keuangan secara terstruktur dan efisien.

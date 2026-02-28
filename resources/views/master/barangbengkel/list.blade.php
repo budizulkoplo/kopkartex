@@ -7,178 +7,146 @@
                 <div class="col-sm-6">
                     <h3 class="mb-0">Master Data Barang Bengkel</h3>
                 </div>
-                <div class="col-sm-6">
-                    <ol class="breadcrumb float-sm-end">
-                        <li class="breadcrumb-item">Master</li>
-                        <li class="breadcrumb-item active">Barang Bengkel</li>
-                    </ol>
-                </div>
             </div>
         </div>
     </div>
 
     <div class="app-content">
         <div class="container-fluid">
-            <div class="card card-warning card-outline">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-wrench-adjustable-circle text-warning"></i> Data Barang Bengkel
-                    </h5>
-                    <div class="card-tools">
-                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modalBarang" id="btnadd">
-                            <i class="bi bi-plus-circle"></i> Tambah Barang
-                        </button>
-                        <button class="btn btn-sm btn-success ms-1" data-bs-toggle="modal" data-bs-target="#modalQuickAdd">
-                            <i class="bi bi-lightning"></i> Quick Add
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    {{-- Filter --}}
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-warning text-white">
-                                    <i class="bi bi-filter"></i>
-                                </span>
-                                <select class="form-select" id="fkategori">
-                                    <option value="all">SEMUA KATEGORI</option>
-                                    @foreach ($kategori as $item)
-                                    <option value="{{ $item->id }}">{{ $item->name }}</option>
-                                    @endforeach
-                                </select>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card card-warning card-outline mb-4">
+                        <div class="card-header pt-1 pb-1">
+                            <div class="card-title">
+                                <div class="row row-cols-auto">
+                                    <div class="col">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-warning text-white">Kategori</span>
+                                            <select class="form-select form-select-sm" id="fkategori">
+                                                <option value="all">SEMUA</option>
+                                                @foreach ($kategori as $item)
+                                                <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="input-group input-group-sm">
-                                <input type="text" class="form-control" id="searchInput" placeholder="Cari kode/nama barang...">
-                                <button class="btn btn-warning" type="button" onclick="table.search($('#searchInput').val()).draw()">
-                                    <i class="bi bi-search"></i> Cari
+                            <div class="card-tools">
+                                <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modalBarang" id="btnadd">
+                                    <i class="bi bi-file-earmark-plus"></i> Tambah
+                                </button>
+                                <button class="btn btn-sm btn-success ms-1" data-bs-toggle="modal" data-bs-target="#modalQuickAdd">
+                                    <i class="bi bi-lightning"></i> Quick Add
                                 </button>
                             </div>
                         </div>
-                    </div>
-
-                    {{-- Tabel --}}
-                    <div class="table-responsive">
-                        <table id="tbbarang" class="table table-sm table-striped table-hover" style="width:100%; font-size: small;">
-                            <thead class="table-warning">
-                                <tr>
-                                    <th width="5%">#</th>
-                                    <th width="15%">Kode Barang</th>
-                                    <th width="20%">Nama Barang</th>
-                                    <th width="10%">Kategori</th>
-                                    <th width="10%">Satuan</th>
-                                    <th width="10%">Stok</th>
-                                    <th width="15%">Harga Beli</th>
-                                    <th width="15%">Harga Jual</th>
-                                    <th width="5%">Foto</th>
-                                    <th width="10%">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                        <div class="card-body">
+                            <table id="tbbarang" class="table table-sm table-striped" style="width:100%; font-size: small;">
+                                <thead class="table-warning">
+                                    <tr>
+                                        <th width="5%">#</th>
+                                        <th width="15%">Kode</th>
+                                        <th width="20%">Nama</th>
+                                        <th width="10%">Kategori</th>
+                                        <th width="10%">Satuan</th>
+                                        <th width="10%">Stok</th>
+                                        <th width="10%">Harga Beli</th>
+                                        <th width="10%">Harga Jual</th>
+                                        <th width="5%">Foto</th>
+                                        <th width="10%">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Modal Form Utama --}}
-    <div class="modal fade" id="modalBarang" tabindex="-1" aria-hidden="true">
+    {{-- Modal Form --}}
+    <div class="modal fade" id="modalBarang" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <form id="frmbarang" class="needs-validation" novalidate enctype="multipart/form-data">
+                    @csrf
                     <div class="modal-header bg-warning text-white">
-                        <h5 class="modal-title">
-                            <i class="bi bi-wrench"></i> Form Barang Bengkel
-                        </h5>
+                        <h5 class="modal-title" id="modalTitle">Form Barang Bengkel</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <input type="hidden" name="idbarang" id="idbarang">
-                        
-                        <div class="row g-3">
-                            <div class="col-md-6">
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
                                 <label class="form-label">Kode Barang <span class="text-danger">*</span></label>
                                 <div class="input-group input-group-sm">
-                                    <input type="text" class="form-control" name="kode_barang" required 
-                                           placeholder="Kode unik barang" id="kodeInput">
-                                    <button type="button" class="btn btn-outline-warning" onclick="generateKode()">
-                                        <i class="bi bi-magic"></i> Generate
+                                    <input type="text" class="form-control" name="kode_barang" id="kode_barang" required>
+                                    <button type="button" class="btn btn-outline-warning" id="btnGenerateCode">
+                                        <i class="bi bi-arrow-clockwise"></i>
                                     </button>
                                 </div>
-                                <div class="form-text text-muted" id="kodeInfo"></div>
+                                <small class="text-muted">Klik tombol untuk generate kode otomatis</small>
                             </div>
-                            
-                            <div class="col-md-6">
+                            <div class="col-md-6 mb-2">
                                 <label class="form-label">Nama Barang <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control form-control-sm" name="nama_barang" required>
+                                <input type="text" class="form-control form-control-sm" name="nama_barang" required maxlength="255">
                             </div>
-                            
-                            <div class="col-md-4">
+                            <div class="col-md-6 mb-2">
                                 <label class="form-label">Kategori <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" name="idkategori" required id="idkategori">
+                                <select class="form-select form-select-sm" name="idkategori" id="idkategori" required>
                                     <option value="">Pilih Kategori</option>
                                     @foreach ($kategori as $item)
                                     <option value="{{ $item->id }}">{{ $item->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            
-                            <div class="col-md-4">
+                            <div class="col-md-6 mb-2">
                                 <label class="form-label">Satuan <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" name="idsatuan" required id="idsatuan">
+                                <select class="form-select form-select-sm" name="idsatuan" id="idsatuan" required>
                                     <option value="">Pilih Satuan</option>
                                     @foreach ($satuan as $item)
                                     <option value="{{ $item->id }}">{{ $item->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label">Stok Unit 5</label>
-                                <input type="number" class="form-control form-control-sm" name="stok" id="stok" 
-                                       min="0" step="1" value="0" readonly>
-                                <div class="form-text text-muted">Stok di unit bengkel (ID: 5)</div>
-                            </div>
-                            
-                            <div class="col-md-6">
+                            <div class="col-md-6 mb-2">
                                 <label class="form-label">Harga Beli</label>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text">Rp</span>
-                                    <input type="number" class="form-control" name="harga_beli" min="0" step="1000" id="hargaBeli">
+                                    <input type="number" class="form-control" name="harga_beli" id="hargaBeli" min="0" step="1000">
                                 </div>
                             </div>
-                            
-                            <div class="col-md-6">
+                            <div class="col-md-6 mb-2">
                                 <label class="form-label">Harga Jual</label>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text">Rp</span>
-                                    <input type="number" class="form-control" name="harga_jual" min="0" step="1000" id="hargaJual">
+                                    <input type="number" class="form-control" name="harga_jual" id="hargaJual" min="0" step="1000">
                                 </div>
-                                <div class="form-text text-muted" id="hargaInfo"></div>
+                                <small class="text-muted" id="hargaInfo"></small>
                             </div>
-                            
-                            <div class="col-12">
-                                <label class="form-label">Foto Barang (Opsional)</label>
-                                <input type="file" class="form-control form-control-sm" name="img" accept="image/*" id="fileInput">
-                                <div class="mt-2 text-center">
-                                    <img id="previewImg" src="" style="max-height: 150px; max-width: 200px;" 
-                                         class="img-thumbnail d-none border-warning">
-                                    <input type="hidden" name="hapus_gambar" id="hapus_gambar" value="0">
+                            <div class="col-md-12 mb-2">
+                                <label class="form-label">Foto Produk</label>
+                                <input type="file" class="form-control form-control-sm" name="img" accept="image/*" id="imgInput">
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" name="hapus_gambar" value="1" id="hapusGambar">
+                                    <label class="form-check-label" for="hapusGambar">Hapus gambar saat update</label>
                                 </div>
-                                <div class="form-text">Format: JPG, PNG, JPEG (Max: 2MB)</div>
+                                <div class="mt-2 text-center">
+                                    <img id="previewImg" src="" style="max-height:150px; display:none;" class="img-thumbnail border-warning">
+                                </div>
+                            </div>
+                            <div class="col-md-12 mb-2">
+                                <label class="form-label">Stok Unit 5 (Bengkel)</label>
+                                <input type="text" class="form-control form-control-sm" name="stok_display" id="stok" readonly>
+                                <small class="text-muted">Stok saat ini (readonly)</small>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="bi bi-x-circle"></i> Batal
-                        </button>
-                        <button type="submit" class="btn btn-warning" id="savebarang">
-                            <i class="bi bi-save"></i> Simpan
-                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-warning" id="savebarang">Simpan</button>
                     </div>
                 </form>
             </div>
@@ -259,16 +227,6 @@
                 background-color: #ffc107;
                 color: #212529;
             }
-            .badge-edit {
-                cursor: pointer;
-                padding: 0.25rem 0.5rem;
-            }
-            .badge-edit:hover {
-                opacity: 0.8;
-            }
-            .img-thumbnail {
-                border: 2px solid #ffc107;
-            }
             .stok-positive {
                 color: #198754;
                 font-weight: bold;
@@ -277,222 +235,117 @@
                 color: #dc3545;
                 font-weight: bold;
             }
-            .select2-container--default .select2-selection--single {
-                height: 31px;
-                border: 1px solid #ced4da;
-            }
-            .select2-container--default .select2-selection--single .select2-selection__rendered {
-                line-height: 29px;
-                font-size: 0.875rem;
-            }
         </style>
     </x-slot>
 
     <x-slot name="jscustom">
     <script>
-        let table;
-        
-        $(document).ready(function () {
-            // Inisialisasi DataTable
-            table = $('#tbbarang').DataTable({
+        $(document).ready(function() {
+            var table = $('#tbbarang').DataTable({
+                ordering: false,
+                responsive: true,
                 processing: true,
                 serverSide: true,
+                pageLength: 25,
                 ajax: {
                     url: "{{ route('barangbengkel.getdata') }}",
-                    type: "GET",
                     data: function(d) {
                         d.kategori = $('#fkategori').val();
-                        if ($('#searchInput').val()) {
-                            d.search = {
-                                value: $('#searchInput').val(),
-                                regex: false
-                            };
-                        }
                     },
-                    error: function(xhr, error, thrown) {
-                        console.error('DataTables error:', error, thrown);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error Loading Data',
-                            text: 'Gagal memuat data. Silakan refresh halaman.'
-                        });
-                    }
+                    type: "GET"
                 },
                 columns: [
+                    { data: "DT_RowIndex", name: "DT_RowIndex", searchable: false },
+                    { data: "kode_barang" },
+                    { data: "nama_barang" },
+                    { data: "kategori_nama" },
+                    { data: "satuan_nama" },
                     { 
-                        data: 'DT_RowIndex',
-                        name: 'DT_RowIndex',
-                        orderable: false,
-                        searchable: false,
-                        width: '5%'
-                    },
-                    { 
-                        data: 'kode_barang',
-                        name: 'kode_barang',
-                        width: '15%'
-                    },
-                    { 
-                        data: 'nama_barang',
-                        name: 'nama_barang',
-                        width: '20%'
-                    },
-                    { 
-                        data: 'kategori_nama',
-                        name: 'kategori_nama',
-                        width: '10%'
-                    },
-                    { 
-                        data: 'satuan_nama',
-                        name: 'satuan_nama',
-                        width: '10%'
-                    },
-                    { 
-                        data: 'stok',
-                        name: 'stok',
-                        orderable: true,
-                        searchable: false,
-                        width: '10%',
-                        render: function(data, type, row) {
-                            if (type === 'display') {
-                                const stokNum = parseInt(data.replace(/\./g, '')) || 0;
-                                const stokClass = stokNum > 0 ? 'stok-positive' : 'stok-zero';
-                                return `<span class="${stokClass}">${data}</span>`;
-                            }
-                            return data;
+                        data: "stok",
+                        render: function(data) {
+                            const stokNum = parseInt(data.replace(/\./g, '')) || 0;
+                            const stokClass = stokNum > 0 ? 'stok-positive' : 'stok-zero';
+                            return `<span class="${stokClass}">${data}</span>`;
                         }
                     },
+                    { data: "harga_beli" },
+                    { data: "harga_jual" },
                     { 
-                        data: 'harga_beli_format',
-                        name: 'harga_beli',
-                        orderable: true,
+                        data: "img", 
+                        orderable: false, 
                         searchable: false,
-                        width: '15%'
-                    },
-                    { 
-                        data: 'harga_jual_format',
-                        name: 'harga_jual',
-                        orderable: true,
-                        searchable: false,
-                        width: '15%'
-                    },
-                    { 
-                        data: 'foto',
-                        name: 'img',
-                        orderable: false,
-                        searchable: false,
-                        width: '5%'
+                        render: function(data) {
+                            if (data) {
+                                return '<img src="/storage/produk/bengkel/' + data + '" class="img-thumbnail" style="max-height:50px;">';
+                            }
+                            return '<span class="text-muted">-</span>';
+                        }
                     },
                     {
-                        data: 'aksi',
-                        name: 'aksi',
+                        data: "aksi",
                         orderable: false,
-                        searchable: false,
-                        width: '10%'
+                        searchable: false
                     }
-                ],
-                pageLength: 25,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                language: {
-                    search: "Cari:",
-                    lengthMenu: "Tampilkan _MENU_ data",
-                    info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
-                    infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
-                    infoFiltered: "(disaring dari _MAX_ total data)",
-                    emptyTable: "Tidak ada data barang bengkel",
-                    loadingRecords: "Memuat data...",
-                    processing: "Memproses...",
-                    zeroRecords: "Tidak ada data yang cocok",
-                    paginate: {
-                        first: "Pertama",
-                        last: "Terakhir",
-                        next: "Selanjutnya",
-                        previous: "Sebelumnya"
-                    }
-                },
-                drawCallback: function(settings) {
-                    var api = this.api();
-                    var startIndex = api.page.info().start;
-                    api.column(0, {page: 'current'}).nodes().each(function(cell, i) {
-                        cell.innerHTML = startIndex + i + 1;
-                    });
-                }
+                ]
             });
 
-            // Filter kategori
+            // Filter change
             $('#fkategori').on('change', function() {
                 table.ajax.reload();
             });
 
-            // Search dengan debounce
-            let searchTimeout;
-            $('#searchInput').on('keyup', function(e) {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(function() {
-                    table.search($('#searchInput').val()).draw();
-                }, 500);
+            // Generate kode otomatis
+            $('#btnGenerateCode').on('click', function() {
+                $.get("{{ route('barangbengkel.getcode') }}", function(code) {
+                    $('#kode_barang').val(code);
+                    cekKodeAvailability(code);
+                });
             });
 
-            // Generate kode
-            window.generateKode = function() {
-                $.get("{{ route('barangbengkel.getcode') }}", function(response) {
-                    $('#kodeInput').val(response);
-                    checkKodeAvailability(response);
-                }).fail(function() {
-                    Swal.fire('Error', 'Gagal generate kode', 'error');
-                });
-            };
-
-            // Check kode availability
-            $('#kodeInput').on('blur', function() {
-                const kode = $(this).val().trim();
+            // Cek kode unik saat input
+            $('#kode_barang').on('blur', function() {
+                const kode = $(this).val();
                 if (kode) {
-                    checkKodeAvailability(kode);
+                    cekKodeAvailability(kode);
                 }
             });
 
-            function checkKodeAvailability(kode) {
-                $.ajax({
-                    url: "{{ route('barangbengkel.cekcode') }}",
-                    data: { code: kode },
-                    success: function(count) {
-                        if (count > 0) {
-                            $('#kodeInfo').html('<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Kode sudah digunakan</span>');
-                        } else {
-                            $('#kodeInfo').html('<span class="text-success"><i class="bi bi-check-circle"></i> Kode tersedia</span>');
+            function cekKodeAvailability(kode) {
+                $.get("{{ route('barangbengkel.cekcode') }}", { code: kode }, function(count) {
+                    if (count > 0 && !$('#idbarang').val()) {
+                        $('#kode_barang').addClass('is-invalid');
+                        if (!$('#kode_barang').next('.invalid-feedback').length) {
+                            $('#kode_barang').after('<div class="invalid-feedback">Kode barang sudah digunakan!</div>');
                         }
-                    },
-                    error: function() {
-                        $('#kodeInfo').html('<span class="text-warning"><i class="bi bi-question-circle"></i> Gagal validasi kode</span>');
+                    } else {
+                        $('#kode_barang').removeClass('is-invalid');
+                        $('#kode_barang').next('.invalid-feedback').remove();
                     }
                 });
             }
 
-            // Check harga validation
-            $('#hargaBeli, #hargaJual').on('input', function() {
-                validateHarga();
-            });
-
+            // Validasi harga
             function validateHarga() {
                 const hargaBeli = parseFloat($('#hargaBeli').val()) || 0;
                 const hargaJual = parseFloat($('#hargaJual').val()) || 0;
                 
                 if (hargaJual > 0 && hargaBeli > 0 && hargaJual < hargaBeli) {
-                    $('#hargaInfo').html('<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Harga jual kurang dari harga beli</span>');
+                    $('#hargaInfo').html('<span class="text-danger">Harga jual tidak boleh kurang dari harga beli</span>').show();
+                    return false;
                 } else {
-                    $('#hargaInfo').html('');
+                    $('#hargaInfo').html('').hide();
+                    return true;
                 }
             }
 
-            // Preview image
-            $('#fileInput').on('change', function(evt) {
+            $('#hargaBeli, #hargaJual').on('input', validateHarga);
+
+            // Preview gambar
+            $('#imgInput').on('change', function(evt) {
                 const [file] = this.files;
                 if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        $('#previewImg').removeClass('d-none').attr('src', e.target.result);
-                        $('#hapus_gambar').val('0'); // Reset hapus gambar jika upload baru
-                    };
-                    reader.readAsDataURL(file);
+                    $('#previewImg').show().attr('src', URL.createObjectURL(file));
+                    $('#hapusGambar').prop('checked', false);
                 }
             });
 
@@ -500,31 +353,12 @@
             $('#frmbarang').on('submit', function(e) {
                 e.preventDefault();
                 
-                if (!this.checkValidity()) {
-                    e.stopPropagation();
-                    this.classList.add('was-validated');
-                    return;
-                }
-
-                const hargaBeli = parseFloat($('#hargaBeli').val()) || 0;
-                const hargaJual = parseFloat($('#hargaJual').val()) || 0;
-                
-                if (hargaJual > 0 && hargaBeli > 0 && hargaJual < hargaBeli) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Perhatian',
-                        text: 'Harga jual tidak boleh kurang dari harga beli!'
-                    });
+                if (!validateHarga()) {
+                    Swal.fire('Perhatian', 'Harga jual tidak boleh kurang dari harga beli!', 'warning');
                     return;
                 }
 
                 const formData = new FormData(this);
-                
-                // Ambil stok jika barang baru
-                const idbarang = $('#idbarang').val();
-                if (!idbarang) {
-                    formData.append('stok', $('#stok').val() || 0);
-                }
                 
                 $.ajax({
                     url: "{{ route('barangbengkel.store') }}",
@@ -532,249 +366,84 @@
                     data: formData,
                     processData: false,
                     contentType: false,
-                    beforeSend: function() {
-                        $('#savebarang').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Menyimpan...');
-                    },
                     success: function(response) {
                         if (response.success) {
+                            table.ajax.reload();
+                            $('#modalBarang').modal('hide');
                             Swal.fire({
                                 icon: 'success',
-                                title: 'Berhasil!',
+                                title: 'Berhasil',
                                 text: response.message,
                                 timer: 1500,
                                 showConfirmButton: false
-                            }).then(() => {
-                                $('#modalBarang').modal('hide');
-                                table.ajax.reload();
-                                resetForm();
                             });
                         } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Gagal!',
-                                text: response.message
-                            });
+                            Swal.fire('Error!', response.message, 'error');
                         }
                     },
                     error: function(xhr) {
-                        let errorMsg = 'Terjadi kesalahan saat menyimpan!';
+                        let message = 'Terjadi kesalahan';
                         if (xhr.responseJSON && xhr.responseJSON.message) {
-                            errorMsg = xhr.responseJSON.message;
-                        } else if (xhr.responseText) {
-                            errorMsg = xhr.responseText;
+                            message = xhr.responseJSON.message;
                         }
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: errorMsg
-                        });
-                    },
-                    complete: function() {
-                        $('#savebarang').prop('disabled', false).html('<i class="bi bi-save"></i> Simpan');
+                        Swal.fire('Error!', message, 'error');
                     }
                 });
             });
 
             // Edit button
-            $(document).on('click', '.btn-edit', function() {
+            $(document).on('click', '.editbtn', function() {
                 const encryptedId = $(this).data('id');
                 
-                resetForm();
-                $('#modalBarang').modal('show');
-                
-                // Show loading
-                $('#modalBarang .modal-body').html('<div class="text-center py-5"><div class="spinner-border text-warning"></div><p class="mt-2">Memuat data...</p></div>');
-                
                 $.ajax({
-                    url: "{{ route('barangbengkel.getsingledata') }}",
+                    url: "{{ route('barangbengkel.getdetail') }}",
                     method: "GET",
                     data: { id: encryptedId },
                     success: function(response) {
                         if (response.success) {
                             const data = response.data;
                             
-                            // Kembalikan konten modal ke form
-                            $('#modalBarang .modal-body').html(`
-                                <input type="hidden" name="idbarang" id="idbarang" value="${data.id}">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Kode Barang <span class="text-danger">*</span></label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="text" class="form-control" name="kode_barang" required 
-                                                   placeholder="Kode unik barang" id="kodeInput" value="${data.kode_barang}" readonly>
-                                            <button type="button" class="btn btn-outline-warning" onclick="generateKode()" disabled>
-                                                <i class="bi bi-magic"></i> Generate
-                                            </button>
-                                        </div>
-                                        <div class="form-text text-muted">Kode tidak dapat diubah saat edit</div>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <label class="form-label">Nama Barang <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control form-control-sm" name="nama_barang" required value="${data.nama_barang}">
-                                    </div>
-                                    
-                                    <div class="col-md-4">
-                                        <label class="form-label">Kategori <span class="text-danger">*</span></label>
-                                        <select class="form-select form-select-sm" name="idkategori" required id="idkategori">
-                                            <option value="">Pilih Kategori</option>
-                                            @foreach ($kategori as $item)
-                                            <option value="{{ $item->id }}" ${data.idkategori == {{ $item->id }} ? 'selected' : ''}>{{ $item->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="col-md-4">
-                                        <label class="form-label">Satuan <span class="text-danger">*</span></label>
-                                        <select class="form-select form-select-sm" name="idsatuan" required id="idsatuan">
-                                            <option value="">Pilih Satuan</option>
-                                            @foreach ($satuan as $item)
-                                            <option value="{{ $item->id }}" ${data.idsatuan == {{ $item->id }} ? 'selected' : ''}>{{ $item->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label">Stok Unit 5</label>
-                                        <input type="number" class="form-control form-control-sm" name="stok_display" id="stok" 
-                                               min="0" step="1" value="${data.stok}" readonly>
-                                        <div class="form-text text-muted">Stok di unit bengkel (ID: 5)</div>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <label class="form-label">Harga Beli</label>
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-text">Rp</span>
-                                            <input type="number" class="form-control" name="harga_beli" min="0" step="1000" id="hargaBeli" value="${data.harga_beli}">
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <label class="form-label">Harga Jual</label>
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-text">Rp</span>
-                                            <input type="number" class="form-control" name="harga_jual" min="0" step="1000" id="hargaJual" value="${data.harga_jual}">
-                                        </div>
-                                        <div class="form-text text-muted" id="hargaInfo"></div>
-                                    </div>
-                                    
-                                    <div class="col-12">
-                                        <label class="form-label">Foto Barang (Opsional)</label>
-                                        <input type="file" class="form-control form-control-sm" name="img" accept="image/*" id="fileInput">
-                                        <div class="mt-2 text-center">
-                                            ${data.img ? 
-                                                `<img id="previewImg" src="{{ asset('storage/produk/bengkel') }}/${data.img}" style="max-height: 150px; max-width: 200px;" class="img-thumbnail border-warning">
-                                                 <div class="mt-1">
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeImage()">
-                                                        <i class="bi bi-trash"></i> Hapus Foto
-                                                    </button>
-                                                 </div>` 
-                                                : 
-                                                `<img id="previewImg" src="" style="max-height: 150px; max-width: 200px;" class="img-thumbnail d-none border-warning">`
-                                            }
-                                        </div>
-                                        <input type="hidden" name="hapus_gambar" id="hapus_gambar" value="0">
-                                    </div>
-                                </div>
-                            `);
+                            $('#idbarang').val(encryptedId);
+                            $('#kode_barang').val(data.kode_barang).prop('readonly', true);
+                            $('input[name="nama_barang"]').val(data.nama_barang);
+                            $('#idkategori').val(data.idkategori);
+                            $('#idsatuan').val(data.idsatuan);
+                            $('#hargaBeli').val(data.harga_beli);
+                            $('#hargaJual').val(data.harga_jual);
+                            $('#stok').val(data.stok);
                             
-                            // Re-attach event handlers
-                            attachFormEvents();
+                            if (data.img) {
+                                $('#previewImg').show().attr('src', '/storage/produk/bengkel/' + data.img);
+                            } else {
+                                $('#previewImg').hide().attr('src', '');
+                            }
                             
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Gagal!',
-                                text: response.message
-                            });
-                            $('#modalBarang').modal('hide');
+                            $('#hapusGambar').prop('checked', false);
+                            $('#modalTitle').text('Edit Barang Bengkel');
+                            $('#modalBarang').modal('show');
+                            
+                            validateHarga();
                         }
                     },
                     error: function() {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Gagal memuat data barang'
-                        });
-                        $('#modalBarang').modal('hide');
+                        Swal.fire('Error!', 'Gagal memuat data', 'error');
                     }
                 });
             });
 
-            // Function untuk re-attach event handlers
-            function attachFormEvents() {
-                // Check harga validation
-                $('#hargaBeli, #hargaJual').on('input', function() {
-                    validateHarga();
-                });
-                
-                // Preview image
-                $('#fileInput').on('change', function(evt) {
-                    const [file] = this.files;
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            $('#previewImg').removeClass('d-none').attr('src', e.target.result);
-                            $('#hapus_gambar').val('0');
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                });
-                
-                // Harga validation initial
-                validateHarga();
-            }
-
-            // Function untuk validasi harga
-            function validateHarga() {
-                const hargaBeli = parseFloat($('#hargaBeli').val()) || 0;
-                const hargaJual = parseFloat($('#hargaJual').val()) || 0;
-                
-                if (hargaJual > 0 && hargaBeli > 0 && hargaJual < hargaBeli) {
-                    $('#hargaInfo').html('<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Harga jual kurang dari harga beli</span>');
-                } else {
-                    $('#hargaInfo').html('');
-                }
-            }
-
-            // Function untuk hapus foto
-            window.removeImage = function() {
-                Swal.fire({
-                    title: 'Hapus Foto?',
-                    text: "Foto akan dihapus dari sistem",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Ya, Hapus!',
-                    cancelButtonText: 'Batal'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $('#hapus_gambar').val('1');
-                        $('#previewImg').addClass('d-none').attr('src', '');
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Foto akan dihapus saat disimpan',
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
-                    }
-                });
-            };
-
             // Delete button
-            $(document).on('click', '.btn-delete', function() {
+            $(document).on('click', '.deletebtn', function() {
                 const encryptedId = $(this).data('id');
+                const row = $(this).closest('tr');
+                const namaBarang = table.cell(row, 2).data();
                 
                 Swal.fire({
-                    title: 'Hapus Barang Bengkel?',
-                    text: "Data yang dihapus tidak dapat dikembalikan!",
-                    icon: 'warning',
+                    title: "Yakin hapus?",
+                    html: `<strong>${namaBarang}</strong> akan dihapus permanen`,
+                    icon: "warning",
                     showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Ya, Hapus!',
-                    cancelButtonText: 'Batal'
+                    confirmButtonText: "Ya, Hapus!",
+                    cancelButtonText: "Batal"
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
@@ -782,54 +451,41 @@
                             method: "DELETE",
                             data: { 
                                 id: encryptedId,
-                                _token: "{{ csrf_token() }}"
+                                _token: "{{ csrf_token() }}" 
                             },
                             success: function(response) {
                                 if (response.success) {
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Terhapus!',
-                                        text: response.message,
-                                        timer: 1500,
-                                        showConfirmButton: false
-                                    }).then(() => {
-                                        table.ajax.reload();
-                                    });
+                                    table.ajax.reload();
+                                    Swal.fire("Terhapus!", response.message, "success");
                                 } else {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Gagal!',
-                                        text: response.message
-                                    });
+                                    Swal.fire("Error!", response.message, "error");
                                 }
                             },
-                            error: function(xhr) {
-                                let errorMsg = 'Terjadi kesalahan saat menghapus!';
-                                if (xhr.responseJSON && xhr.responseJSON.message) {
-                                    errorMsg = xhr.responseJSON.message;
-                                }
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error',
-                                    text: errorMsg
-                                });
+                            error: function() {
+                                Swal.fire("Error!", "Gagal menghapus data", "error");
                             }
                         });
                     }
                 });
             });
 
-            // Reset modal saat ditutup
-            $('#modalBarang').on('hidden.bs.modal', function () {
-                resetForm();
-            });
-
             // Reset form saat tambah baru
             $('#btnadd').on('click', function() {
                 resetForm();
-                $('#kodeInput').prop('readonly', false).val('');
-                generateKode();
+                $('#kode_barang').prop('readonly', false);
+                $('#modalTitle').text('Tambah Barang Bengkel Baru');
+                $('#btnGenerateCode').trigger('click');
             });
+
+            function resetForm() {
+                $('#frmbarang')[0].reset();
+                $('#idbarang').val('');
+                $('#previewImg').hide().attr('src', '');
+                $('#hapusGambar').prop('checked', false);
+                $('#hargaInfo').html('').hide();
+                $('#kode_barang').removeClass('is-invalid');
+                $('#kode_barang').next('.invalid-feedback').remove();
+            }
 
             // Quick Add validation
             $('#quickHargaBeli, #quickHargaJual').on('input', function() {
@@ -837,13 +493,12 @@
                 const hargaJual = parseFloat($('#quickHargaJual').val()) || 0;
                 
                 if (hargaJual > 0 && hargaBeli > 0 && hargaJual < hargaBeli) {
-                    $('#quickHargaInfo').html('<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Harga jual kurang dari harga beli</span>');
+                    $('#quickHargaInfo').html('<span class="text-danger">Harga jual tidak boleh kurang dari harga beli</span>');
                 } else {
                     $('#quickHargaInfo').html('');
                 }
             });
 
-            // Quick Add check kode
             $('#quickKode').on('blur', function() {
                 const kode = $(this).val().trim();
                 if (kode) {
@@ -852,32 +507,15 @@
                         data: { code: kode },
                         success: function(count) {
                             if (count > 0) {
-                                $('#quickKodeInfo').html('<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Kode sudah digunakan</span>');
+                                $('#quickKodeInfo').html('<span class="text-danger">Kode sudah digunakan</span>');
                             } else {
-                                $('#quickKodeInfo').html('<span class="text-success"><i class="bi bi-check-circle"></i> Kode tersedia</span>');
+                                $('#quickKodeInfo').html('<span class="text-success">Kode tersedia</span>');
                             }
-                        },
-                        error: function() {
-                            $('#quickKodeInfo').html('<span class="text-warning"><i class="bi bi-question-circle"></i> Gagal validasi kode</span>');
                         }
                     });
                 }
             });
         });
-
-        function resetForm() {
-            if ($('#frmbarang').length > 0) {
-                $('#frmbarang')[0].reset();
-            }
-            $('#idbarang').val('');
-            $('#kodeInfo').html('');
-            $('#hargaInfo').html('');
-            $('#previewImg').addClass('d-none').attr('src', '');
-            $('#hapus_gambar').val('0');
-            if ($('#frmbarang').hasClass('was-validated')) {
-                $('#frmbarang').removeClass('was-validated');
-            }
-        }
 
         // Quick Add function
         function saveQuickAdd() {
@@ -889,20 +527,12 @@
             const hargaJual = parseFloat($('#quickHargaJual').val()) || 0;
 
             if (!kode || !nama || !idkategori || !idsatuan) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Perhatian',
-                    text: 'Semua field yang bertanda * harus diisi!'
-                });
+                Swal.fire('Perhatian', 'Semua field yang bertanda * harus diisi!', 'warning');
                 return;
             }
 
             if (hargaJual > 0 && hargaBeli > 0 && hargaJual < hargaBeli) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Perhatian',
-                    text: 'Harga jual tidak boleh kurang dari harga beli!'
-                });
+                Swal.fire('Perhatian', 'Harga jual tidak boleh kurang dari harga beli!', 'warning');
                 return;
             }
 
@@ -931,7 +561,7 @@
                             showConfirmButton: false
                         }).then(() => {
                             $('#modalQuickAdd').modal('hide');
-                            table.ajax.reload();
+                            $('#tbbarang').DataTable().ajax.reload();
                             
                             // Reset form quick add
                             $('#quickKode').val('');
@@ -944,11 +574,7 @@
                             $('#quickHargaInfo').html('');
                         });
                     } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal!',
-                            text: response.message
-                        });
+                        Swal.fire('Error!', response.message, 'error');
                     }
                 },
                 error: function(xhr) {
@@ -956,11 +582,7 @@
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMsg = xhr.responseJSON.message;
                     }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: errorMsg
-                    });
+                    Swal.fire('Error!', errorMsg, 'error');
                 },
                 complete: function() {
                     $('#modalQuickAdd .btn-success').prop('disabled', false).html('<i class="bi bi-plus"></i> Tambah');

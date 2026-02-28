@@ -23,4 +23,14 @@ class TransaksiBengkel extends Model
         'kembali',
         'created_user',
     ];
+
+    public function details()
+    {
+        return $this->hasMany(TransaksiBengkelDetail::class, 'transaksi_bengkel_id');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_id');
+    }
 }

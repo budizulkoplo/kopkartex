@@ -21,4 +21,14 @@ class TransaksiBengkelDetail extends Model
     {
         return $this->belongsTo(TransaksiBengkel::class, 'transaksi_bengkel_id');
     }
+
+    public function barang()
+    {
+        return $this->belongsTo(Barang::class, 'barang_id');
+    }
+
+    public function jasa()
+    {
+        return $this->belongsTo(JasaBengkel::class, 'jasa_id');
+    }
 }
