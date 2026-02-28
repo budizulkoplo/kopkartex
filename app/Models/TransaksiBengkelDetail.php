@@ -3,10 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TransaksiBengkelDetail extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'transaksi_bengkel_details';
+    
     protected $fillable = [
         'transaksi_bengkel_id',
         'jenis',
@@ -14,7 +18,13 @@ class TransaksiBengkelDetail extends Model
         'barang_id',
         'qty',
         'harga',
-        'total',
+        'total'
+    ];
+
+    protected $casts = [
+        'harga' => 'float',
+        'total' => 'float',
+        'qty' => 'integer'
     ];
 
     public function transaksi()
@@ -22,13 +32,13 @@ class TransaksiBengkelDetail extends Model
         return $this->belongsTo(TransaksiBengkel::class, 'transaksi_bengkel_id');
     }
 
-    public function barang()
-    {
-        return $this->belongsTo(Barang::class, 'barang_id');
-    }
-
     public function jasa()
     {
         return $this->belongsTo(JasaBengkel::class, 'jasa_id');
+    }
+
+    public function barang()
+    {
+        return $this->belongsTo(Barang::class, 'barang_id');
     }
 }
