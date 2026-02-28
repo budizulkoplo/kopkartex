@@ -406,7 +406,7 @@ class TransaksiBengkelController extends Controller
             )->orderBy('cicilan','asc')->get();
         }
 
-        return view('transaksi.bengkelNota', compact('hdr','dtl','cicilan'));
+        return view('transaksi.BengkelNota', compact('hdr','dtl','cicilan'));
     }
 
     public function riwayat(Request $request)
