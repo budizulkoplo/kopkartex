@@ -53,8 +53,8 @@
                 <div class="card-body">
 
                     <table id="tbRiwayat"
-                           class="table table-bordered table-striped table-sm w-100"
-                           style="font-size: 13px;">
+                        class="table table-bordered table-striped table-sm w-100"
+                        style="font-size: 13px;">
                         <thead class="table-light">
                             <tr>
                                 <th>No Nota</th>
@@ -66,11 +66,9 @@
                                 <th width="220">Aksi</th>
                             </tr>
                         </thead>
-
                         <tbody>
                             @forelse($data as $row)
                             <tr>
-
                                 <td>
                                     <a href="{{ route('bengkel.cetak',$row->id) }}"
                                     target="_blank"
@@ -78,17 +76,13 @@
                                         {{ $row->nomor_invoice }}
                                     </a>
                                 </td>
-
                                 <td>
                                     {{ \Carbon\Carbon::parse($row->tanggal)->format('d-m-Y H:i') }}
                                 </td>
-
                                 <td>{{ $row->customer ?? '-' }}</td>
-
                                 <td class="text-end">
                                     {{ number_format($row->grandtotal,0,',','.') }}
                                 </td>
-
                                 <td>
                                     @if($row->metode_bayar == 'tunai')
                                         Tunai
@@ -98,7 +92,6 @@
                                         {{ ucfirst($row->metode_bayar) }}
                                     @endif
                                 </td>
-
                                 <td>
                                     @if($row->status == 'lunas')
                                         <span class="badge bg-success">Lunas</span>
@@ -110,10 +103,8 @@
                                         <span class="badge bg-secondary">{{ $row->status }}</span>
                                     @endif
                                 </td>
-
                                 <td>
                                     <div class="btn-group btn-group-sm">
-
                                         <!-- Cetak -->
                                         <a href="{{ route('bengkel.cetak',$row->id) }}"
                                         target="_blank"
@@ -123,7 +114,6 @@
                                         </a>
 
                                         @if($row->status != 'canceled')
-
                                             <!-- Revisi -->
                                             <a href="{{ route('bengkel.revise', $row->id) }}"
                                             class="btn btn-warning"
@@ -138,22 +128,14 @@
                                                     data-nota="{{ $row->nomor_invoice }}">
                                                 <i class="bi bi-x-circle-fill"></i>
                                             </button>
-
                                         @endif
-
                                     </div>
                                 </td>
-
                             </tr>
                             @empty
-                            <tr>
-                                <td colspan="7" class="text-center text-muted">
-                                    Tidak ada data pada periode ini
-                                </td>
-                            </tr>
+                            {{-- KOSONGKAN --}}
                             @endforelse
-                            </tbody>
-
+                        </tbody>
                     </table>
 
                 </div>
