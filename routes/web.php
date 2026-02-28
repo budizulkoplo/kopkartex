@@ -27,6 +27,7 @@ use App\Http\Controllers\TransaksiBengkelController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\BarangBengkelController;
 use App\Http\Controllers\TagihanController;
+use App\Http\Controllers\KategoriBengkelController;
 
 //LAPORAN
 use App\Http\Controllers\LaporanController;
@@ -105,13 +106,19 @@ Route::prefix('master/jasabengkel')
     ->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])
     ->name('master.jasabengkel.')
     ->group(function () {
-        Route::get('/', [JasaBengkelController::class, 'index'])->name('index'); // daftar jasa
-        Route::get('/getdata', [JasaBengkelController::class, 'getdata'])->name('getdata'); // ajax datatable
-        Route::get('/getcode', [JasaBengkelController::class, 'getCode'])->name('getcode'); // generate kode baru
-        Route::post('/cekcode', [JasaBengkelController::class, 'cekCode'])->name('cekcode'); // cek kode unik
-        Route::post('/store', [JasaBengkelController::class, 'store'])->name('store'); // simpan / update data
-        Route::post('/hapus', [JasaBengkelController::class, 'hapus'])->name('hapus'); // hapus data
+        Route::get('/', [JasaBengkelController::class, 'index'])->name('index'); 
+        Route::get('/getdata', [JasaBengkelController::class, 'getdata'])->name('getdata'); 
+        Route::get('/getcode', [JasaBengkelController::class, 'getCode'])->name('getcode');
+        Route::post('/cekcode', [JasaBengkelController::class, 'cekCode'])->name('cekcode'); 
+        Route::post('/store', [JasaBengkelController::class, 'store'])->name('store'); 
+        Route::post('/hapus', [JasaBengkelController::class, 'hapus'])->name('hapus'); 
     });
+
+Route::prefix('master')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
+    Route::get('/kategori-bengkel', [KategoriBengkelController::class, 'index'])->name('kategori.bengkel.index');
+    Route::get('/kategori-bengkel/{id}/edit', [KategoriBengkelController::class, 'edit'])->name('kategori.bengkel.edit');
+    Route::put('/kategori-bengkel/{id}', [KategoriBengkelController::class, 'update'])->name('kategori.bengkel.update');
+});
 
 Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin', 'global.app'])->group(function () {
     Route::get('/', [PenerimaanController::class, 'index'])->name('penerimaan.form');
