@@ -448,37 +448,31 @@ class StockOpnameController extends Controller
         $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
         $endDate = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
 
-        $query = StockOpnameHDR::with(['barang'])
-            ->where('id_unit', $unitId)
-            ->whereBetween('tgl_opname', [$startDate, $endDate])
-            ->whereNull('deleted_at')
+        $query = StockOpnameHDR::join('barang', 'stock_opname_hdr.id_barang', '=', 'barang.id')
+            ->where('stock_opname_hdr.id_unit', $unitId)
+            ->whereBetween('stock_opname_hdr.tgl_opname', [$startDate, $endDate])
+            ->whereNull('stock_opname_hdr.deleted_at')
             ->select([
-                'id as opname_id',
-                'id_barang',
-                'kode_barang',
-                'stock_sistem',
-                'stock_fisik',
-                'status',
-                'tgl_opname'
+                'stock_opname_hdr.id as opname_id',
+                'stock_opname_hdr.id_barang',
+                'stock_opname_hdr.kode_barang',
+                'stock_opname_hdr.stock_sistem',
+                'stock_opname_hdr.stock_fisik',
+                'stock_opname_hdr.status',
+                'stock_opname_hdr.tgl_opname',
+                'barang.nama_barang'
             ]);
 
-        return datatables()->eloquent($query)
+        return datatables()->queryBuilder($query)
             ->addIndexColumn()
-            ->addColumn('nama_barang', function($row) {
-                return $row->barang->nama_barang ?? '-';
-            })
             ->addColumn('aksi', function($row) use ($bulan) {
                 $url = route('stockopname.form', [
                     'barang_id' => $row->id_barang,
                     'bulan' => $bulan
                 ]);
-                
-                $btnClass = $row->status == 'sukses' ? 'btn-warning' : 'btn-primary';
-                $btnText = $row->status == 'sukses' ? 'Revisi' : 'Input';
-                $btnIcon = $row->status == 'sukses' ? 'bi-pencil-square' : 'bi-input-cursor';
-                
-                return '<a href="'.$url.'" class="btn btn-sm '.$btnClass.'">
-                    <i class="bi '.$btnIcon.'"></i> '.$btnText.'
+
+                return '<a href="'.$url.'" class="btn btn-sm btn-primary">
+                    Input
                 </a>';
             })
             ->rawColumns(['aksi'])

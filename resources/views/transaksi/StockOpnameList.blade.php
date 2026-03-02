@@ -97,6 +97,7 @@
                 $('#tbbarang').DataTable({
                     processing: true,
                     serverSide: true,
+                    pageLength: 50,
                     ajax: {
                         url: "{{ route('stockopname.barangajax') }}",
                         data: { bulan: "{{ $bulan }}" }
