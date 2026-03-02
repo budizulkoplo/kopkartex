@@ -463,16 +463,21 @@ class StockOpnameController extends Controller
                 'barang.nama_barang'
             ]);
 
-        return datatables()->queryBuilder($query)
+        return datatables()->of($query)
             ->addIndexColumn()
             ->addColumn('aksi', function($row) use ($bulan) {
+
                 $url = route('stockopname.form', [
                     'barang_id' => $row->id_barang,
                     'bulan' => $bulan
                 ]);
 
-                return '<a href="'.$url.'" class="btn btn-sm btn-primary">
-                    Input
+                $btnClass = $row->status == 'sukses' ? 'btn-warning' : 'btn-primary';
+                $btnText  = $row->status == 'sukses' ? 'Revisi' : 'Input';
+                $btnIcon  = $row->status == 'sukses' ? 'bi-pencil-square' : 'bi-input-cursor';
+
+                return '<a href="'.$url.'" class="btn btn-sm '.$btnClass.'">
+                    <i class="bi '.$btnIcon.'"></i> '.$btnText.'
                 </a>';
             })
             ->rawColumns(['aksi'])
