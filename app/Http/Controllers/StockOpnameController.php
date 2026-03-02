@@ -441,46 +441,47 @@ class StockOpnameController extends Controller
     }
 
     public function getBarangAjax(Request $request)
-    {
-        $unitId = Auth::user()->unit_kerja;
-        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
-        
-        $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
-        $endDate = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
+{
+    $unitId = Auth::user()->unit_kerja;
+    $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
 
-        $query = StockOpnameHDR::join('barang', 'stock_opname_hdr.id_barang', '=', 'barang.id')
-            ->where('stock_opname_hdr.id_unit', $unitId)
-            ->whereBetween('stock_opname_hdr.tgl_opname', [$startDate, $endDate])
-            ->whereNull('stock_opname_hdr.deleted_at')
-            ->select([
-                'stock_opname_hdr.id as opname_id',
-                'stock_opname_hdr.id_barang',
-                'stock_opname_hdr.kode_barang',
-                'stock_opname_hdr.stock_sistem',
-                'stock_opname_hdr.stock_fisik',
-                'stock_opname_hdr.status',
-                'stock_opname_hdr.tgl_opname',
-                'barang.nama_barang'
+    $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
+    $endDate   = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
+
+    $query = StockOpnameHDR::query()
+        ->join('barang', 'stock_opname.id_barang', '=', 'barang.id')
+        ->where('stock_opname.id_unit', $unitId)
+        ->whereBetween('stock_opname.tgl_opname', [$startDate, $endDate])
+        ->whereNull('stock_opname.deleted_at')
+        ->select([
+            'stock_opname.id as opname_id',
+            'stock_opname.id_barang',
+            'stock_opname.kode_barang',
+            'stock_opname.stock_sistem',
+            'stock_opname.stock_fisik',
+            'stock_opname.status',
+            'stock_opname.tgl_opname',
+            'barang.nama_barang'
+        ]);
+
+    return datatables()->of($query)
+        ->addIndexColumn()
+        ->addColumn('aksi', function($row) use ($bulan) {
+
+            $url = route('stockopname.form', [
+                'barang_id' => $row->id_barang,
+                'bulan'     => $bulan
             ]);
 
-        return datatables()->of($query)
-            ->addIndexColumn()
-            ->addColumn('aksi', function($row) use ($bulan) {
+            $btnClass = $row->status == 'sukses' ? 'btn-warning' : 'btn-primary';
+            $btnText  = $row->status == 'sukses' ? 'Revisi' : 'Input';
+            $btnIcon  = $row->status == 'sukses' ? 'bi-pencil-square' : 'bi-input-cursor';
 
-                $url = route('stockopname.form', [
-                    'barang_id' => $row->id_barang,
-                    'bulan' => $bulan
-                ]);
-
-                $btnClass = $row->status == 'sukses' ? 'btn-warning' : 'btn-primary';
-                $btnText  = $row->status == 'sukses' ? 'Revisi' : 'Input';
-                $btnIcon  = $row->status == 'sukses' ? 'bi-pencil-square' : 'bi-input-cursor';
-
-                return '<a href="'.$url.'" class="btn btn-sm '.$btnClass.'">
-                    <i class="bi '.$btnIcon.'"></i> '.$btnText.'
-                </a>';
-            })
-            ->rawColumns(['aksi'])
-            ->make(true);
-    }
+            return '<a href="'.$url.'" class="btn btn-sm '.$btnClass.'">
+                <i class="bi '.$btnIcon.'"></i> '.$btnText.'
+            </a>';
+        })
+        ->rawColumns(['aksi'])
+        ->make(true);
+}
 }
