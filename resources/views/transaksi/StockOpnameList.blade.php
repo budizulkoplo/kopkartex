@@ -104,10 +104,10 @@
                     },
                     columns: [
                         { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-                        { data: 'kode_barang', name: 'kode_barang' },
-                        { data: 'nama_barang', name: 'nama_barang' },
-                        { data: 'stock_sistem', name: 'stock_sistem' },
-                        { data: 'stock_fisik', name: 'stock_fisik' },
+                        { data: 'kode_barang', name: 'stock_opname.kode_barang' },
+                        { data: 'nama_barang', name: 'barang.nama_barang' }, // 🔥 ini penting
+                        { data: 'stock_sistem', name: 'stock_opname.stock_sistem' },
+                        { data: 'stock_fisik', name: 'stock_opname.stock_fisik' },
                         { data: 'aksi', name: 'aksi', orderable: false, searchable: false }
                     ],
                     pageLength: 25,
