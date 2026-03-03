@@ -393,8 +393,40 @@
                     "<'row mb-2'<'col-md-6 d-flex align-items-center'B><'col-md-6 d-flex justify-content-end'f>>" +
                     "<'row mb-2'<'col-md-6'l><'col-md-6 text-end'i>>" +
                     "<'row'<'col-12'tr>>" +
-                    "<'row mt-2'<'col-md-6'i><'col-md-6 d-flex justify-content-end'p>>"
-                
+                    "<'row mt-2'<'col-md-6'i><'col-md-6 d-flex justify-content-end'p>>",
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="bi bi-file-earmark-excel"></i> Export Excel (Page)',
+                        className: 'btn btn-success btn-sm',
+                        exportOptions: {
+                            columns: ':visible',
+                            modifier: {
+                                page: 'current'
+                            }
+                        },
+                        customize: function(xlsx) {
+                            var sheet = xlsx.xl.worksheets['sheet1.xml'];
+                            $('row c', sheet).attr('s', '45');
+                        }
+                    },
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="bi bi-file-earmark-excel"></i> Export Excel (All)',
+                        className: 'btn btn-info btn-sm',
+                        exportOptions: {
+                            columns: ':visible',
+                            modifier: {
+                                page: 'all',
+                                search: 'applied'
+                            }
+                        },
+                        customize: function(xlsx) {
+                            var sheet = xlsx.xl.worksheets['sheet1.xml'];
+                            $('row c', sheet).attr('s', '45');
+                        }
+                    }
+                ]
             });
 
             // Load totals on page load
