@@ -88,7 +88,7 @@
                                                     <td>
                                                         <input type="hidden" name="code[]" value="{{ $selectedBarang->code }}" required>
                                                         <input type="hidden" name="id[]" value="{{ $selectedBarang->id }}" required>
-                                                        <input type="number" class="form-control form-control-sm qty" min="0" name="qty[]" value="0" required>
+                                                        <input type="number" class="form-control form-control-sm qty" min="0" name="qty[]" required>
                                                     </td>
                                                     <td>
                                                         <input type="date" class="form-control form-control-sm" name="exp[]">
@@ -167,34 +167,38 @@
             }
 
             function addRow(){
-                rowCounter++;
-                let row = `
-                    <tr class="align-middle" id="row-${rowCounter}">
-                        <td></td>
-                        <td>
-                            <input type="hidden" class="form-control form-control-sm" name="code[]" value="{{ $selectedBarang->code }}" required>
-                            <input type="hidden" class="form-control form-control-sm" name="id[]" value="{{ $selectedBarang->id }}" required>
-                            <input type="number" class="form-control form-control-sm qty" min="0" name="qty[]" value="0" required>
-                        </td>
-                        <td>
-                            <input type="date" class="form-control form-control-sm" name="exp[]">
-                        </td>
-                        <td class="text-center">
-                            <span class="badge bg-danger dellist" onclick="removeRow(${rowCounter})">
-                                <i class="bi bi-trash3-fill"></i>
-                            </span>
-                        </td>
-                    </tr>
-                `;
-                $('#tbterima tbody').append(row);
-                numbering();
-                calculateTotal();
-                
-                // Auto focus ke input qty baru
-                setTimeout(() => {
-                    $('#row-' + rowCounter + ' .qty').focus();
-                }, 100);
-            }
+            rowCounter++;
+            let row = `
+                <tr class="align-middle" id="row-${rowCounter}">
+                    <td></td>
+                    <td>
+                        <input type="hidden" class="form-control form-control-sm" name="code[]" value="{{ $selectedBarang->code }}" required>
+                        <input type="hidden" class="form-control form-control-sm" name="id[]" value="{{ $selectedBarang->id }}" required>
+                        <input type="number" class="form-control form-control-sm qty" min="0" name="qty[]" value="0" required>
+                    </td>
+                    <td>
+                        <input type="date" class="form-control form-control-sm" name="exp[]">
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-danger dellist" onclick="removeRow(${rowCounter})">
+                            <i class="bi bi-trash3-fill"></i>
+                        </span>
+                    </td>
+                </tr>
+            `;
+            $('#tbterima tbody').append(row);
+            numbering();
+            calculateTotal();
+            
+            // Auto focus ke input qty baru dan kosongkan jika 0
+            setTimeout(() => {
+                let newInput = $('#row-' + rowCounter + ' .qty');
+                if (newInput.val() == 0) {
+                    newInput.val('');
+                }
+                newInput.focus();
+            }, 100);
+        }
 
             function removeRow(rowId) {
                 if ($('#tbterima tbody tr').length > 1) {
@@ -349,6 +353,26 @@
                         $('#row-1 .qty').focus().select();
                     }
                 });
+            });
+
+            // Di dalam $(document).ready()
+            $(document).on('focus', '.qty', function() {
+                // Jika nilai saat ini adalah 0, langsung kosongkan
+                if ($(this).val() == 0) {
+                    $(this).val('');
+                }
+                // Jika tidak 0, seleksi seluruh teks
+                else {
+                    $(this).select();
+                }
+            });
+
+            // Optional: Kembalikan ke 0 jika field kosong dan kehilangan fokus
+            $(document).on('blur', '.qty', function() {
+                if ($(this).val() === '') {
+                    $(this).val(0);
+                }
+                calculateTotal();
             });
         </script>
     </x-slot>
