@@ -56,6 +56,11 @@
                         <a href="{{ route('mobile.stokopname.index') }}" class="btn btn-primary btn-sm d-flex align-items-center">
                             <i class="bi bi-upc-scan me-1"></i> Scan Opname (Mobile)
                         </a>
+                        @if($hasData)
+                            <button type="button" class="btn btn-success" onclick="selesaiOpname('{{ $bulan }}')">
+                                <i class="bi bi-check-circle"></i> Selesai Opname
+                            </button>
+                        @endif
                     </div>
 
                     <div class="card p-2 mb-3 border border-info" style="background-color:#e9f7ff;">
@@ -200,5 +205,129 @@
                 document.getElementById("kodeScan")?.focus();
             });
         </script>
+
+        <script>
+function selesaiOpname(bulan) {
+    Swal.fire({
+        title: 'Selesaikan Stock Opname?',
+        html: `
+            <p>Proses ini akan:</p>
+            <ul class="text-start">
+                <li>Memastikan semua barang sudah diopname</li>
+                <li>Menyimpan data ke tabel modal awal periode ${bulan}</li>
+                <li>Data yang sudah disimpan tidak bisa diubah</li>
+            </ul>
+            <p class="text-warning"><strong>Pastikan semua data sudah benar!</strong></p>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Selesaikan!',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Verifikasi password dulu
+            Swal.fire({
+                title: 'Verifikasi Password',
+                input: 'password',
+                inputLabel: 'Masukkan password Anda untuk konfirmasi',
+                inputPlaceholder: 'Password',
+                showCancelButton: true,
+                confirmButtonText: 'Verifikasi',
+                cancelButtonText: 'Batal',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Password harus diisi!';
+                    }
+                }
+            }).then((passwordResult) => {
+                if (passwordResult.isConfirmed) {
+                    // Verifikasi password via AJAX
+                    $.ajax({
+                        url: '{{ route("stockopname.verifyPassword") }}',
+                        method: 'POST',
+                        data: {
+                            password: passwordResult.value,
+                            _token: '{{ csrf_token() }}'
+                        },
+                        success: function(response) {
+                            if (response.valid) {
+                                // Lanjutkan proses selesai opname
+                                $.ajax({
+                                    url: '{{ route("stockopname.selesai") }}',
+                                    method: 'POST',
+                                    data: {
+                                        bulan: bulan,
+                                        _token: '{{ csrf_token() }}'
+                                    },
+                                    beforeSend: function() {
+                                        Swal.fire({
+                                            title: 'Memproses...',
+                                            html: 'Menyimpan data modal awal',
+                                            allowOutsideClick: false,
+                                            didOpen: () => {
+                                                Swal.showLoading();
+                                            }
+                                        });
+                                    },
+                                    success: function(response) {
+                                        if (response.success) {
+                                            Swal.fire({
+                                                icon: 'success',
+                                                title: 'Berhasil!',
+                                                html: `
+                                                    ${response.message}<br>
+                                                    <strong>Total Barang:</strong> ${response.data.total_barang}<br>
+                                                    <strong>Total Modal:</strong> Rp ${response.data.total_modal}<br>
+                                                    <strong>Periode:</strong> ${response.data.periode}
+                                                `,
+                                                confirmButtonColor: '#28a745'
+                                            }).then(() => {
+                                                location.reload();
+                                            });
+                                        } else {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Gagal!',
+                                                text: response.message
+                                            });
+                                        }
+                                    },
+                                    error: function(xhr) {
+                                        let errorMsg = 'Terjadi kesalahan!';
+                                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                                            errorMsg = xhr.responseJSON.message;
+                                        }
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error!',
+                                            text: errorMsg
+                                        });
+                                    }
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Gagal!',
+                                    text: 'Password salah!'
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal!',
+                                text: 'Verifikasi password gagal!'
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    });
+}
+</script>
     </x-slot>
 </x-app-layout>

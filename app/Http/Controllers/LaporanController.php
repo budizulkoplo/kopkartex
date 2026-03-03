@@ -1525,4 +1525,164 @@ private function formatDbfField($value, $maxLength)
             ->make(true);
     }
 
+    /**
+     * Laporan Modal Awal
+     */
+    public function modalAwal(Request $request)
+    {
+        $bulan = $request->get('bulan', date('Y-m'));
+        
+        // Untuk dropdown filter unit
+        $units = DB::table('unit')->select('id', 'nama_unit')->orderBy('nama_unit')->get();
+        
+        return view('laporan.modal_awal', compact('bulan', 'units'));
+    }
+
+    /**
+     * Data untuk Laporan Modal Awal
+     */
+    public function modalAwalData(Request $request)
+    {
+        $bulan = $request->get('bulan', date('Y-m'));
+        $unit_id = $request->get('unit', 'all');
+
+        $query = DB::table('modal_awal as ma')
+            ->leftJoin('unit as u', 'u.id', '=', 'ma.unit_id')
+            ->leftJoin('barang as b', 'b.id', '=', 'ma.barang_id')
+            ->leftJoin('satuan as s', 'b.idsatuan', '=', 's.id') // Join ke tabel satuan
+            ->select(
+                'ma.id',
+                'ma.periode',
+                'ma.kode_barang',
+                'ma.nama_barang',
+                'ma.harga_modal',
+                'ma.unit_id',
+                'u.nama_unit as unit',
+                'ma.stok',
+                'ma.nilai_total_barang',
+                'ma.created_at',
+                'ma.updated_at',
+                's.name as satuan' // Ambil name dari tabel satuan
+            )
+            ->where('ma.periode', $bulan);
+
+        if ($unit_id != 'all') {
+            $query->where('ma.unit_id', $unit_id);
+        }
+
+        $data = $query->orderBy('ma.kode_barang', 'asc')->get();
+
+        // Hitung total untuk footer
+        $totalModal = $data->sum('nilai_total_barang');
+        $totalStok = $data->sum('stok');
+
+        return response()->json([
+            'data' => $data,
+            'totals' => [
+                'total_stok' => $totalStok,
+                'total_modal' => $totalModal
+            ]
+        ]);
+    }
+
+    /**
+     * Export Excel Laporan Modal Awal
+     */
+    public function modalAwalExport(Request $request)
+    {
+        $bulan = $request->get('bulan', date('Y-m'));
+        $unit_id = $request->get('unit', 'all');
+        
+        $query = DB::table('modal_awal as ma')
+            ->leftJoin('unit as u', 'u.id', '=', 'ma.unit_id')
+            ->leftJoin('barang as b', 'b.id', '=', 'ma.barang_id')
+            ->leftJoin('satuan as s', 'b.idsatuan', '=', 's.id') // Join ke tabel satuan
+            ->select(
+                'ma.periode',
+                'ma.kode_barang',
+                'ma.nama_barang',
+                'ma.harga_modal',
+                'u.nama_unit as unit',
+                'ma.stok',
+                'ma.nilai_total_barang',
+                's.name as satuan' // Ambil name dari tabel satuan
+            )
+            ->where('ma.periode', $bulan);
+
+        if ($unit_id != 'all') {
+            $query->where('ma.unit_id', $unit_id);
+        }
+
+        $data = $query->orderBy('ma.kode_barang', 'asc')->get();
+
+        // Hitung total
+        $totalStok = $data->sum('stok');
+        $totalModal = $data->sum('nilai_total_barang');
+
+        // Generate Excel menggunakan array
+        $filename = "modal_awal_{$bulan}_" . date('YmdHis') . ".xls";
+        
+        header("Content-Type: application/vnd.ms-excel");
+        header("Content-Disposition: attachment; filename=\"$filename\"");
+        header("Cache-Control: max-age=0");
+        
+        echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+        echo '<head>';
+        echo '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">';
+        echo '<style>';
+        echo 'table { border-collapse: collapse; width: 100%; }';
+        echo 'th { background-color: #f2f2f2; border: 1px solid #000; padding: 5px; text-align: center; }';
+        echo 'td { border: 1px solid #000; padding: 3px; }';
+        echo '.text-right { text-align: right; }';
+        echo '.text-center { text-align: center; }';
+        echo '.total-row { background-color: #d1e7ff; font-weight: bold; }';
+        echo '</style>';
+        echo '</head>';
+        echo '<body>';
+        
+        echo '<table>';
+        
+        // Header
+        echo '<tr>';
+        echo '<th>No</th>';
+        echo '<th>Periode</th>';
+        echo '<th>Kode Barang</th>';
+        echo '<th>Nama Barang</th>';
+        echo '<th>Satuan</th>';
+        echo '<th>Harga Modal</th>';
+        echo '<th>Unit</th>';
+        echo '<th>Stok</th>';
+        echo '<th>Nilai Total</th>';
+        echo '</tr>';
+        
+        // Data
+        $no = 1;
+        foreach ($data as $row) {
+            echo '<tr>';
+            echo '<td class="text-center">' . $no++ . '</td>';
+            echo '<td class="text-center">' . $row->periode . '</td>';
+            echo '<td>' . $row->kode_barang . '</td>';
+            echo '<td>' . $row->nama_barang . '</td>';
+            echo '<td class="text-center">' . ($row->satuan ?? '-') . '</td>';
+            echo '<td class="text-right">' . number_format($row->harga_modal, 2, ',', '.') . '</td>';
+            echo '<td>' . ($row->unit ?? '-') . '</td>';
+            echo '<td class="text-right">' . number_format($row->stok, 0, ',', '.') . '</td>';
+            echo '<td class="text-right">' . number_format($row->nilai_total_barang, 2, ',', '.') . '</td>';
+            echo '</tr>';
+        }
+        
+        // Total
+        echo '<tr class="total-row">';
+        echo '<td colspan="7" class="text-right">TOTAL</td>';
+        echo '<td class="text-right">' . number_format($totalStok, 0, ',', '.') . '</td>';
+        echo '<td class="text-right">' . number_format($totalModal, 2, ',', '.') . '</td>';
+        echo '</tr>';
+        
+        echo '</table>';
+        echo '</body>';
+        echo '</html>';
+        
+        exit;
+    }
+
 }

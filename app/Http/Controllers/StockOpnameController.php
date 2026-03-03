@@ -6,6 +6,7 @@ use App\Models\StockOpnameDTL;
 use App\Models\StockOpnameHDR;
 use App\Models\StokUnit;
 use App\Models\Barang;
+use App\Models\ModalAwal;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -482,6 +483,190 @@ class StockOpnameController extends Controller
                 </a>';
             })
             ->rawColumns(['aksi'])
+            ->make(true);
+    }
+
+    /**
+     * Menyelesaikan stock opname dan menyimpan ke modal_awal
+     */
+    public function selesaiOpname(Request $request)
+    {
+        $request->validate([
+            'bulan' => 'required|date_format:Y-m'
+        ]);
+
+        $unitId = Auth::user()->unit_kerja;
+        $bulan = $request->bulan;
+        
+        $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
+        $endDate = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
+
+        DB::beginTransaction();
+        try {
+            // 1. Hapus data modal_awal untuk periode dan unit yang sama jika ada
+            ModalAwal::where('periode', $bulan)
+                ->where('unit_id', $unitId)
+                ->delete();
+
+            // 2. Ambil semua barang yang seharusnya ada di unit ini
+            $semuaBarang = DB::table('barang')
+                ->leftJoin('stok_unit', function ($join) use ($unitId) {
+                    $join->on('barang.id', '=', 'stok_unit.barang_id')
+                        ->where('stok_unit.unit_id', '=', $unitId)
+                        ->whereNull('stok_unit.deleted_at');
+                })
+                ->where(function ($q) use ($unitId) {
+                    if ($unitId == 5) {
+                        $q->where('barang.kelompok_unit', 'bengkel');
+                    } else {
+                        $q->where('barang.kelompok_unit', '<>', 'bengkel');
+                    }
+                })
+                ->select(
+                    'barang.id as id_barang',
+                    'barang.kode_barang',
+                    'barang.nama_barang',
+                    'barang.harga_beli', // Menggunakan harga_beli sebagai modal
+                    DB::raw('IFNULL(stok_unit.stok, 0) as stok_sistem')
+                )
+                ->get();
+
+            // 3. Ambil data opname yang sudah diinput (status sukses)
+            $dataOpname = StockOpnameHDR::where('id_unit', $unitId)
+                ->whereBetween('tgl_opname', [$startDate, $endDate])
+                ->get()
+                ->keyBy('id_barang'); // Group by id_barang untuk mudah diakses
+
+            // 4. Insert ke modal_awal untuk semua barang
+            foreach ($semuaBarang as $barang) {
+                // Cek apakah barang ini sudah diopname
+                $opnameBarang = $dataOpname->get($barang->id_barang);
+                
+                // Jika sudah diopname, ambil stok_fisik, jika belum, set 0
+                $stokFisik = $opnameBarang ? $opnameBarang->stock_fisik : 0;
+                
+                // Ambil harga beli dari barang
+                $hargaBeli = $barang->harga_beli ?? 0;
+                
+                ModalAwal::create([
+                    'periode' => $bulan,
+                    'barang_id' => $barang->id_barang,
+                    'kode_barang' => $barang->kode_barang,
+                    'nama_barang' => $barang->nama_barang,
+                    'harga_modal' => $hargaBeli, // Simpan harga_beli ke field harga_modal
+                    'unit_id' => $unitId,
+                    'stok' => $stokFisik,
+                    'nilai_total_barang' => $stokFisik * $hargaBeli
+                ]);
+            }
+
+            // 5. Update status semua opname menjadi 'selesai' 
+            // (termasuk yang statusnya pending akan dianggap selesai dengan stok 0)
+            StockOpnameHDR::where('id_unit', $unitId)
+                ->whereBetween('tgl_opname', [$startDate, $endDate])
+                ->update(['status' => 'selesai']);
+
+            // 6. Untuk barang yang belum ada record opname sama sekali, buat record baru dengan status selesai dan stok 0
+            $barangYangSudahAdaRecord = StockOpnameHDR::where('id_unit', $unitId)
+                ->whereBetween('tgl_opname', [$startDate, $endDate])
+                ->pluck('id_barang')
+                ->toArray();
+                
+            $barangBelumAdaRecord = $semuaBarang->filter(function ($barang) use ($barangYangSudahAdaRecord) {
+                return !in_array($barang->id_barang, $barangYangSudahAdaRecord);
+            });
+            
+            foreach ($barangBelumAdaRecord as $barang) {
+                StockOpnameHDR::create([
+                    'tgl_opname' => $endDate, // Gunakan tanggal terakhir bulan
+                    'id_unit' => $unitId,
+                    'id_barang' => $barang->id_barang,
+                    'kode_barang' => $barang->kode_barang,
+                    'stock_sistem' => $barang->stok_sistem,
+                    'stock_fisik' => 0,
+                    'user' => Auth::user()->id,
+                    'status' => 'selesai',
+                    'keterangan' => 'Auto generate saat selesai opname (stok 0)'
+                ]);
+            }
+
+            DB::commit();
+
+            // Hitung total modal
+            $totalModal = ModalAwal::where('periode', $bulan)
+                ->where('unit_id', $unitId)
+                ->sum('nilai_total_barang');
+                
+            $jumlahBarangStokNol = $barangBelumAdaRecord->count();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock opname selesai. Data modal awal berhasil disimpan.',
+                'data' => [
+                    'total_barang' => $semuaBarang->count(),
+                    'barang_diopname' => $dataOpname->count(),
+                    'barang_stok_nol' => $jumlahBarangStokNol,
+                    'total_modal' => number_format($totalModal, 2),
+                    'periode' => $bulan
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyelesaikan stock opname: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Menampilkan data modal awal
+     */
+    public function modalAwal(Request $request): View
+    {
+        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
+        $unitId = Auth::user()->unit_kerja;
+        
+        $dataModal = ModalAwal::with(['barang', 'unit'])
+            ->where('periode', $bulan)
+            ->where('unit_id', $unitId)
+            ->orderBy('kode_barang')
+            ->get();
+            
+        $totalModal = $dataModal->sum('nilai_total_barang');
+        
+        return view('laporan.modal_awal', compact('dataModal', 'bulan', 'totalModal'));
+    }
+
+    /**
+     * API untuk datatable modal awal
+     */
+    public function getModalAwalAjax(Request $request)
+    {
+        $unitId = Auth::user()->unit_kerja;
+        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
+
+        $query = ModalAwal::query()
+            ->where('periode', $bulan)
+            ->where('unit_id', $unitId)
+            ->select([
+                'id',
+                'kode_barang',
+                'nama_barang',
+                'harga_beli',
+                'stok',
+                'nilai_total_barang'
+            ]);
+
+        return datatables()->of($query)
+            ->addIndexColumn()
+            ->editColumn('harga_beli', function($row) {
+                return number_format($row->harga_beli, 2);
+            })
+            ->editColumn('nilai_total_barang', function($row) {
+                return number_format($row->nilai_total_barang, 2);
+            })
             ->make(true);
     }
 }

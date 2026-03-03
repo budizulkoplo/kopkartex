@@ -102,6 +102,11 @@ Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin|h
     Route::post('/insert-old', [StockOpnameController::class, 'insertFromOld'])->name('stockopname.insertOld');
     Route::post('/verify-password', [StockOpnameController::class, 'verifyPassword'])->name('stockopname.verifyPassword');
     Route::get('/barang-ajax', [StockOpnameController::class, 'getBarangAjax'])->name('stockopname.barangajax');
+
+    Route::post('/selesai', [StockOpnameController::class, 'selesaiOpname'])->name('stockopname.selesai');
+    
+    Route::get('/modal-awal', [StockOpnameController::class, 'modalAwal'])->name('stockopname.modalawal');
+    Route::get('/modal-awal-ajax', [StockOpnameController::class, 'getModalAwalAjax'])->name('stockopname.modalawalajax');
 });
 
 Route::prefix('master/jasabengkel')
@@ -356,6 +361,11 @@ Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin
     Route::get('/penjualan-bengkel-detail/data', [LaporanController::class, 'penjualanBengkelDetailData'])->name('penjualan-bengkel-detail.data');
     Route::get('/penjualan-bengkel-detail/print', [LaporanController::class, 'penjualanBengkelDetailPrint'])->name('penjualan-bengkel-detail.print');
     Route::get('/penjualan-bengkel-detail/export', [LaporanController::class, 'penjualanBengkelDetailExport'])->name('penjualan-bengkel-detail.export');
+
+    // Modal Awal
+    Route::get('/modal-awal', [LaporanController::class, 'modalAwal'])->name('laporan.modalawal');
+    Route::get('/modal-awal/data', [LaporanController::class, 'modalAwalData'])->name('laporan.modalawal.data');
+    Route::get('/modal-awal/export', [LaporanController::class, 'modalAwalExport'])->name('laporan.modalawal.export');
 });
 
 Route::middleware(['auth'])->prefix('mobile/belanja')->name('mobile.belanja.')->group(function () {
