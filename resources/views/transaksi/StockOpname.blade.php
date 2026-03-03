@@ -259,14 +259,14 @@
                         }
                     });
                     
-                    if (!hasQty) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Perhatian',
-                            text: 'Minimal ada 1 quantity yang harus diisi (lebih dari 0)!'
-                        });
-                        return;
-                    }
+                    // if (!hasQty) {
+                    //     Swal.fire({
+                    //         icon: 'warning',
+                    //         title: 'Perhatian',
+                    //         text: 'Minimal ada 1 quantity yang harus diisi (lebih dari 0)!'
+                    //     });
+                    //     return;
+                    // }
 
                     Swal.fire({
                         title: "Simpan Stock Opname?",
