@@ -388,7 +388,7 @@ class TransaksiBengkelController extends Controller
     public function nota($invoice): View
     {
         $hdr = TransaksiBengkel::join('users','users.id','transaksi_bengkels.created_user')
-            ->select('transaksi_bengkels.*','users.name as kasir')
+            ->select('transaksi_bengkels.*','users.name as kasir', 'users.nomor_anggota')
             ->where('transaksi_bengkels.nomor_invoice',$invoice)
             ->firstOrFail();
 
