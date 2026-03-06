@@ -2,28 +2,36 @@
 <head>
     <title>Cetak Nota <?= $hdr->nomor_invoice ?></title>
     <style>
-        @page { margin: 0 }
-        body {
-            margin: 0;
-            font-family: monospace;
-            font-size: 11px;
-            width: 9.5cm;
+        body{
+            margin:0;
+            font-family: Courier, monospace;
+            font-size:12px;
+            line-height:1.4;
+            width:9.5cm;
         }
 
-        .sheet { width: 9.5cm; padding: 5px; }
-        .center { text-align: center; }
-        .right { text-align: right; }
-        .left { text-align: left; }
-
-        .line {
-            border-bottom: 1px dashed #000;
-            margin: 3px 0;
+        .sheet{
+            width:9.5cm;
+            padding:5px;
         }
 
-        table { width: 100%; border-collapse: collapse; }
-        td { vertical-align: top; }
+        .center{ text-align:center }
+        .right{ text-align:right }
+        .left{ text-align:left }
 
-        @media print { body { width: 9.5cm; } }
+        .line{
+            border-bottom:1px solid #000;
+            margin:4px 0;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+        }
+
+        td{
+            padding:1px 0;
+        }
     </style>
 </head>
 
@@ -58,18 +66,41 @@ if($isCicilan){
 
 <!-- HEADER -->
 <div class="center">
-    <b>CV MANDIRI SEJAHTERA</b><br>
-    UNIT BENGKEL<br><br>
+    <b style="font-size:13px">CV MANDIRI SEJAHTERA</b>
+</div>
+
+<table>
+<tr>
+    <td class="left"><b>UNIT BENGKEL</b></td>
+    <td class="right"><b><?= $hdr->nomor_invoice ?></b></td>
+</tr>
+</table>
+
+<br>
+
+<div class="center">
     <b><?= $isCicilan ? 'NOTA PENJUALAN KREDIT' : 'NOTA PENJUALAN' ?></b>
 </div>
 
 <div class="line"></div>
 
 <table>
-<tr><td>Nama</td><td>:</td><td><?= $hdr->nomor_anggota ? $hdr->nomor_anggota." - ".$hdr->customer : $hdr->customer ?></td></tr>
-<tr><td>No Nota</td><td>:</td><td><?= $hdr->nomor_invoice ?></td></tr>
-<tr><td>Tanggal</td><td>:</td><td><?= date('d-m-Y H:i', strtotime($hdr->tanggal)) ?></td></tr>
-<tr><td>Kasir</td><td>:</td><td><?= $hdr->kasir ?></td></tr>
+<tr>
+    <td width="50%">
+        Nama : <?= $hdr->customer ?>
+    </td>
+    <td width="50%" class="right">
+        Kasir : <?= $hdr->kasir ?>
+    </td>
+</tr>
+<tr>
+    <td>
+        No. Agt : <?= $hdr->nomor_anggota ?? '-' ?>
+    </td>
+    <td class="right">
+        Tgl : <?= date('d-m-Y H:i', strtotime($hdr->tanggal)) ?>
+    </td>
+</tr>
 </table>
 
 <div class="line"></div>
