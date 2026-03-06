@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class TransaksiBengkelController extends Controller
 {
@@ -435,33 +436,33 @@ class TransaksiBengkelController extends Controller
     /**
      * Menampilkan form revisi transaksi
      */
-    public function revise($id): View
-    {
-        $transaksi = TransaksiBengkel::with(['details' => function($q) {
-            $q->with(['barang', 'jasa']);
-        }, 'user', 'anggota']) // Tambahkan relasi user dan anggota
-        ->findOrFail($id);
+    public function revise($id): View|RedirectResponse
+{
+    $transaksi = TransaksiBengkel::with([
+        'details' => function($q){
+            $q->with(['barang','jasa']);
+        },
+        'user',
+        'anggota'
+    ])->findOrFail($id);
 
-        // Debug: cek apakah details terload
-        // dd($transaksi->details); // Uncomment untuk debug
-
-        // Cek apakah transaksi bisa direvisi
-        if ($transaksi->status == 'canceled') {
-            return redirect()->route('bengkel.riwayat')
-                ->with('error', 'Transaksi yang sudah dibatalkan tidak dapat direvisi');
-        }
-
-        // Cek apakah transaksi sudah lama (lebih dari 1 hari)
-        if (Carbon::parse($transaksi->created_at)->diffInDays(now()) > 1) {
-            return redirect()->route('bengkel.riwayat')
-                ->with('error', 'Transaksi hanya dapat direvisi maksimal 1 hari setelah transaksi');
-        }
-
-        return view('transaksi.BengkelRevise', [
-            'transaksi' => $transaksi,
-            'unit' => Auth::user()->unit_kerja, // Ini untuk keperluan lain jika perlu
-        ]);
+    // Tidak boleh revise jika sudah cancel
+    if ($transaksi->status == 'canceled') {
+        return redirect()->route('bengkel.riwayat')
+            ->with('error','Transaksi yang sudah dibatalkan tidak dapat direvisi');
     }
+
+    // Maksimal revisi 1 hari
+    if (Carbon::parse($transaksi->created_at)->diffInDays(now()) > 3) {
+        return redirect()->route('bengkel.riwayat')
+            ->with('error','Transaksi hanya dapat direvisi maksimal 3 hari setelah transaksi');
+    }
+
+    return view('transaksi.BengkelRevise',[
+        'transaksi' => $transaksi,
+        'unit' => Auth::user()->unit_kerja
+    ]);
+}
 
     /**
      * Update transaksi revisi

@@ -51,7 +51,12 @@
         <div class="container-fluid">
             <div class="card shadow-sm border-0">
                 <div class="card-body">
-
+                    @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        {{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    @endif
                     <table id="tbRiwayat"
                         class="table table-bordered table-striped table-sm w-100"
                         style="font-size: 13px;">
