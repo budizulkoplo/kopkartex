@@ -97,9 +97,7 @@ if($isCicilan){
     <td>
         No. Agt : <?= $hdr->nomor_anggota ?? '-' ?>
     </td>
-    <td class="right">
-        Tgl : <?= date('d-m-Y H:i', strtotime($hdr->tanggal)) ?>
-    </td>
+    
 </tr>
 </table>
 
@@ -206,7 +204,7 @@ Rp. <?= number_format($c->total_cicilan,0,',','.') ?><br>
 <div class="line"></div>
 
 <div class="center">
-    Terima kasih atas kunjungan anda
+    <?= date('d-m-Y H:i', strtotime($hdr->tanggal)) ?>
 </div>
 
 <br><br><br>
