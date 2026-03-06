@@ -160,10 +160,11 @@ if($v->jenis == 'jasa' && $v->jasa){
 <?php if($isCicilan): ?>
 <div class="line"></div>
 
-<table>
+<!-- Informasi Cicilan -->
+<table width="100%">
 <tr>
-    <td class="right">TOTAL BP :</td>
-    <td class="right"><?= number_format($totalBP,0,',','.') ?></td>
+    <td class="right" width="70%">TOTAL BP :</td>
+    <td class="right" width="30%"><?= number_format($totalBP,0,',','.') ?></td>
 </tr>
 <tr>
     <td class="right">TOTAL NON BP :</td>
@@ -176,19 +177,19 @@ if($v->jenis == 'jasa' && $v->jasa){
 </table>
 
 <?php if(isset($cicilan) && $cicilan->count() > 0): ?>
-
 <div class="line"></div>
-<b>RINCIAN CICILAN NON BP</b><br>
+<div><b>RINCIAN CICILAN NON BP :</b></div>
 
 <?php
 $nonbp = $cicilan->where('kategori',1);
+$cicilan_list = [];
+foreach($nonbp as $c) {
+    $cicilan_list[] = "{$c->cicilan}: Rp ". number_format($c->total_cicilan,0,',','.');
+}
 ?>
-
-<?php foreach($nonbp as $c): ?>
-Cicilan <?= $c->cicilan ?> :
-Rp. <?= number_format($c->total_cicilan,0,',','.') ?><br>
-<?php endforeach; ?>
-
+<div style="margin: 2px 0; word-break: keep-all;">
+    <?= implode(' | ', $cicilan_list) ?>
+</div>
 <?php endif; ?>
 
 <?php endif; ?>
