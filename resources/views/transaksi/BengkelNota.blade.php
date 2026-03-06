@@ -66,7 +66,7 @@ if($isCicilan){
 <div class="line"></div>
 
 <table>
-<tr><td>Nama</td><td>:</td><td><?= $hdr->customer ?></td></tr>
+<tr><td>Nama</td><td>:</td><td><?= $hdr->nomor_anggota ? $hdr->nomor_anggota." - ".$hdr->customer : $hdr->customer ?></td></tr>
 <tr><td>No Nota</td><td>:</td><td><?= $hdr->nomor_invoice ?></td></tr>
 <tr><td>Tanggal</td><td>:</td><td><?= date('d-m-Y H:i', strtotime($hdr->tanggal)) ?></td></tr>
 <tr><td>Kasir</td><td>:</td><td><?= $hdr->kasir ?></td></tr>
