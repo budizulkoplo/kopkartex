@@ -452,7 +452,7 @@ class TransaksiBengkelController extends Controller
             ->with('error','Transaksi yang sudah dibatalkan tidak dapat direvisi');
     }
 
-    // Maksimal revisi 1 hari
+    // Maksimal revisi 3 hari
     if (Carbon::parse($transaksi->created_at)->diffInDays(now()) > 3) {
         return redirect()->route('bengkel.riwayat')
             ->with('error','Transaksi hanya dapat direvisi maksimal 3 hari setelah transaksi');
@@ -750,9 +750,9 @@ class TransaksiBengkelController extends Controller
                 return redirect()->back()->with('error', 'Transaksi sudah dibatalkan sebelumnya');
             }
 
-            // Cek apakah transaksi sudah lama (lebih dari 1 hari)
-            if (Carbon::parse($transaksi->created_at)->diffInDays(now()) > 1) {
-                return redirect()->back()->with('error', 'Transaksi hanya dapat dibatalkan maksimal 1 hari setelah transaksi');
+            // Cek apakah transaksi sudah lama (lebih dari 3 hari)
+            if (Carbon::parse($transaksi->created_at)->diffInDays(now()) > 3) {
+                return redirect()->back()->with('error', 'Transaksi hanya dapat dibatalkan maksimal 3 hari setelah transaksi');
             }
 
             // Kembalikan stok
