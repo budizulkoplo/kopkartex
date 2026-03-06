@@ -2,36 +2,28 @@
 <head>
     <title>Cetak Nota <?= $hdr->nomor_invoice ?></title>
     <style>
-        body{
-            margin:0;
-            font-family: Courier, monospace;
-            font-size:12px;
-            line-height:1.4;
-            width:9.5cm;
+        @page { margin: 0 }
+        body {
+            margin: 0;
+            font-family: monospace;
+            font-size: 11px;
+            width: 9.5cm;
         }
 
-        .sheet{
-            width:9.5cm;
-            padding:5px;
+        .sheet { width: 9.5cm; padding: 5px; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .left { text-align: left; }
+
+        .line {
+            border-bottom: 1px dashed #000;
+            margin: 3px 0;
         }
 
-        .center{ text-align:center }
-        .right{ text-align:right }
-        .left{ text-align:left }
+        table { width: 100%; border-collapse: collapse; }
+        td { vertical-align: top; }
 
-        .line{
-            border-bottom:1px solid #000;
-            margin:4px 0;
-        }
-
-        table{
-            width:100%;
-            border-collapse:collapse;
-        }
-
-        td{
-            padding:1px 0;
-        }
+        @media print { body { width: 9.5cm; } }
     </style>
 </head>
 
