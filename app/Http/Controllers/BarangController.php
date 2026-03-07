@@ -332,4 +332,5 @@ class BarangController extends Controller
             ], 404);
         }
     }
+    
 }

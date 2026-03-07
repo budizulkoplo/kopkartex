@@ -173,8 +173,8 @@
                                 <div class="input-group input-group-sm mb-2">
                                     <span class="input-group-text label-fixed-width">Metode</span>
                                     <select class="form-select form-select-sm" id="metodebayar" name="metodebayar" required>
-                                        <option value="tunai" selected>Tunai</option>
                                         <option value="cicilan">Cicilan</option>
+                                        <option value="tunai" selected>Tunai</option>
                                     </select>
                                 </div>
                                 
@@ -933,7 +933,7 @@
                 $('#dibayar').val(0);
                 $('#kembali').val(0);
                 $('textarea[name="note"]').val('');
-                $('#metodebayar').val('tunai').trigger('change');
+                $('#metodebayar').val('cicilan').trigger('change');
                 $('#input-qty').val(1);
                 $('.topgrandtotal').text('Rp. 0');
                 

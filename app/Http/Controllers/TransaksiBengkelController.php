@@ -398,7 +398,15 @@ class TransaksiBengkelController extends Controller
             ->where('transaksi_bengkels.nomor_invoice',$invoice)
             ->firstOrFail();
 
-        $dtl = TransaksiBengkelDetail::with(['barang','jasa'])
+        // $dtl = TransaksiBengkelDetail::with(['barang','jasa'])
+        //     ->where('transaksi_bengkel_id',$hdr->id)
+        //     ->orderBy('id','asc')
+        //     ->get();
+
+            $dtl = TransaksiBengkelDetail::with([
+                'barang.kategori',
+                'jasa'
+            ])
             ->where('transaksi_bengkel_id',$hdr->id)
             ->orderBy('id','asc')
             ->get();
