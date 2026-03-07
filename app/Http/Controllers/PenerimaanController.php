@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use App\Models\Satuan;
 use App\Models\Kategori;
+use Illuminate\Support\Facades\Auth;
 
 class PenerimaanController extends Controller
 {
@@ -190,7 +191,7 @@ class PenerimaanController extends Controller
                     ON DUPLICATE KEY UPDATE 
                         stok = stok + VALUES(stok),
                         updated_at = VALUES(updated_at)",
-                    [$barangId, 1, $quantities[$index]]
+                    [$barangId, Auth::user()->unit_kerja, $quantities[$index]]
                 );
 
                 // Update harga di master barang
@@ -373,7 +374,7 @@ class PenerimaanController extends Controller
                 // lock stok
                 $stok = DB::table('stok_unit')
                     ->where('barang_id', $detail->barang_id)
-                    ->where('unit_id', 1)
+                    ->where('unit_id', Auth::user()->unit_kerja)
                     ->lockForUpdate()
                     ->value('stok');
 
@@ -385,7 +386,7 @@ class PenerimaanController extends Controller
                     UPDATE stok_unit
                     SET stok = stok - ?, updated_at = NOW()
                     WHERE barang_id = ? AND unit_id = ?
-                ", [$oldQty, $detail->barang_id, 1]);
+                ", [$oldQty, $detail->barang_id, Auth::user()->unit_kerja]);
 
                 $detail->delete();
 
@@ -415,7 +416,7 @@ class PenerimaanController extends Controller
                 if ($selisih != 0) {
                     $stok = DB::table('stok_unit')
                         ->where('barang_id', $detail->barang_id)
-                        ->where('unit_id', 1)
+                        ->where('unit_id', Auth::user()->unit_kerja)
                         ->lockForUpdate()
                         ->value('stok');
 
@@ -429,7 +430,7 @@ class PenerimaanController extends Controller
                         ON DUPLICATE KEY UPDATE
                             stok = stok + VALUES(stok),
                             updated_at = VALUES(updated_at)
-                    ", [$detail->barang_id, 1, $selisih]);
+                    ", [$detail->barang_id, Auth::user()->unit_kerja, $selisih]);
                 }
 
                 $detail->jumlah = $newQty;
@@ -493,7 +494,7 @@ class PenerimaanController extends Controller
                         updated_at = NOW()
                     WHERE barang_id = ? 
                     AND unit_id = ?",
-                    [$detail->jumlah, $detail->barang_id, 1]
+                    [$detail->jumlah, $detail->barang_id, Auth::user()->unit_kerja]
                 );
             }
             
@@ -684,7 +685,7 @@ class PenerimaanController extends Controller
                 VALUES (?, ?, ?, NOW(), NOW())
                 ON DUPLICATE KEY UPDATE 
                     updated_at = VALUES(updated_at)",
-                [$barang->id, 1, 0]
+                [$barang->id, Auth::user()->unit_kerja, 0]
             );
 
             DB::commit();
