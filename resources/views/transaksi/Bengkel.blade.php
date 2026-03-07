@@ -86,7 +86,7 @@
 
                         {{-- TABEL JASA --}}
                         <div class="row mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="card">
                                     <div class="card-header bg-light">
                                         <h6 class="fw-bold mb-0">Jasa Bengkel</h6>
@@ -115,7 +115,7 @@
                             </div>
 
                             {{-- TABEL BARANG --}}
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="card">
                                     <div class="card-header bg-light">
                                         <h6 class="fw-bold mb-0">Sparepart</h6>
