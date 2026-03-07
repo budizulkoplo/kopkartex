@@ -799,4 +799,9 @@ class TransaksiBengkelController extends Controller
         $trx = TransaksiBengkel::where('id',$id)->firstOrFail();
         return redirect()->route('bengkel.nota',$trx->nomor_invoice);
     }
+
+    public function getInvoice(){
+        return response()->json($this->genCode());
+    }
+
 }

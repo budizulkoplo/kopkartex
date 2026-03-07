@@ -439,7 +439,7 @@
             function kalkulasi() {
                 let subtotal = 0;
                 
-                // Hitung total jasa
+                // Hitung total jasa - membaca dari input yang bisa diedit
                 $('#tabelJasa tbody tr').each(function() {
                     let harga = parseFloat($(this).find('.harga-jasa').val()) || 0;
                     subtotal += harga;
@@ -527,7 +527,7 @@
                             <input type="hidden" name="jasa_id[]" class="idjasa" value="${datarow ? datarow.id : ''}">
                         </td>
                         <td>
-                            <input type="number" name="jasa_harga[]" class="form-control form-control-sm harga-jasa" value="${datarow ? datarow.harga : 0}">
+                            <input type="number" name="jasa_harga[]" class="form-control form-control-sm harga-jasa" onkeyup="kalkulasi()" value="${datarow ? datarow.harga : 0}">
                         </td>
                         <td>
                             <span class="badge btn bg-danger dellist" onclick="removeJasaRow($(this).closest('tr'))">
@@ -608,6 +608,7 @@
                     let data = e.params.data;
                     let row = $(this).closest('tr');
                     
+                    // Isi harga otomatis dari data yang dipilih
                     row.find('.harga-jasa').val(data.harga);
                     row.find('.idjasa').val(data.id);
                     
@@ -628,6 +629,7 @@
                         delete existingJasa[idjasa];
                     }
                     
+                    // Kosongkan harga saat jasa di-clear
                     row.find('.harga-jasa').val(0);
                     row.find('.idjasa').val('');
                     kalkulasi();
@@ -1257,7 +1259,7 @@
                     let jasaHargas = [];
                     $('#tabelJasa tbody tr').each(function() {
                         jasaIds.push($(this).find('.idjasa').val());
-                        jasaHargas.push($(this).find('.harga-jasa').val());
+                        jasaHargas.push($(this).find('.harga-jasa').val()); // Mengambil nilai dari input yang bisa diedit
                     });
                     formData.append('jasa_ids', JSON.stringify(jasaIds));
                     formData.append('jasa_hargas', JSON.stringify(jasaHargas));
