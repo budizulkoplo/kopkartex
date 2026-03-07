@@ -527,7 +527,7 @@
                             <input type="hidden" name="jasa_id[]" class="idjasa" value="${datarow ? datarow.id : ''}">
                         </td>
                         <td>
-                            <input type="number" name="jasa_harga[]" class="form-control form-control-sm harga-jasa" value="${datarow ? datarow.harga : 0}" readonly>
+                            <input type="number" name="jasa_harga[]" class="form-control form-control-sm harga-jasa" value="${datarow ? datarow.harga : 0}">
                         </td>
                         <td>
                             <span class="badge btn bg-danger dellist" onclick="removeJasaRow($(this).closest('tr'))">
