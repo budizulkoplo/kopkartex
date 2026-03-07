@@ -84,37 +84,8 @@
                             </div>
                         </div>
 
-                        {{-- TABEL JASA --}}
+                        {{-- TABEL BARANG --}}
                         <div class="row mb-3">
-                            <div class="col-md-12">
-                                <div class="card">
-                                    <div class="card-header bg-light">
-                                        <h6 class="fw-bold mb-0">Jasa Bengkel</h6>
-                                    </div>
-                                    <div class="card-body p-2">
-                                        <table class="table table-sm table-striped table-bordered mb-2" id="tabelJasa" style="font-size: small;">
-                                            <thead>
-                                                <tr>
-                                                    <th>#</th>
-                                                    <th>Nama Jasa</th>
-                                                    <th>Harga</th>
-                                                    <th></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <!-- Row akan ditambahkan via JavaScript -->
-                                            </tbody>
-                                        </table>
-                                        <div class="text-end">
-                                            <button type="button" id="tambahJasa" class="btn btn-primary btn-sm">
-                                                <i class="bi bi-plus"></i> Tambah Jasa
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- TABEL BARANG --}}
                             <div class="col-md-12">
                                 <div class="card">
                                     <div class="card-header bg-light">
@@ -141,6 +112,36 @@
                                         <div class="text-end">
                                             <button type="button" id="tambahBarang" class="btn btn-success btn-sm">
                                                 <i class="bi bi-plus"></i> Tambah Barang
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {{-- TABEL JASA --}}
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="fw-bold mb-0">Jasa Bengkel</h6>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <table class="table table-sm table-striped table-bordered mb-2" id="tabelJasa" style="font-size: small;">
+                                            <thead>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Nama Jasa</th>
+                                                    <th>Harga</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Row akan ditambahkan via JavaScript -->
+                                            </tbody>
+                                        </table>
+                                        <div class="text-end">
+                                            <button type="button" id="tambahJasa" class="btn btn-primary btn-sm">
+                                                <i class="bi bi-plus"></i> Tambah Jasa
                                             </button>
                                         </div>
                                     </div>
