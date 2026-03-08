@@ -159,8 +159,8 @@
                                 </div>
                                 <div class="input-group input-group-sm mb-2">
                                     <span class="input-group-text label-fixed-width">Diskon</span>
-                                    <input type="number" class="form-control" value="0" onfocus="this.select()" onkeyup="kalkulasi()" name="diskon" id="diskon" min="0" max="100">
-                                    <span class="input-group-text">%</span>
+                                    <input type="number" class="form-control" value="0" onfocus="this.select()" onkeyup="kalkulasi()" name="diskon" id="diskon" min="0">
+                                    <span class="input-group-text">Rp.</span>
                                 </div>
                                 <div class="input-group input-group-sm mb-2">
                                     <span class="input-group-text label-fixed-width">Grand Total</span>
@@ -454,7 +454,14 @@
                     subtotal += total;
                 });
                 
-                window.globtot = subtotal * (1 - ($('#diskon').val() / 100));
+                let diskon = parseFloat($('#diskon').val()) || 0;
+                if (diskon > subtotal) {
+                    diskon = subtotal;
+                    $('#diskon').val(diskon);
+                }
+                $('#diskon').attr('max', subtotal);
+                
+                window.globtot = subtotal - diskon;
                 $('#subtotal').val(subtotal);
                 $('#grandtotal').val(window.globtot);
                 $('.topgrandtotal').text(formatRupiahWithDecimal(window.globtot));

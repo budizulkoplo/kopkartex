@@ -138,7 +138,7 @@ if($v->jenis == 'jasa' && $v->jasa){
 </tr>
 <tr>
     <td class="right">Diskon :</td>
-    <td class="right"><?= $hdr->diskon ?> %</td>
+    <td class="right">Rp. <?= number_format($hdr->diskon,0,',','.') ?></td>
 </tr>
 <tr>
     <td class="right"><b>Grand Total :</b></td>
