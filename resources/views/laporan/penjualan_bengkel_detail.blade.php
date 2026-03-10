@@ -78,9 +78,39 @@
 
             // Fungsi untuk membersihkan format angka dan konversi ke number
             function cleanNumber(value) {
-                if (!value) return 0;
-                // Hapus semua titik (pemisah ribuan) dan konversi ke number
-                return parseFloat(value.toString().replace(/\./g, '')) || 0;
+                if (value === null || value === undefined || value === '') return 0;
+                let str = value.toString().trim();
+
+                // Format Indonesia ribuan: 1.234.567 atau 1.234.567,89
+                if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(str)) {
+                    str = str.replace(/\./g, '').replace(',', '.');
+                    return parseFloat(str) || 0;
+                }
+
+                // Format EN ribuan: 1,234,567 atau 1,234,567.89
+                if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(str)) {
+                    str = str.replace(/,/g, '');
+                    return parseFloat(str) || 0;
+                }
+
+                // Format desimal dengan koma: 12345,67
+                if (/^-?\d+,\d+$/.test(str)) {
+                    str = str.replace(',', '.');
+                    return parseFloat(str) || 0;
+                }
+
+                // Format angka polos / desimal titik dari DB: 12345 atau 12345.67
+                if (/^-?\d+(\.\d+)?$/.test(str)) {
+                    return parseFloat(str) || 0;
+                }
+
+                // Fallback aman
+                str = str.replace(/[^\d,.-]/g, '').replace(/\.(?=.*\.)/g, '').replace(',', '.');
+                return parseFloat(str) || 0;
+            }
+
+            function formatNumber(value) {
+                return new Intl.NumberFormat('id-ID').format(cleanNumber(value));
             }
 
             function printReport() {
@@ -266,7 +296,9 @@
                     if (currentInvoice !== row.nomor_invoice) {
                         currentInvoice = row.nomor_invoice;
                         invoiceGroups[currentInvoice] = {
-                            total: 0,
+                            subtotal: 0,
+                            diskon: cleanNumber(row.diskon_nota),
+                            grandtotalNota: cleanNumber(row.grandtotal_nota),
                             rows: []
                         };
                         invoiceCount++;
@@ -274,9 +306,8 @@
                     
                     // Bersihkan format angka sebelum dijumlah
                     let total = cleanNumber(row.total);
-                    invoiceGroups[currentInvoice].total += total;
+                    invoiceGroups[currentInvoice].subtotal += total;
                     invoiceGroups[currentInvoice].rows.push(row);
-                    grandTotal += total;
                 });
 
                 // Render data dengan subtotal per invoice
@@ -284,6 +315,10 @@
                 for (let invoice in invoiceGroups) {
                     let group = invoiceGroups[invoice];
                     let groupRows = group.rows;
+                    let totalSetelahDiskon = group.grandtotalNota > 0
+                        ? group.grandtotalNota
+                        : Math.max(group.subtotal - group.diskon, 0);
+                    grandTotal += totalSetelahDiskon;
                     
                     // Render setiap baris dalam invoice
                     groupRows.forEach(row => {
@@ -304,12 +339,12 @@
                             </tr>`;
                     });
                     
-                    // Tambahkan subtotal untuk invoice ini
+                    // Tambahkan subtotal untuk invoice ini (setelah diskon nota)
                     printHTML += `
                         <tr class="subtotal-row invoice-total">
-                            <td colspan="9" class="text-right bold">Subtotal Invoice ${invoice}</td>
-                            <td colspan="2" class="text-right bold">Subtotal</td>
-                            <td class="text-right bold">${group.total}</td>
+                            <td colspan="9" class="text-right bold">Total Invoice ${invoice} (Setelah Diskon)</td>
+                            <td colspan="2" class="text-right bold">Diskon: ${formatNumber(group.diskon)}</td>
+                            <td class="text-right bold">${formatNumber(totalSetelahDiskon)}</td>
                         </tr>`;
                     
                     invoiceIndex++;
@@ -331,7 +366,7 @@
                                     <td colspan="9" class="text-right bold">GRAND TOTAL</td>
                                     <td class="text-right bold">${data.length} item</td>
                                     <td class="text-right bold">${invoiceCount} invoice</td>
-                                    <td class="text-right bold">${grandTotal}</td>
+                                    <td class="text-right bold">${formatNumber(grandTotal)}</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -399,29 +434,37 @@
                     
                     // Reset semua rowspan sebelumnya
                     $(rows).find('td').removeAttr('rowspan');
-                    
+
                     let invoiceGroups = {};
                     let grandTotal = 0;
 
                     // Kelompokkan data berdasarkan invoice
                     data.each(function (row, i) {
                         let invoice = row.nomor_invoice;
-                        // Bersihkan format angka sebelum dijumlah
                         let total = cleanNumber(row.total);
-                        grandTotal += total;
 
                         if (!invoiceGroups[invoice]) {
                             invoiceGroups[invoice] = {
                                 count: 0,
-                                total: 0,
-                                firstRowIndex: i,
-                                data: row
+                                subtotal: 0,
+                                diskon: cleanNumber(row.diskon_nota),
+                                grandtotalNota: cleanNumber(row.grandtotal_nota),
+                                firstRowIndex: i
                             };
                         }
                         
                         invoiceGroups[invoice].count++;
-                        invoiceGroups[invoice].total += total;
+                        invoiceGroups[invoice].subtotal += total;
                     });
+
+                    // Hitung total invoice setelah diskon
+                    for (let invoice in invoiceGroups) {
+                        let group = invoiceGroups[invoice];
+                        group.totalSetelahDiskon = group.grandtotalNota > 0
+                            ? group.grandtotalNota
+                            : Math.max(group.subtotal - group.diskon, 0);
+                        grandTotal += group.totalSetelahDiskon;
+                    }
 
                     // Terapkan rowspan untuk setiap kelompok invoice
                     for (let invoice in invoiceGroups) {
@@ -467,9 +510,9 @@
                         
                         $(rows).eq(rowIndex + group.count - 1).after(
                             `<tr class="fw-bold bg-warning invoice-total-row">
-                                <td colspan="8" class="text-end">Total Invoice: ${invoice}</td>
-                                <td colspan="2" class="text-end">Subtotal</td>
-                                <td class="text-end">${group.total}</td>
+                                <td colspan="8" class="text-end">Total Invoice: ${invoice} (Setelah Diskon)</td>
+                                <td colspan="2" class="text-end">Diskon: ${formatNumber(group.diskon)}</td>
+                                <td class="text-end">${formatNumber(group.totalSetelahDiskon)}</td>
                             </tr>`
                         );
                     }
@@ -477,9 +520,9 @@
                     // Render grand total di footer
                     $(api.table().footer()).html(
                         `<tr class="fw-bold bg-warning text-dark">
-                            <td colspan="8" class="text-end">Grand Total</td>
+                            <td colspan="8" class="text-end">Grand Total (Setelah Diskon Nota)</td>
                             <td colspan="2" class="text-end">${data.length} item</td>
-                            <td class="text-end">${grandTotal}</td>
+                            <td class="text-end">${formatNumber(grandTotal)}</td>
                         </tr>`
                     );
                 },
@@ -518,3 +561,4 @@
         </script>
     </x-slot>
 </x-app-layout>
+

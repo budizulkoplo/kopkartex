@@ -1447,6 +1447,9 @@ private function formatDbfField($value, $maxLength)
                 'tb.nomor_invoice',
                 'tb.customer',
                 'tb.metode_bayar',
+                DB::raw('COALESCE(tb.subtotal, 0) as subtotal_nota'),
+                DB::raw('COALESCE(tb.diskon, 0) as diskon_nota'),
+                DB::raw('COALESCE(tb.grandtotal, 0) as grandtotal_nota'),
                 DB::raw("'Bengkel' as nama_unit"), // Fixed value
                 DB::raw("'BARANG' as tipe_item"),
                 'b.kode_barang',
@@ -1469,6 +1472,9 @@ private function formatDbfField($value, $maxLength)
                 'tb.nomor_invoice',
                 'tb.customer',
                 'tb.metode_bayar',
+                DB::raw('COALESCE(tb.subtotal, 0) as subtotal_nota'),
+                DB::raw('COALESCE(tb.diskon, 0) as diskon_nota'),
+                DB::raw('COALESCE(tb.grandtotal, 0) as grandtotal_nota'),
                 DB::raw("'Bengkel' as nama_unit"), // Fixed value
                 DB::raw("'JASA' as tipe_item"),
                 'jb.kode_jasa as kode_barang',
@@ -1686,3 +1692,4 @@ private function formatDbfField($value, $maxLength)
     }
 
 }
+
