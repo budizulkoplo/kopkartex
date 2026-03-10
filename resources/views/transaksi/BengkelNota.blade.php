@@ -2,73 +2,51 @@
 <head>
     <title>Cetak Nota <?= $hdr->nomor_invoice ?></title>
     <style>
-        @page {
-            width: 72mm; /* Dikurangi dari 80mm */
-            margin: 1mm;
-        }
+        @page { margin: 0 }
         body {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 10px; /* Diperkecil dari 12px */
-            width: 72mm;
-            margin: 0 auto;
-            line-height: 1.1;
+            margin: 0;
+            font-family: monospace;
+            font-size: 11px;
+            width: 9.5cm;
         }
-        .sheet {
-            width: 100%;
-            padding: 1mm;
-        }
+
+        .sheet { width: 9.5cm; padding: 5px; }
         .center { text-align: center; }
         .right { text-align: right; }
         .left { text-align: left; }
+
         .line {
-            border-top: 1px dashed #000;
-            margin: 2px 0;
-            width: 100%;
+            border-bottom: 1px dashed #000;
+            margin: 3px 0;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 9px; /* Diperkecil */
-        }
-        td {
-            padding: 0;
-            white-space: nowrap;
-        }
-        .item-row td:first-child {
-            max-width: 35mm; /* Dikurangi */
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .header-logo {
-            font-size: 12px; /* Diperkecil */
-            font-weight: bold;
-            letter-spacing: 0;
-        }
-        .flex-row {
-            display: flex;
-            width: 100%;
-        }
-        @media print {
-            body { width: 72mm; }
-        }
+
+        table { width: 100%; border-collapse: collapse; }
+        td { vertical-align: top; }
+
+        @media print { body { width: 9.5cm; } }
     </style>
 </head>
-<body onload="window.print(); setTimeout(()=>window.close(), 1500);">
+
+<body onload="window.print(); setTimeout(()=>window.close(),1000);">
 <div class="sheet">
 
 <?php
 $isCicilan = $hdr->metode_bayar == 'cicilan';
 
-$totalBP = 0;
-$totalNonBP = 0;
+$totalBP = 0;      // jasa + kategori 0
+$totalNonBP = 0;   // kategori 1
 
+// Kelompokkan total
 if($isCicilan){
     foreach($dtl as $v){
+
         $totalItem = $v->harga * $v->qty;
+
         if($v->jenis == 'jasa'){
             $totalBP += $totalItem;
         } else {
             $kategoriCicilan = $v->barang?->kategori?->cicilan ?? 1;
+
             if($kategoriCicilan == 0)
                 $totalBP += $totalItem;
             else
@@ -80,43 +58,56 @@ if($isCicilan){
 
 <!-- HEADER -->
 <div class="center">
-    <div class="header-logo">CV MANDIRI SEJAHTERA</div>
+    <b style="font-size:13px">CV MANDIRI SEJAHTERA</b>
 </div>
 
-<table style="margin:2px 0; font-size:9px;">
+<table>
 <tr>
     <td class="left"><b>UNIT BENGKEL</b></td>
     <td class="right"><b><?= $hdr->nomor_invoice ?></b></td>
 </tr>
 </table>
 
-<div class="center" style="font-weight:bold; margin:2px 0; font-size:10px;">
-    <?= $isCicilan ? 'NOTA PENJUALAN KREDIT' : 'NOTA PENJUALAN' ?>
+<br>
+
+<div class="center">
+    <b><?= $isCicilan ? 'NOTA PENJUALAN KREDIT' : 'NOTA PENJUALAN' ?></b>
 </div>
 
 <div class="line"></div>
 
-<!-- Customer Info -->
-<div style="margin:2px 0; font-size:9px;">
-    <span>Nama   : <?= $hdr->customer ?></span><br>
-    <span>No.Agt : <?= $hdr->nomor_anggota ?? '-' ?></span>
-    <span style="float:right;">Kasir : <?= $hdr->kasir ?></span>
-</div>
+<table>
+<tr>
+    <td width="50%">
+        Nama : <?= $hdr->customer ?>
+    </td>
+    <td width="50%" class="right">
+        Kasir : <?= $hdr->kasir ?>
+    </td>
+</tr>
+<tr>
+    <td>
+        No. Agt : <?= $hdr->nomor_anggota ?? '-' ?>
+    </td>
+    
+</tr>
+</table>
 
 <div class="line"></div>
 
-<!-- Header Item -->
-<div style="display:flex; font-weight:bold; margin:2px 0; font-size:9px;">
-    <span style="width:32mm;">NAMA</span>
-    <span style="width:8mm; text-align:right;">QTY</span>
-    <span style="width:15mm; text-align:right;">HARGA</span>
-    <span style="width:15mm; text-align:right;">JML</span>
-</div>
+<table>
+<tr>
+    <td width="45%"><b>NAMA</b></td>
+    <td width="10%" class="right"><b>QTY</b></td>
+    <td width="20%" class="right"><b>HARGA</b></td>
+    <td width="25%" class="right"><b>JML</b></td>
+</tr>
+</table>
 
 <div class="line"></div>
 
-<!-- Items -->
 <?php foreach($dtl as $v): ?>
+
 <?php
 $nama = '-';
 if($v->jenis == 'barang' && $v->barang){
@@ -125,102 +116,102 @@ if($v->jenis == 'barang' && $v->barang){
 if($v->jenis == 'jasa' && $v->jasa){
     $nama = $v->jasa->nama_jasa;
 }
-// Potong nama jika terlalu panjang
-$nama = strlen($nama) > 20 ? substr($nama, 0, 18).'..' : $nama;
-$jumlah = $v->harga * $v->qty;
 ?>
-<div style="display:flex; margin:0; font-size:9px;">
-    <span style="width:32mm;"><?= strtoupper($nama) ?></span>
-    <span style="width:8mm; text-align:right;"><?= $v->qty ?></span>
-    <span style="width:15mm; text-align:right;"><?= number_format($v->harga,0,',','.') ?></span>
-    <span style="width:15mm; text-align:right;"><?= number_format($jumlah,0,',','.') ?></span>
-</div>
+
+<table>
+<tr>
+    <td width="45%"><?= strtoupper($nama) ?></td>
+    <td width="10%" class="right"><?= $v->qty ?></td>
+    <td width="20%" class="right"><?= number_format($v->harga,0,',','.') ?></td>
+    <td width="25%" class="right"><?= number_format($v->harga * $v->qty,0,',','.') ?></td>
+</tr>
+</table>
+
 <?php endforeach; ?>
 
 <div class="line"></div>
 
-<!-- Total Section -->
-<div style="margin:2px 0; font-size:9px;">
-    <div style="display:flex;">
-        <span style="width:48mm; text-align:right;">Sub Total :</span>
-        <span style="width:22mm; text-align:right;"><?= number_format($hdr->subtotal,0,',','.') ?></span>
-    </div>
-    <div style="display:flex;">
-        <span style="width:48mm; text-align:right;">Diskon :</span>
-        <span style="width:22mm; text-align:right;"><?= number_format($hdr->diskon,0,',','.') ?></span>
-    </div>
-    <div style="display:flex; font-weight:bold;">
-        <span style="width:48mm; text-align:right;">Grand Total :</span>
-        <span style="width:22mm; text-align:right;"><?= number_format($hdr->grandtotal,0,',','.') ?></span>
-    </div>
-    
-    <?php if(!$isCicilan): ?>
-    <div style="display:flex;">
-        <span style="width:48mm; text-align:right;">Dibayar :</span>
-        <span style="width:22mm; text-align:right;"><?= number_format($hdr->dibayar,0,',','.') ?></span>
-    </div>
-    <div style="display:flex;">
-        <span style="width:48mm; text-align:right;">Kembali :</span>
-        <span style="width:22mm; text-align:right;"><?= number_format($hdr->kembali,0,',','.') ?></span>
-    </div>
-    <?php endif; ?>
-</div>
+<table>
+<tr>
+    <td class="right">Sub Total :</td>
+    <td class="right"><?= number_format($hdr->subtotal,0,',','.') ?></td>
+</tr>
+<tr>
+    <td class="right">Diskon :</td>
+    <td class="right">Rp. <?= number_format($hdr->diskon,0,',','.') ?></td>
+</tr>
+<tr>
+    <td class="right"><b>Grand Total :</b></td>
+    <td class="right"><b><?= number_format($hdr->grandtotal,0,',','.') ?></b></td>
+</tr>
+
+<?php if(!$isCicilan): ?>
+<tr>
+    <td class="right">Dibayar :</td>
+    <td class="right"><?= number_format($hdr->dibayar,0,',','.') ?></td>
+</tr>
+<tr>
+    <td class="right">Kembali :</td>
+    <td class="right"><?= number_format($hdr->kembali,0,',','.') ?></td>
+</tr>
+<?php endif; ?>
+</table>
 
 <?php if($isCicilan): ?>
 <div class="line"></div>
 
 <!-- Informasi Cicilan -->
-<div style="margin:2px 0; font-size:9px;">
-    <div style="display:flex;">
-        <span style="width:40mm;">TOTAL BP :</span>
-        <span style="width:30mm; text-align:right;"><?= number_format($totalBP,0,',','.') ?></span>
-    </div>
-    <div style="display:flex;">
-        <span style="width:40mm;">TOTAL NON BP :</span>
-        <span style="width:30mm; text-align:right;"><?= number_format($totalNonBP,0,',','.') ?></span>
-    </div>
-    <div style="display:flex;">
-        <span style="width:40mm;">Tenor :</span>
-        <span style="width:30mm; text-align:right;"><?= $hdr->tenor ?> Kali</span>
-    </div>
-</div>
+<table width="100%">
+<tr>
+    <td class="right" width="70%">TOTAL BP :</td>
+    <td class="right" width="30%"><?= number_format($totalBP,0,',','.') ?></td>
+</tr>
+<tr>
+    <td class="right">TOTAL NON BP :</td>
+    <td class="right"><?= number_format($totalNonBP,0,',','.') ?></td>
+</tr>
+<tr>
+    <td class="right">Tenor :</td>
+    <td class="right"><?= $hdr->tenor ?> Kali</td>
+</tr>
+</table>
 
 <?php if(isset($cicilan) && $cicilan->count() > 0): ?>
 <div class="line"></div>
-<div style="font-weight:bold; font-size:9px;">RINCIAN CICILAN NON BP :</div>
+<div><b>RINCIAN CICILAN NON BP :</b></div>
 
 <?php
 $nonbp = $cicilan->where('kategori',1);
-$cicilan_text = [];
+$cicilan_list = [];
 foreach($nonbp as $c) {
-    $cicilan_text[] = "{$c->cicilan}: Rp". number_format($c->total_cicilan,0,',','.');
-}
-$text_line = implode(' | ', $cicilan_text);
-// Wrap text untuk multiple lines
-$lines = str_split($text_line, 38);
-foreach($lines as $line) {
-    echo "<div style='margin:1px 0; font-size:8px;'>$line</div>";
+    $cicilan_list[] = "{$c->cicilan}: Rp ". number_format($c->total_cicilan,0,',','.');
 }
 ?>
+<div style="margin: 2px 0; word-break: keep-all;">
+    <?= implode(' | ', $cicilan_list) ?>
+</div>
 <?php endif; ?>
+
 <?php endif; ?>
 
 <div class="line"></div>
 
-<div class="center" style="font-size:9px;">
+<div class="center">
     <?= date('d-m-Y H:i', strtotime($hdr->tanggal)) ?>
 </div>
 
-<br>
-<!-- Signature -->
-<div style="display:flex; margin-top:10px; font-size:9px;">
-    <span style="width:36mm; text-align:center;">Sales</span>
-    <span style="width:36mm; text-align:center;">Pembeli</span>
-</div>
-<div style="display:flex; margin-top:15px; font-size:9px;">
-    <span style="width:36mm; text-align:center;">(__________)</span>
-    <span style="width:36mm; text-align:center;">(__________)</span>
-</div>
+<br><br><br>
+
+<table width="100%">
+<tr>
+    <td class="center">Sales</td>
+    <td class="center">Pembeli</td>
+</tr>
+<tr>
+    <td class="center">(__________)</td>
+    <td class="center">(__________)</td>
+</tr>
+</table>
 
 </div>
 </body>
