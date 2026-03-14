@@ -38,36 +38,64 @@ class TransaksiBengkelController extends Controller
         return 'BKL-' . now()->format('ymd') . str_pad($total + 1, 3, '0', STR_PAD_LEFT);
     }
 
-    public function getAnggota(Request $request){
+    public function getAnggota(Request $request)
+    {
         $query = $request->get('query');
 
-        $users = User::leftJoin('penjualan_cicilan', function($join) {
-            $join->on('penjualan_cicilan.anggota_id', '=', 'users.id')
-                ->where('penjualan_cicilan.status', '=', 'hutang');
-        })
-        ->where(function ($q) use ($query) {
-            $q->where('users.nomor_anggota', 'LIKE', "%{$query}%")
-            ->orWhere('users.name', 'LIKE', "%{$query}%");
-        })
-        ->select(
-            'users.id',
-            'users.name',
-            'users.nomor_anggota',
-            'users.limit_hutang',
-            'users.gaji',
-            DB::raw('SUM(penjualan_cicilan.pokok) as total_pokok')
-        )
-        ->groupBy('users.id', 'users.name', 'users.nomor_anggota', 'users.limit_hutang', 'users.gaji')
-        ->get();
+        $users = User::query()
+            ->leftJoin('penjualan_cicilan', function ($join) {
+                $join->on('penjualan_cicilan.anggota_id', '=', 'users.id')
+                    ->where('penjualan_cicilan.status', '=', 'hutang');
+            })
+            ->leftJoin('transaksi_bengkel_cicilan', function ($join) {
+                $join->on('transaksi_bengkel_cicilan.anggota_id', '=', 'users.id')
+                    ->where('transaksi_bengkel_cicilan.status', '=', 'hutang');
+            })
+            ->where(function ($q) use ($query) {
+                $q->where('users.nomor_anggota', 'LIKE', "%{$query}%")
+                ->orWhere('users.name', 'LIKE', "%{$query}%");
+            })
+            ->select(
+                'users.id',
+                'users.name',
+                'users.nomor_anggota',
+                'users.limit_hutang',
+                'users.gaji',
+
+                DB::raw('COALESCE(SUM(DISTINCT penjualan_cicilan.total_cicilan),0) as total_toko'),
+
+                DB::raw('COALESCE(SUM(DISTINCT transaksi_bengkel_cicilan.total_cicilan),0) as total_bengkel')
+            )
+            ->groupBy(
+                'users.id',
+                'users.name',
+                'users.nomor_anggota',
+                'users.limit_hutang',
+                'users.gaji'
+            )
+            ->limit(10)
+            ->get();
 
         $formatted = $users->map(function ($user) {
+
+            // batas hutang
+            $batas = (!empty($user->limit_hutang) && $user->limit_hutang > 0)
+                ? $user->limit_hutang
+                : (0.35 * $user->gaji);
+
+            // total hutang aktif
+            $totalHutang = $user->total_toko + $user->total_bengkel;
+
+            // sisa limit
+            $sisaLimit = $batas - $totalHutang;
+
             return [
-                'id' => $user->id,
-                'name' => $user->name,
+                'id'            => $user->id,
+                'name'          => $user->name,
                 'nomor_anggota' => $user->nomor_anggota,
-                'limit_hutang' => $user->limit_hutang - $user->total_pokok,
-                'total_pokok' => $user->total_pokok,
-                'gaji' => $user->gaji,
+                'limit_hutang'  => max($sisaLimit, 0),
+                'total_hutang'  => $totalHutang,
+                'gaji'          => $user->gaji,
             ];
         });
 
@@ -319,7 +347,7 @@ class TransaksiBengkelController extends Controller
                 if (($totalcicilan + $cicilanpertama) > $batas) {
                     DB::rollBack();
                     return response()->json(
-                        'Tidak dapat diproses, Melebihi batas limit',
+                        'Tidak dapat diproses, Melebihi batas limitxx hutang. Sisa limit: Rp ' . number_format($totalBengkel, 0, ',', '.'),
                         500
                     );
                 }
