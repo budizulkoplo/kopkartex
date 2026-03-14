@@ -174,6 +174,8 @@ Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|adm
     Route::get('/nota/{invoice}', [PenjualanController::class, 'nota'])->name('jual.nota');
     Route::post('/cektanggungan', [PenjualanController::class, 'CekTanggungan'])->name('jual.cektanggungan');
     Route::get('/riwayat', [PenjualanController::class, 'RiwayatPenjualan'])->name('jual.riwayat');
+    Route::get('/{id}/revise', [PenjualanController::class, 'revise'])->name('jual.revise');
+    Route::post('/{id}/revise/update', [PenjualanController::class, 'reviseUpdate'])->name('jual.revise.update');
 
     Route::get('detail/{id}', [PenjualanController::class, 'getDetail'])->name('penjualan.detail');
     Route::post('retur', [PenjualanController::class, 'prosesRetur'])->name('penjualan.retur');

@@ -1,15 +1,15 @@
 <x-app-layout>
-    <x-slot name="pagetitle">Revisi Transaksi Bengkel</x-slot>
+    <x-slot name="pagetitle">Revisi Penjualan</x-slot>
 
     <div class="app-content-header">
         <div class="container-fluid">
             <div class="row mb-3">
                 <div class="col-sm-6">
-                    <h3 class="mb-0">Revisi Transaksi Bengkel</h3>
-                    <small class="text-muted">Nota: {{ $transaksi->nomor_invoice }}</small>
+                    <h3 class="mb-0">Revisi Penjualan</h3>
+                    <small class="text-muted">Nota: {{ $penjualan->nomor_invoice }}</small>
                 </div>
                 <div class="col-sm-6 text-end">
-                    <a href="{{ route('bengkel.riwayat') }}" class="btn btn-secondary btn-sm">
+                    <a href="{{ route('jual.riwayat') }}" class="btn btn-secondary btn-sm">
                         <i class="bi bi-arrow-left"></i> Kembali ke Riwayat
                     </a>
                 </div>
@@ -35,24 +35,24 @@
                             <div class="col-md-4">
                                 <div class="input-group input-group-sm mb-2"> 
                                     <span class="input-group-text label-fixed-width">Tanggal</span>
-                                    <input type="text" class="form-control" value="{{ \Carbon\Carbon::parse($transaksi->tanggal)->format('d-m-Y') }}" readonly>
-                                    <input type="hidden" name="tanggal" value="{{ \Carbon\Carbon::parse($transaksi->tanggal)->format('Y-m-d') }}">
+                                    <input type="text" class="form-control" value="{{ \Carbon\Carbon::parse($penjualan->tanggal)->format('d-m-Y') }}" readonly>
+                                    <input type="hidden" name="tanggal" value="{{ \Carbon\Carbon::parse($penjualan->tanggal)->format('Y-m-d') }}">
                                 </div>
                                 <div class="input-group input-group-sm mb-2 align-items-center">
                                     <div class="input-group-text">
-                                        <input class="form-check-input mt-0 me-2" type="checkbox" id="flexCheckDefault" {{ $transaksi->anggota_id ? 'checked disabled' : 'disabled' }}>
+                                        <input class="form-check-input mt-0 me-2" type="checkbox" id="flexCheckDefault" {{ $penjualan->anggota_id ? 'checked disabled' : 'disabled' }}>
                                         <label for="flexCheckDefault" class="mb-0">Anggota</label>
                                     </div>
-                                    <input type="text" class="form-control bg-light" value="{{ $transaksi->customer ?? 'Non Anggota' }}" readonly>
-                                    <input type="hidden" id="idcustomer" name="idcustomer" value="{{ $transaksi->anggota_id }}">
-                                    <input type="hidden" name="customer" value="{{ $transaksi->customer }}">
+                                    <input type="text" class="form-control bg-light" value="{{ $penjualan->customer ?? 'Non Anggota' }}" readonly>
+                                    <input type="hidden" id="idcustomer" name="idcustomer" value="{{ $penjualan->anggota_id }}">
+                                    <input type="hidden" name="customer" value="{{ $penjualan->customer }}">
                                 </div>
                             </div>
 
                             <div class="col-md-4">
                                 <div class="input-group input-group-sm mb-2"> 
                                     <span class="input-group-text label-fixed-width">Petugas</span>
-                                    <input type="text" class="form-control bg-light" value="{{ $transaksi->user->name ?? auth()->user()->name }}" readonly>
+                                    <input type="text" class="form-control bg-light" value="{{ $penjualan->user->name ?? auth()->user()->name }}" readonly>
                                 </div>
                                 <div class="input-group input-group-sm mb-2"> 
                                     <span class="input-group-text label-fixed-width">Barang</span>
@@ -64,9 +64,9 @@
                             <div class="col-md-4 text-end">
                                 <div class="mb-2">
                                     <label class="form-label fw-bold">Invoice</label>
-                                    <div class="fs-6 fw-bold txtinv">{{ $transaksi->nomor_invoice }}</div>
+                                    <div class="fs-6 fw-bold txtinv">{{ $penjualan->nomor_invoice }}</div>
                                 </div>
-                                <div class="fs-3 fw-bold text-warning topgrandtotal">Rp. {{ number_format($transaksi->grandtotal, 0, ',', '.') }}</div>
+                                <div class="fs-3 fw-bold text-warning topgrandtotal">Rp. {{ number_format($penjualan->grandtotal, 0, ',', '.') }}</div>
                             </div>
                         </div>
 
@@ -92,10 +92,10 @@
                             <div class="col-md-12">
                                 <div class="card">
                                     <div class="card-header bg-light">
-                                        <h6 class="fw-bold mb-0">Sparepart</h6>
+                                        <h6 class="fw-bold mb-0">Item Penjualan</h6>
                                     </div>
                                     <div class="card-body p-2">
-                                        <div class="table-responsive bengkel-table-wrap">
+                                        <div class="table-responsive penjualan-table-wrap">
                                             <table class="table table-sm table-striped table-bordered mb-2 align-middle" id="tabelBarang" style="font-size: small;">
                                                 <thead>
                                                     <tr>
@@ -110,8 +110,8 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    @foreach($transaksi->details->where('jenis', 'barang') as $detail)
-                                                    <tr data-detail-id="{{ $detail->id }}" data-id="{{ $detail->barang_id }}" data-jenis="barang">
+                                                    @foreach($penjualan->details as $detail)
+                                                    <tr data-detail-id="{{ $detail->id }}" data-id="{{ $detail->barang_id }}">
                                                         <td>{{ $loop->iteration }}</td>
                                                         <td class="kodebarang">{{ $detail->barang->kode_barang ?? '' }}</td>
                                                         <td class="cell-select-barang">
@@ -138,7 +138,7 @@
                                                             <input type="hidden" name="harga_jual[]" class="hargajual" value="{{ $detail->harga }}">
                                                         </td>
                                                         <td class="hargajualtext">{{ number_format($detail->harga, 0, ',', '.') }}</td>
-                                                        <td class="totalitm">{{ number_format($detail->total, 0, ',', '.') }}</td>
+                                                        <td class="totalitm">{{ number_format($detail->qty * $detail->harga, 0, ',', '.') }}</td>
                                                         <td>
                                                             <span class="badge btn bg-danger dellist" onclick="removeBarangRow($(this).closest('tr'))">
                                                                 <i class="bi bi-trash3-fill"></i>
@@ -159,113 +159,58 @@
                             </div>
                         </div>
 
-                        {{-- TABEL JASA --}}
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <div class="card">
-                                    <div class="card-header bg-light">
-                                        <h6 class="fw-bold mb-0">Jasa Bengkel</h6>
-                                    </div>
-                                    <div class="card-body p-2">
-                                        <div class="table-responsive bengkel-table-wrap">
-                                            <table class="table table-sm table-striped table-bordered mb-2 align-middle" id="tabelJasa" style="font-size: small;">
-                                                <thead>
-                                                    <tr>
-                                                        <th>#</th>
-                                                        <th>Nama Jasa</th>
-                                                        <th>Harga</th>
-                                                        <th></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach($transaksi->details->where('jenis', 'jasa') as $detail)
-                                                    <tr data-detail-id="{{ $detail->id }}" data-jenis="jasa">
-                                                        <td>{{ $loop->iteration }}</td>
-                                                        <td class="cell-select-jasa">
-                                                            <select class="form-select form-select-sm namajasa" style="width:100%" required>
-                                                                <option value="{{ $detail->jasa_id }}"
-                                                                        selected
-                                                                        data-harga="{{ $detail->harga }}">
-                                                                    {{ $detail->jasa->nama_jasa ?? 'Jasa' }}
-                                                                </option>
-                                                            </select>
-                                                            <input type="hidden" name="jasa_id[]" class="idjasa" value="{{ $detail->jasa_id }}">
-                                                        </td>
-                                                        <td>
-                                                            <input type="number" name="jasa_harga[]" class="form-control form-control-sm harga-jasa" value="{{ $detail->harga }}" readonly>
-                                                        </td>
-                                                        <td>
-                                                            <span class="badge btn bg-danger dellist" onclick="removeJasaRow($(this).closest('tr'))">
-                                                                <i class="bi bi-trash3-fill"></i>
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div class="text-end">
-                                            <button type="button" id="tambahJasa" class="btn btn-primary btn-sm">
-                                                <i class="bi bi-plus"></i> Tambah Jasa
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         {{-- TOTAL & PAYMENT (EDITABLE) --}}
                         <div class="row mt-3">
                             <div class="col-md-4">
                                 <div class="input-group input-group-sm mb-2">
                                     <span class="input-group-text label-fixed-width">Subtotal</span>
                                     <span class="input-group-text">Rp.</span>
-                                    <input type="number" class="form-control bg-light" value="{{ $transaksi->subtotal }}" name="subtotal" id="subtotal" readonly>
+                                    <input type="number" class="form-control bg-light" value="{{ $penjualan->subtotal }}" name="subtotal" id="subtotal" readonly>
                                 </div>
                                 <div class="input-group input-group-sm mb-2">
                                     <span class="input-group-text label-fixed-width">Diskon</span>
-                                    <input type="number" class="form-control" value="{{ $transaksi->diskon }}" name="diskon" id="diskon" min="0" max="100" step="0.01" onkeyup="kalkulasi()" onchange="kalkulasi()">
+                                    <input type="number" class="form-control" value="{{ $penjualan->diskon }}" name="diskon" id="diskon" min="0" max="100" step="0.01" onkeyup="kalkulasi()" onchange="kalkulasi()">
                                     <span class="input-group-text">%</span>
                                 </div>
                                 <div class="input-group input-group-sm mb-2">
                                     <span class="input-group-text label-fixed-width">Grand Total</span>
                                     <span class="input-group-text">Rp.</span>
-                                    <input type="number" class="form-control bg-light" value="{{ $transaksi->grandtotal }}" name="grandtotal" id="grandtotal" readonly>
+                                    <input type="number" class="form-control bg-light" value="{{ $penjualan->grandtotal }}" name="grandtotal" id="grandtotal" readonly>
                                 </div>
                             </div>
 
                             <div class="col-md-4">
                                 <div class="input-group input-group-sm mb-2">
                                     <span class="input-group-text label-fixed-width">Metode</span>
-                                    <select class="form-select form-select-sm" id="metodebayar" name="metodebayar" onchange="ubahMetodeBayar()" readonly>
-                                        <option value="tunai" {{ $transaksi->metode_bayar == 'tunai' ? 'selected' : '' }}>Tunai</option>
-                                        <option value="cicilan" {{ $transaksi->metode_bayar == 'cicilan' ? 'selected' : '' }}>Cicilan</option>
+                                    <select class="form-select form-select-sm" id="metodebayar" name="metodebayar" onchange="ubahMetodeBayar()">
+                                        <option value="tunai" {{ $penjualan->metode_bayar == 'tunai' ? 'selected' : '' }}>Tunai</option>
+                                        <option value="cicilan" {{ $penjualan->metode_bayar == 'cicilan' ? 'selected' : '' }}>Cicilan</option>
                                     </select>
                                 </div>
                                 
-                                <div id="cicilanSection" style="{{ $transaksi->metode_bayar == 'cicilan' ? '' : 'display: none;' }}">
+                                <div id="cicilanSection" style="{{ $penjualan->metode_bayar == 'cicilan' ? '' : 'display: none;' }}">
                                     <div class="input-group input-group-sm mb-2">
                                         <span class="input-group-text label-fixed-width">Jml.Cicilan</span>
                                         <input type="number" class="form-control" id="jmlcicilan" name="jmlcicilan" 
-                                            value="{{ $transaksi->tenor ?? 2 }}" min="1" max="12" step="1" 
+                                            value="{{ $penjualan->tenor ?? 1 }}" min="1" max="12" step="1" 
                                             onkeyup="kalkulasi()" onchange="kalkulasi()" required>
                                         <span class="input-group-text">bulan</span>
                                     </div>
                                     <div class="alert alert-info py-1 small" id="infoCicilan">
-                                        <i class="bi bi-info-circle"></i> <span id="textInfoCicilan">Periksa kelayakan limit</span>
+                                        <i class="bi bi-info-circle"></i> <span id="textInfoCicilan">Periksa kategori cicilan item</span>
                                     </div>
                                 </div>
 
-                                <div id="tunaiSection" style="{{ $transaksi->metode_bayar == 'tunai' ? '' : 'display: none;' }}">
+                                <div id="tunaiSection" style="{{ $penjualan->metode_bayar == 'tunai' ? '' : 'display: none;' }}">
                                     <div class="input-group input-group-sm mb-2">
                                         <span class="input-group-text label-fixed-width">Dibayar</span>
                                         <span class="input-group-text">Rp.</span>
-                                        <input type="number" class="form-control" value="{{ $transaksi->dibayar ?? 0 }}" name="dibayar" id="dibayar" min="0" onkeyup="hitungKembali()" onchange="hitungKembali()">
+                                        <input type="number" class="form-control" value="{{ $penjualan->dibayar ?? 0 }}" name="dibayar" id="dibayar" min="0" onkeyup="hitungKembali()" onchange="hitungKembali()">
                                     </div>
                                     <div class="input-group input-group-sm mb-2">
                                         <span class="input-group-text label-fixed-width">Kembali</span>
                                         <span class="input-group-text">Rp.</span>
-                                        <input type="number" class="form-control bg-light" value="{{ $transaksi->kembali ?? 0 }}" name="kembali" id="kembali" readonly>
+                                        <input type="number" class="form-control bg-light" value="{{ $penjualan->kembali ?? 0 }}" name="kembali" id="kembali" readonly>
                                     </div>
                                 </div>
                             </div>
@@ -273,14 +218,14 @@
                             <div class="col-md-4">
                                 <div class="input-group input-group-sm mb-3"> 
                                     <span class="input-group-text label-fixed-width">Catatan</span> 
-                                    <textarea class="form-control" name="note" rows="3">{{ $transaksi->note ?? '' }}</textarea> 
+                                    <textarea class="form-control" name="note" rows="3">{{ $penjualan->note ?? '' }}</textarea> 
                                 </div>
                             </div>
                         </div>
 
                         <div class="row justify-content-end">
                             <div class="col-auto d-flex gap-2">
-                                <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ route('bengkel.riwayat') }}'">
+                                <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ route('jual.riwayat') }}'">
                                     <i class="bi bi-arrow-left"></i> Kembali
                                 </button>
                                 <button type="submit" class="btn btn-warning">
@@ -387,17 +332,15 @@
             padding: 0.75rem 1rem;
         }
 
-        .bengkel-table-wrap {
+        .penjualan-table-wrap {
             overflow-x: auto;
             overflow-y: visible;
         }
 
-        .cell-select-jasa,
         .cell-select-barang {
             min-width: 260px;
         }
 
-        #tabelJasa .select2-container,
         #tabelBarang .select2-container {
             width: 100% !important;
         }
@@ -412,12 +355,11 @@
         <script src="{{ asset('plugins/loader/waitMe.js') }}"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-3-typeahead/4.0.2/bootstrap3-typeahead.min.js"></script>
         <script>
-            var globtot = {{ $transaksi->grandtotal }};
-            var existingJasa = {};
+            var globtot = {{ $penjualan->grandtotal }};
             var existingBarang = {};
             var typeaheadInstance = null;
             var enterPressed = false;
-            var transaksiId = {{ $transaksi->id }};
+            var penjualanId = {{ $penjualan->id }};
             
             function loader(onoff) {
                 if(onoff)
@@ -433,22 +375,51 @@
                 }).format(angka);
             }
 
-            function numbering(tableId) {
-                $(tableId + ' tbody tr').each(function(index) {
+            function numbering() {
+                $('#tabelBarang tbody tr').each(function(index) {
                     $(this).find('td:first').text(index + 1);
                 });
             }
 
+            function hitungKembali() {
+                let dibayar = parseFloat($('#dibayar').val()) || 0;
+                let grandtotal = parseFloat($('#grandtotal').val()) || 0;
+                $('#kembali').val(Math.max(0, dibayar - grandtotal));
+            }
+
+            function cekCicilan() {
+                let hasCicilan0 = false;
+
+                $('#tabelBarang tbody tr').each(function() {
+                    let kategoriCicilan = $(this).find('.namabarang option:selected').data('cicilan') || 1;
+                    if (kategoriCicilan == 0) {
+                        hasCicilan0 = true;
+                    }
+                });
+
+                $('#infoCicilan').show();
+                $('#textInfoCicilan').text(
+                    hasCicilan0
+                        ? 'Ada item kategori cicilan 1x. Sistem akan split otomatis.'
+                        : 'Semua item bisa dicicil fleksibel.'
+                );
+            }
+
+            function ubahMetodeBayar() {
+                if ($('#metodebayar').val() === 'cicilan') {
+                    $('#cicilanSection').show();
+                    $('#tunaiSection').hide();
+                    cekCicilan();
+                } else {
+                    $('#cicilanSection').hide();
+                    $('#tunaiSection').show();
+                    hitungKembali();
+                }
+            }
+
             function kalkulasi() {
                 let subtotal = 0;
-                
-                // Hitung total jasa
-                $('#tabelJasa tbody tr').each(function() {
-                    let harga = parseFloat($(this).find('.harga-jasa').val()) || 0;
-                    subtotal += harga;
-                });
-                
-                // Hitung total barang
+
                 $('#tabelBarang tbody tr').each(function() {
                     let qty = parseFloat($(this).find('.barangqty').val()) || 0;
                     let harga = parseFloat($(this).find('.hargajual').val()) || 0;
@@ -463,6 +434,12 @@
                 $('#subtotal').val(subtotal);
                 $('#grandtotal').val(globtot);
                 $('.topgrandtotal').text(formatRupiahWithDecimal(globtot));
+
+                if ($('#metodebayar').val() === 'tunai') {
+                    hitungKembali();
+                } else {
+                    cekCicilan();
+                }
             }
 
             function clearBarcodeSearch() {
@@ -484,118 +461,6 @@
                 }, 100);
             }
 
-            // FUNGSI UNTUK JASA
-            function addJasaRow(datarow = null) {
-                let newRow = $(`
-                    <tr>
-                        <td></td>
-                        <td>
-                            <select class="form-select form-select-sm namajasa" style="width:100%" required>
-                                ${datarow ? `<option value="${datarow.id}" selected data-harga="${datarow.harga}">${datarow.text}</option>` : ''}
-                            </select>
-                            <input type="hidden" name="jasa_id[]" class="idjasa" value="${datarow ? datarow.id : ''}">
-                        </td>
-                        <td>
-                            <input type="number" name="jasa_harga[]" class="form-control form-control-sm harga-jasa" value="${datarow ? datarow.harga : 0}" readonly>
-                        </td>
-                        <td>
-                            <span class="badge btn bg-danger dellist" onclick="removeJasaRow($(this).closest('tr'))">
-                                <i class="bi bi-trash3-fill"></i>
-                            </span>
-                        </td>
-                    </tr>
-                `);
-                
-                $('#tabelJasa tbody').prepend(newRow);
-                numbering('#tabelJasa');
-                initSelect2Jasa(newRow);
-                
-                if (datarow && datarow.id) {
-                    existingJasa[datarow.id] = newRow;
-                }
-                
-                kalkulasi();
-            }
-
-            function removeJasaRow(row) {
-                let idjasa = row.find('.idjasa').val();
-                if (idjasa && existingJasa[idjasa]) {
-                    delete existingJasa[idjasa];
-                }
-                row.remove();
-                numbering('#tabelJasa');
-                kalkulasi();
-            }
-
-            function initSelect2Jasa(context) {
-                context.find('.namajasa').select2({
-                    placeholder: "Pilih jasa",
-                    width: '100%',
-                    allowClear: true,
-                    ajax: {
-                        url: '{{ route('bengkel.getjasa') }}',
-                        dataType: 'json',
-                        delay: 250,
-                        data: function(params) { 
-                            return { q: params.term }; 
-                        },
-                        processResults: function(data) {
-                            return {
-                                results: data.map(j => ({
-                                    id: j.id, 
-                                    text: j.text, 
-                                    harga: j.harga
-                                }))
-                            };
-                        },
-                        cache: true
-                    },
-                    templateResult: function(data) {
-                        if (!data.id) {
-                            return data.text;
-                        }
-                        
-                        let harga = formatRupiahWithDecimal(data.harga);
-                        
-                        return $(
-                            `<div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>${data.text}</strong>
-                                </div>
-                                <div class="text-primary fw-bold">${harga}</div>
-                            </div>`
-                        );
-                    },
-                    templateSelection: function(data) {
-                        return data.text || data.id;
-                    }
-                }).on('select2:select', function(e) {
-                    let data = e.params.data;
-                    let row = $(this).closest('tr');
-                    
-                    row.find('.harga-jasa').val(data.harga);
-                    row.find('.idjasa').val(data.id);
-                    
-                    if (data.id && !existingJasa[data.id]) {
-                        existingJasa[data.id] = row;
-                    }
-                    
-                    kalkulasi();
-                }).on('select2:clear', function() {
-                    let row = $(this).closest('tr');
-                    let idjasa = row.find('.idjasa').val();
-                    
-                    if (idjasa && existingJasa[idjasa]) {
-                        delete existingJasa[idjasa];
-                    }
-                    
-                    row.find('.harga-jasa').val(0);
-                    row.find('.idjasa').val('');
-                    kalkulasi();
-                });
-            }
-
-            // FUNGSI UNTUK BARANG
             function addBarangRow(datarow = null, qty = 1) {
                 if (datarow && datarow.stok <= 0) {
                     Swal.fire({
@@ -667,7 +532,7 @@
                 `);
                 
                 $('#tabelBarang tbody').prepend(newRow);
-                numbering('#tabelBarang');
+                numbering();
                 initSelect2Barang(newRow);
                 
                 if (datarow && datarow.id) {
@@ -685,7 +550,7 @@
                     delete existingBarang[idbarang];
                 }
                 row.remove();
-                numbering('#tabelBarang');
+                numbering();
                 kalkulasi();
             }
 
@@ -721,7 +586,7 @@
                     width: '100%',
                     allowClear: true,
                     ajax: {
-                        url: '{{ route('bengkel.getbarang') }}',
+                        url: '{{ route('jual.getbarang') }}',
                         dataType: 'json',
                         delay: 250,
                         data: function(params) { 
@@ -804,7 +669,7 @@
                         
                         existingRow.find('.barangqty').val(newQty);
                         row.remove();
-                        numbering('#tabelBarang');
+                        numbering();
                         kalkulasi();
                         clearBarcodeSearch();
                         focusToBarcode();
@@ -900,7 +765,7 @@
                     highlight: true,
                     source: function(query, process) {
                         $.ajax({
-                            url: '{{ route('bengkel.getbarang') }}',
+                            url: '{{ route('jual.getbarang') }}',
                             type: 'GET',
                             data: { q: query },
                             dataType: 'json',
@@ -954,24 +819,11 @@
             }
 
             $(document).ready(function() {
-                // Load existing jasa dan barang ke tracking object
-                $('#tabelJasa tbody tr').each(function() {
-                    let id = $(this).find('.idjasa').val();
-                    if (id) {
-                        existingJasa[id] = $(this);
-                    }
-                });
-                
                 $('#tabelBarang tbody tr').each(function() {
                     let id = $(this).find('.idbarang').val();
                     if (id) {
                         existingBarang[id] = $(this);
                     }
-                });
-
-                // Initialize Select2 untuk jasa dan barang yang sudah ada
-                $('#tabelJasa tbody tr').each(function() {
-                    initSelect2Jasa($(this));
                 });
                 
                 $('#tabelBarang tbody tr').each(function() {
@@ -1020,7 +872,7 @@
                         
                         if(barcode) {
                             $.ajax({
-                                url: '{{ route('bengkel.getbarangbycode') }}',
+                                url: '{{ route('jual.getbarangbycode') }}',
                                 method: 'GET',
                                 data: { kode: barcode },
                                 dataType: 'json',
@@ -1066,12 +918,6 @@
                     }
                 });
 
-                // Tambah Jasa
-                $('#tambahJasa').on('click', function() {
-                    addJasaRow();
-                });
-
-                // Tambah Barang manual
                 $('#tambahBarang').on('click', function() {
                     addBarangRow();
                 });
@@ -1080,29 +926,11 @@
                 $('#formTransaksi').on('submit', function(e) {
                     e.preventDefault();
                     
-                    if($('#tabelJasa tbody tr').length === 0 && $('#tabelBarang tbody tr').length === 0) {
+                    if($('#tabelBarang tbody tr').length === 0) {
                         Swal.fire({
                             icon: "warning",
                             title: "Tidak ada item",
-                            text: "Minimal harus ada 1 jasa atau 1 barang"
-                        });
-                        return;
-                    }
-                    
-                    // Validasi semua jasa sudah dipilih
-                    let semuaJasaTerpilih = true;
-                    $('#tabelJasa tbody tr').each(function() {
-                        if (!$(this).find('.namajasa').val()) {
-                            semuaJasaTerpilih = false;
-                            return false;
-                        }
-                    });
-                    
-                    if (!semuaJasaTerpilih) {
-                        Swal.fire({
-                            icon: "warning",
-                            title: "Jasa belum lengkap",
-                            text: "Pastikan semua jasa sudah dipilih"
+                            text: "Minimal harus ada 1 barang"
                         });
                         return;
                     }
@@ -1142,34 +970,23 @@
                 });
 
                 function processRevise() {
-                    // Kumpulkan data items
                     let items = [];
-                    
-                    // Data jasa
-                    $('#tabelJasa tbody tr').each(function() {
-                        items.push({
-                            jenis: 'jasa',
-                            id: $(this).find('.idjasa').val(),
-                            harga: parseFloat($(this).find('.harga-jasa').val()) || 0
-                        });
-                    });
-                    
-                    // Data barang
+
                     $('#tabelBarang tbody tr').each(function() {
                         items.push({
                             jenis: 'barang',
                             id: $(this).find('.idbarang').val(),
                             qty: parseInt($(this).find('.barangqty').val()) || 0,
-                            harga: parseFloat($(this).find('.hargajual').val()) || 0
+                            harga: parseFloat($(this).find('.hargajual').val()) || 0,
+                            kategori_cicilan: parseInt($(this).find('.namabarang option:selected').data('cicilan')) || 1
                         });
                     });
-                    
-                    // Tambahkan items ke form data
+
                     let formData = new FormData($('#formTransaksi')[0]);
                     formData.append('items', JSON.stringify(items));
                     
                     $.ajax({
-                        url: "{{ route('bengkel.revise.update', ':id') }}".replace(':id', transaksiId),
+                        url: "{{ route('jual.revise.update', ':id') }}".replace(':id', penjualanId),
                         type: "POST",
                         data: formData,
                         processData: false,
@@ -1184,11 +1001,11 @@
                                 confirmButtonText: 'Lihat Nota'
                             }).then((result) => {
                                 if (result.isConfirmed) {
-                                    let notaUrl = '{{ route("bengkel.nota", ":invoice") }}'.replace(':invoice', res.invoice);
+                                    let notaUrl = '{{ route("jual.nota", ":invoice") }}'.replace(':invoice', res.invoice);
                                     window.open(notaUrl, '_blank');
-                                    window.location.href = '{{ route("bengkel.riwayat") }}';
+                                    window.location.href = '{{ route("jual.riwayat") }}';
                                 } else {
-                                    window.location.href = '{{ route("bengkel.riwayat") }}';
+                                    window.location.href = '{{ route("jual.riwayat") }}';
                                 }
                             });
                         },
@@ -1209,6 +1026,7 @@
 
                 // Initial calculation
                 kalkulasi();
+                ubahMetodeBayar();
             });
         </script>
     </x-slot>

@@ -50,5 +50,10 @@ class Barang extends Model
     {
         return $this->belongsTo(Kategori::class, 'idkategori');
     }
+
+    public function stok()
+    {
+        return $this->hasOne(StokUnit::class, 'barang_id', 'id');
+    }
     
 }

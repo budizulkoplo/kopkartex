@@ -472,11 +472,21 @@ class TransaksiBengkelController extends Controller
     /**
      * Menampilkan form revisi transaksi
      */
-    public function revise($id): View|RedirectResponse
+public function revise($id): View|RedirectResponse
 {
     $transaksi = TransaksiBengkel::with([
         'details' => function($q){
-            $q->with(['barang','jasa']);
+            $q->with([
+                'barang' => function ($barangQuery) {
+                    $barangQuery->with([
+                        'kategori',
+                        'stok' => function ($stokQuery) {
+                            $stokQuery->where('unit_id', Auth::user()->unit_kerja);
+                        }
+                    ]);
+                },
+                'jasa'
+            ]);
         },
         'user',
         'anggota'

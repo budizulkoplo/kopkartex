@@ -6,6 +6,7 @@
             <div class="row g-2 align-items-center mb-3">
                 <div class="col-sm-6">
                     <h3 class="mb-0">Riwayat Penjualan</h3>
+                    <small class="text-muted">Data transaksi tampil sesuai unit login aktif</small>
                 </div>
                 <div class="col-sm-6 text-end">
                     <form method="GET" action="{{ route('jual.riwayat') }}" class="row g-2 align-items-center justify-content-end">
@@ -26,6 +27,20 @@
 
     <div class="app-content">
         <div class="container-fluid">
+            @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill"></i> {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            @endif
+
+            @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle-fill"></i> {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            @endif
+
             <div class="card card-info card-outline">
                 <div class="card-body">
                     <table id="tbpenjualan" class="table table-striped table-bordered table-sm" style="width:100%; font-size: small;">
@@ -60,6 +75,11 @@
                                         <a href="{{ url('/penjualan/nota/'.$p->nomor_invoice) }}" class="btn btn-sm btn-primary" target="_blank" title="Cetak Nota">
                                             <i class="bi bi-printer-fill"></i> Cetak
                                         </a>
+                                        @if(in_array($p->status, ['lunas', 'hutang']))
+                                        <a href="{{ route('jual.revise', $p->id) }}" class="btn btn-sm btn-warning" title="Revisi Penjualan">
+                                            <i class="bi bi-pencil-square"></i> Revisi
+                                        </a>
+                                        @endif
                                         @if($p->status == 'lunas' || ($p->metode_bayar == 'cicilan' && $p->status == 'hutang'))
                                         <button type="button" class="btn btn-sm btn-danger btn-retur" data-invoice="{{ $p->nomor_invoice }}" data-id="{{ $p->id }}" title="Retur Barang">
                                             <i class="bi bi-arrow-return-left"></i> Retur

@@ -9,6 +9,7 @@ use App\Models\PenjualanDetail;
 use App\Models\StokUnit;
 use App\Models\Unit;
 use App\Models\User;
+use App\Models\Barang;
 use App\Models\Kategori;
 use Carbon\Carbon;
 use Exception;
@@ -16,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class PenjualanController extends Controller
@@ -622,6 +624,7 @@ class PenjualanController extends Controller
             ->select('penjualan.*', 'users.name as kasir')
             ->whereDate('penjualan.tanggal', '>=', $tanggalAwal)
             ->whereDate('penjualan.tanggal', '<=', $tanggalAkhir)
+            ->where('penjualan.unit_id', Auth::user()->unit_kerja)
             ->whereIn('penjualan.status', ['lunas', 'hutang'])
             ->orderBy('penjualan.tanggal', 'desc');
 
@@ -637,6 +640,238 @@ class PenjualanController extends Controller
             'tanggal_akhir' => $tanggalAkhir,
             'anggota' => $request->anggota ?? ''
         ]);
+    }
+
+    public function revise($id): View|RedirectResponse
+    {
+        $penjualan = Penjualan::with([
+            'details' => function ($query) {
+                $query->with([
+                    'barang' => function ($barangQuery) {
+                        $barangQuery->with([
+                            'kategori',
+                            'stok' => function ($stokQuery) {
+                                $stokQuery->where('unit_id', Auth::user()->unit_kerja);
+                            }
+                        ]);
+                    }
+                ]);
+            },
+            'user',
+            'anggota'
+        ])->findOrFail($id);
+
+        if ($penjualan->unit_id != Auth::user()->unit_kerja) {
+            return redirect()->route('jual.riwayat')
+                ->with('error', 'Transaksi tidak ditemukan pada unit login saat ini');
+        }
+
+        if (!in_array($penjualan->status, ['lunas', 'hutang'])) {
+            return redirect()->route('jual.riwayat')
+                ->with('error', 'Transaksi dengan status ini tidak dapat direvisi');
+        }
+
+        return view('transaksi.PenjualanRevise', [
+            'penjualan' => $penjualan,
+            'unit' => Unit::find(Auth::user()->unit_kerja),
+        ]);
+    }
+
+    public function reviseUpdate(Request $request, $id)
+    {
+        $request->validate([
+            'tanggal'     => 'required|date',
+            'grandtotal'  => 'required|numeric|min:0',
+            'subtotal'    => 'required|numeric|min:0',
+            'metodebayar' => 'required|string',
+            'items'       => 'required|json',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $penjualan = Penjualan::findOrFail($id);
+
+            if ($penjualan->unit_id != Auth::user()->unit_kerja) {
+                throw new Exception('Transaksi tidak ditemukan pada unit login saat ini');
+            }
+
+            if (!in_array($penjualan->status, ['lunas', 'hutang'])) {
+                throw new Exception('Transaksi dengan status ini tidak dapat direvisi');
+            }
+
+            $detailsLama = PenjualanDetail::where('penjualan_id', $id)->get();
+            foreach ($detailsLama as $detail) {
+                $stok = StokUnit::where('unit_id', Auth::user()->unit_kerja)
+                    ->where('barang_id', $detail->barang_id)
+                    ->first();
+
+                if ($stok) {
+                    $stok->increment('stok', $detail->qty);
+                }
+            }
+
+            PenjualanDetail::where('penjualan_id', $id)->delete();
+            PenjualanCicil::where('penjualan_id', $id)->delete();
+
+            $date = Carbon::parse($request->tanggal)->setTimeFrom(Carbon::now());
+            $penjualan->tanggal = $date->toDateTimeString();
+            $penjualan->grandtotal = $request->grandtotal;
+            $penjualan->subtotal = $request->subtotal;
+            $penjualan->metode_bayar = $request->metodebayar;
+            $penjualan->customer = $request->customer;
+            $penjualan->anggota_id = $request->idcustomer;
+            $penjualan->diskon = $request->diskon ?? 0;
+            $penjualan->note = $request->note;
+            $penjualan->updated_at = now();
+
+            if ($request->metodebayar == 'cicilan') {
+                if (!$request->idcustomer) {
+                    throw new Exception('Anggota wajib diisi untuk cicilan');
+                }
+
+                $penjualan->status = 'hutang';
+                $penjualan->tenor = $request->jmlcicilan;
+                $penjualan->status_ambil = 'pesan';
+                $penjualan->bunga_barang = 0;
+                $penjualan->kembali = 0;
+                $penjualan->dibayar = 0;
+            } else {
+                $penjualan->status = 'lunas';
+                $penjualan->tenor = 0;
+                $penjualan->status_ambil = 'finish';
+                $penjualan->bunga_barang = 0;
+                $penjualan->kembali = $request->kembali ?? 0;
+                $penjualan->dibayar = $request->dibayar ?? 0;
+            }
+
+            $penjualan->save();
+
+            $items = json_decode($request->items, true);
+            if (!is_array($items) || count($items) === 0) {
+                throw new Exception('Format items tidak valid');
+            }
+
+            $totalCicilan0 = 0;
+            $totalCicilan1 = 0;
+
+            foreach ($items as $item) {
+                $barang = Barang::find($item['id']);
+                if (!$barang) {
+                    throw new Exception('Barang tidak ditemukan');
+                }
+
+                $stok = StokUnit::where('unit_id', Auth::user()->unit_kerja)
+                    ->where('barang_id', $item['id'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$stok || $stok->stok < $item['qty']) {
+                    throw new Exception('Stok ' . $barang->nama_barang . ' tidak mencukupi. Stok tersedia: ' . ($stok->stok ?? 0));
+                }
+
+                PenjualanDetail::create([
+                    'penjualan_id' => $penjualan->id,
+                    'barang_id' => $item['id'],
+                    'qty' => $item['qty'],
+                    'harga' => $item['harga'],
+                ]);
+
+                $subtotalItem = $item['qty'] * $item['harga'];
+                if (($item['kategori_cicilan'] ?? 1) == 0) {
+                    $totalCicilan0 += $subtotalItem;
+                } else {
+                    $totalCicilan1 += $subtotalItem;
+                }
+
+                $stok->decrement('stok', $item['qty']);
+            }
+
+            if ($request->metodebayar == 'cicilan') {
+                $this->prosesCicilanRevisi($penjualan, $request, $totalCicilan0, $totalCicilan1);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaksi berhasil direvisi',
+                'invoice' => $penjualan->nomor_invoice
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal merevisi transaksi: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function prosesCicilanRevisi(Penjualan $penjualan, Request $request, float $totalCicilan0, float $totalCicilan1): void
+    {
+        $bunga = KonfigBunga::select('bunga_barang')->first();
+        $user = User::find($request->idcustomer);
+
+        $cicilanPertamaKategori1 = 0;
+        if ($totalCicilan1 > 0 && $request->jmlcicilan > 0) {
+            $result = DB::select("SELECT hitung_cicilan_toko(?, ?, ?, ?) AS jumlah", [
+                $totalCicilan1,
+                $bunga->bunga_barang,
+                $request->jmlcicilan,
+                1
+            ]);
+            $cicilanPertamaKategori1 = $result[0]->jumlah;
+        }
+
+        $cicilanPertama = $cicilanPertamaKategori1 + $totalCicilan0;
+        $totalCicilanAktif = PenjualanCicil::where('anggota_id', $request->idcustomer)
+            ->where('status', 'hutang')
+            ->where('penjualan_id', '!=', $penjualan->id)
+            ->sum('total_cicilan');
+
+        $batas = (!empty($user->limit_hutang) && $user->limit_hutang > 0)
+            ? $user->limit_hutang
+            : (0.35 * $user->gaji);
+
+        if (($totalCicilanAktif + $cicilanPertama) > $batas) {
+            throw new Exception('Tidak dapat diproses, melebihi batas limit');
+        }
+
+        if ($totalCicilan0 > 0) {
+            PenjualanCicil::create([
+                'penjualan_id' => $penjualan->id,
+                'cicilan' => 1,
+                'anggota_id' => $request->idcustomer,
+                'pokok' => $totalCicilan0,
+                'bunga' => 0,
+                'total_cicilan' => $totalCicilan0,
+                'status' => 'hutang',
+                'kategori' => 0,
+            ]);
+        }
+
+        if ($totalCicilan1 > 0 && $request->jmlcicilan > 0) {
+            for ($i = 1; $i <= $request->jmlcicilan; $i++) {
+                $result = DB::select("SELECT hitung_cicilan_toko(?, ?, ?, ?) AS jumlah", [
+                    $totalCicilan1,
+                    $bunga->bunga_barang,
+                    $request->jmlcicilan,
+                    $i
+                ]);
+
+                PenjualanCicil::create([
+                    'penjualan_id' => $penjualan->id,
+                    'cicilan' => $i,
+                    'anggota_id' => $request->idcustomer,
+                    'pokok' => $result[0]->jumlah,
+                    'bunga' => 0,
+                    'total_cicilan' => $result[0]->jumlah,
+                    'status' => 'hutang',
+                    'kategori' => 1,
+                ]);
+            }
+        }
     }
 
     public function getDetail($id)

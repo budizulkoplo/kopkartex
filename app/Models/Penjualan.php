@@ -16,5 +16,15 @@ class Penjualan extends Model
     {
         return $this->belongsTo(User::class, 'created_user', 'id');
     }
+
+    public function anggota()
+    {
+        return $this->belongsTo(User::class, 'anggota_id', 'id');
+    }
+
+    public function details()
+    {
+        return $this->hasMany(PenjualanDetail::class, 'penjualan_id', 'id');
+    }
     
 }
