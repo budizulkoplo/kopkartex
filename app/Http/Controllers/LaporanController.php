@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ModalAwal;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -10,7 +11,11 @@ use App\Models\PenjualanCicil;
 use App\Exports\LaporanPenerimaanExport;
 use App\Models\Barang;
 use App\Models\Pinbrg;
+use App\Models\StockAdjustmentDetail;
 use App\Models\Unit;
+use Carbon\Carbon;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Log;
@@ -114,6 +119,326 @@ class LaporanController extends Controller
             })
             ->make(true);
         //return response()->json(['data' => $data]);
+    }
+
+    public function stokDetail(Request $request)
+    {
+        $bulan = $request->get('bulan', now()->format('Y-m'));
+        $keyword = trim((string) $request->get('keyword', ''));
+        $unitId = Auth::user()->unit_kerja;
+        $unit = Unit::find($unitId);
+
+        $summary = $this->buildStokDetailSummary($bulan, $unitId, $keyword);
+
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $perPage = 25;
+        $items = $summary->slice(($page - 1) * $perPage, $perPage)->values();
+
+        $adjustments = new LengthAwarePaginator(
+            $items,
+            $summary->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        return view('laporan.stok_detail', [
+            'bulan' => $bulan,
+            'keyword' => $keyword,
+            'unit' => $unit,
+            'rows' => $adjustments,
+            'totals' => [
+                'opening_stock' => $summary->sum('opening_stock'),
+                'penerimaan_qty' => $summary->sum('penerimaan_qty'),
+                'retur_qty' => $summary->sum('retur_qty'),
+                'penjualan_qty' => $summary->sum('penjualan_qty'),
+                'adjustment_qty' => $summary->sum('adjustment_qty'),
+                'calculated_stock' => $summary->sum('calculated_stock'),
+                'system_stock' => $summary->sum('system_stock'),
+                'selisih' => $summary->sum('selisih'),
+                'nominal_calculated' => $summary->sum('nominal_calculated'),
+                'nominal_system' => $summary->sum('nominal_system'),
+            ],
+        ]);
+    }
+
+    public function stokDetailHistory(Request $request, $barangId)
+    {
+        $bulan = $request->get('bulan', now()->format('Y-m'));
+        $unitId = Auth::user()->unit_kerja;
+        $start = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
+        $end = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
+        $openingPeriod = $start->copy()->subMonth()->format('Y-m');
+
+        $barang = Barang::with('satuanRelation')->findOrFail($barangId);
+        $modalAwal = ModalAwal::query()
+            ->where('unit_id', $unitId)
+            ->where('periode', $openingPeriod)
+            ->where('barang_id', $barangId)
+            ->first();
+
+        $history = collect();
+        $runningStock = (int) ($modalAwal->stok ?? 0);
+
+        $history->push([
+            'tanggal' => $start->copy()->subSecond()->format('Y-m-d H:i:s'),
+            'jenis' => 'Modal Awal',
+            'referensi' => 'OPNAME-' . $openingPeriod,
+            'qty_masuk' => $runningStock,
+            'qty_keluar' => 0,
+            'saldo' => $runningStock,
+            'keterangan' => 'Stok awal dari stock opname periode ' . $openingPeriod,
+        ]);
+
+        $penerimaan = DB::table('penerimaan_detail as pd')
+            ->join('penerimaan as p', 'p.idpenerimaan', '=', 'pd.idpenerimaan')
+            ->join('users as u', 'u.id', '=', 'p.user_id')
+            ->whereNull('p.deleted_at')
+            ->where('u.unit_kerja', $unitId)
+            ->where('pd.barang_id', $barangId)
+            ->whereBetween('p.tgl_penerimaan', [$start, $end])
+            ->select([
+                'p.tgl_penerimaan as tanggal',
+                DB::raw("'Penerimaan' as jenis"),
+                'p.nomor_invoice as referensi',
+                'pd.jumlah as qty_masuk',
+                DB::raw('0 as qty_keluar'),
+                DB::raw("CONCAT('Supplier: ', COALESCE(p.nama_supplier, '-')) as keterangan"),
+            ])
+            ->get();
+
+        $penjualan = DB::table('penjualan_detail as pd')
+            ->join('penjualan as p', 'p.id', '=', 'pd.penjualan_id')
+            ->whereNull('p.deleted_at')
+            ->where('p.unit_id', $unitId)
+            ->where('pd.barang_id', $barangId)
+            ->whereBetween('p.tanggal', [$start, $end])
+            ->select([
+                'p.tanggal as tanggal',
+                DB::raw("'Penjualan' as jenis"),
+                'p.nomor_invoice as referensi',
+                DB::raw('0 as qty_masuk'),
+                'pd.qty as qty_keluar',
+                DB::raw("CONCAT('Customer: ', COALESCE(p.customer, '-')) as keterangan"),
+            ])
+            ->get();
+
+        $retur = DB::table('retur_detail as rd')
+            ->join('retur as r', 'r.id', '=', 'rd.idretur')
+            ->whereNull('r.deleted_at')
+            ->where('r.unit_id', $unitId)
+            ->where('rd.barang_id', $barangId)
+            ->whereBetween('r.tgl_retur', [$start, $end])
+            ->select([
+                'r.tgl_retur as tanggal',
+                DB::raw("'Retur' as jenis"),
+                'r.nomor_retur as referensi',
+                DB::raw('0 as qty_masuk'),
+                'rd.qty as qty_keluar',
+                DB::raw("CONCAT('Supplier: ', COALESCE(r.nama_supplier, '-')) as keterangan"),
+            ])
+            ->get();
+
+        $adjustment = DB::table('stock_adjustment_details as sad')
+            ->join('stock_adjustments as sa', 'sa.id', '=', 'sad.stock_adjustment_id')
+            ->where('sa.unit_id', $unitId)
+            ->where('sad.barang_id', $barangId)
+            ->whereBetween('sa.tanggal_adjustment', [$start, $end])
+            ->select([
+                'sa.tanggal_adjustment as tanggal',
+                DB::raw("'Adjustment' as jenis"),
+                'sa.kode_adjustment as referensi',
+                DB::raw('CASE WHEN (sad.new_stock - sad.old_stock) > 0 THEN (sad.new_stock - sad.old_stock) ELSE 0 END as qty_masuk'),
+                DB::raw('CASE WHEN (sad.new_stock - sad.old_stock) < 0 THEN ABS(sad.new_stock - sad.old_stock) ELSE 0 END as qty_keluar'),
+                'sad.note as keterangan',
+            ])
+            ->get();
+
+        $details = $history
+            ->merge($penerimaan)
+            ->merge($penjualan)
+            ->merge($retur)
+            ->merge($adjustment)
+            ->sortBy('tanggal')
+            ->values()
+            ->map(function ($row) {
+                return is_array($row) ? $row : (array) $row;
+            })
+            ->values()
+            ->map(function ($row, $index) use (&$runningStock) {
+                if ($index > 0) {
+                    $runningStock += (int) $row['qty_masuk'];
+                    $runningStock -= (int) $row['qty_keluar'];
+                }
+
+                return [
+                    'tanggal' => Carbon::parse($row['tanggal'])->format('d-m-Y H:i'),
+                    'jenis' => $row['jenis'],
+                    'referensi' => $row['referensi'],
+                    'qty_masuk' => (int) $row['qty_masuk'],
+                    'qty_keluar' => (int) $row['qty_keluar'],
+                    'saldo' => $runningStock,
+                    'keterangan' => $row['keterangan'] ?? '-',
+                ];
+            });
+
+        $summary = $this->buildStokDetailSummary($bulan, $unitId)->firstWhere('barang_id', (int) $barangId);
+
+        return response()->json([
+            'success' => true,
+            'header' => [
+                'barang' => $barang->kode_barang . ' - ' . $barang->nama_barang,
+                'satuan' => $barang->satuanRelation->name ?? '-',
+                'bulan' => $bulan,
+                'stok_awal' => (int) ($summary['opening_stock'] ?? 0),
+                'stok_hitung' => (int) ($summary['calculated_stock'] ?? 0),
+                'stok_sistem' => (int) ($summary['system_stock'] ?? 0),
+                'selisih' => (int) ($summary['selisih'] ?? 0),
+                'nominal_sistem' => (float) ($summary['nominal_system'] ?? 0),
+            ],
+            'details' => $details,
+        ]);
+    }
+
+    protected function buildStokDetailSummary(string $bulan, int $unitId, string $keyword = '')
+    {
+        $start = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
+        $end = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
+        $openingPeriod = $start->copy()->subMonth()->format('Y-m');
+
+        $openingSub = ModalAwal::query()
+            ->select([
+                'barang_id',
+                DB::raw('SUM(stok) as opening_stock'),
+                DB::raw('MAX(harga_modal) as opening_price'),
+            ])
+            ->where('unit_id', $unitId)
+            ->where('periode', $openingPeriod)
+            ->groupBy('barang_id');
+
+        $penerimaanSub = DB::table('penerimaan_detail as pd')
+            ->join('penerimaan as p', 'p.idpenerimaan', '=', 'pd.idpenerimaan')
+            ->join('users as u', 'u.id', '=', 'p.user_id')
+            ->whereNull('p.deleted_at')
+            ->where('u.unit_kerja', $unitId)
+            ->whereBetween('p.tgl_penerimaan', [$start, $end])
+            ->groupBy('pd.barang_id')
+            ->select('pd.barang_id', DB::raw('SUM(pd.jumlah) as penerimaan_qty'));
+
+        $returSub = DB::table('retur_detail as rd')
+            ->join('retur as r', 'r.id', '=', 'rd.idretur')
+            ->whereNull('r.deleted_at')
+            ->where('r.unit_id', $unitId)
+            ->whereBetween('r.tgl_retur', [$start, $end])
+            ->groupBy('rd.barang_id')
+            ->select('rd.barang_id', DB::raw('SUM(rd.qty) as retur_qty'));
+
+        $penjualanSub = DB::table('penjualan_detail as pd')
+            ->join('penjualan as p', 'p.id', '=', 'pd.penjualan_id')
+            ->whereNull('p.deleted_at')
+            ->where('p.unit_id', $unitId)
+            ->whereBetween('p.tanggal', [$start, $end])
+            ->groupBy('pd.barang_id')
+            ->select('pd.barang_id', DB::raw('SUM(pd.qty) as penjualan_qty'));
+
+        $adjustmentSub = DB::table('stock_adjustment_details as sad')
+            ->join('stock_adjustments as sa', 'sa.id', '=', 'sad.stock_adjustment_id')
+            ->where('sa.unit_id', $unitId)
+            ->whereBetween('sa.tanggal_adjustment', [$start, $end])
+            ->groupBy('sad.barang_id')
+            ->select('sad.barang_id', DB::raw('SUM(sad.new_stock - sad.old_stock) as adjustment_qty'));
+
+        $rows = DB::table('barang as b')
+            ->leftJoin('satuan as s', 's.id', '=', 'b.idsatuan')
+            ->leftJoin('stok_unit as su', function ($join) use ($unitId) {
+                $join->on('su.barang_id', '=', 'b.id')
+                    ->where('su.unit_id', '=', $unitId)
+                    ->whereNull('su.deleted_at');
+            })
+            ->leftJoinSub($openingSub, 'opening', function ($join) {
+                $join->on('opening.barang_id', '=', 'b.id');
+            })
+            ->leftJoinSub($penerimaanSub, 'penerimaan', function ($join) {
+                $join->on('penerimaan.barang_id', '=', 'b.id');
+            })
+            ->leftJoinSub($returSub, 'retur', function ($join) {
+                $join->on('retur.barang_id', '=', 'b.id');
+            })
+            ->leftJoinSub($penjualanSub, 'penjualan', function ($join) {
+                $join->on('penjualan.barang_id', '=', 'b.id');
+            })
+            ->leftJoinSub($adjustmentSub, 'adjustment', function ($join) {
+                $join->on('adjustment.barang_id', '=', 'b.id');
+            })
+            ->whereNull('b.deleted_at')
+            ->when($keyword !== '', function ($query) use ($keyword) {
+                $query->where(function ($builder) use ($keyword) {
+                    $builder->where('b.kode_barang', 'like', '%' . $keyword . '%')
+                        ->orWhere('b.nama_barang', 'like', '%' . $keyword . '%');
+                });
+            })
+            ->select([
+                'b.id as barang_id',
+                'b.kode_barang',
+                'b.nama_barang',
+                'b.harga_beli',
+                DB::raw('COALESCE(s.name, "-") as satuan'),
+                DB::raw('COALESCE(opening.opening_stock, 0) as opening_stock'),
+                DB::raw('COALESCE(opening.opening_price, b.harga_beli, 0) as opening_price'),
+                DB::raw('COALESCE(penerimaan.penerimaan_qty, 0) as penerimaan_qty'),
+                DB::raw('COALESCE(retur.retur_qty, 0) as retur_qty'),
+                DB::raw('COALESCE(penjualan.penjualan_qty, 0) as penjualan_qty'),
+                DB::raw('COALESCE(adjustment.adjustment_qty, 0) as adjustment_qty'),
+                DB::raw('COALESCE(su.stok, 0) as system_stock'),
+            ])
+            ->orderBy('b.nama_barang')
+            ->get()
+            ->map(function ($row) {
+                $calculatedStock = (int) $row->opening_stock
+                    + (int) $row->penerimaan_qty
+                    - (int) $row->retur_qty
+                    - (int) $row->penjualan_qty
+                    + (int) $row->adjustment_qty;
+
+                $systemStock = (int) $row->system_stock;
+                $hargaModal = (float) ($row->opening_price ?: $row->harga_beli ?: 0);
+
+                return [
+                    'barang_id' => (int) $row->barang_id,
+                    'kode_barang' => $row->kode_barang,
+                    'nama_barang' => $row->nama_barang,
+                    'satuan' => $row->satuan,
+                    'harga_modal' => $hargaModal,
+                    'opening_stock' => (int) $row->opening_stock,
+                    'penerimaan_qty' => (int) $row->penerimaan_qty,
+                    'retur_qty' => (int) $row->retur_qty,
+                    'penjualan_qty' => (int) $row->penjualan_qty,
+                    'adjustment_qty' => (int) $row->adjustment_qty,
+                    'calculated_stock' => $calculatedStock,
+                    'system_stock' => $systemStock,
+                    'selisih' => $systemStock - $calculatedStock,
+                    'nominal_calculated' => $calculatedStock * $hargaModal,
+                    'nominal_system' => $systemStock * $hargaModal,
+                ];
+            })
+            ->filter(function ($row) use ($keyword) {
+                if ($keyword !== '') {
+                    return true;
+                }
+
+                return $row['opening_stock'] != 0
+                    || $row['penerimaan_qty'] != 0
+                    || $row['retur_qty'] != 0
+                    || $row['penjualan_qty'] != 0
+                    || $row['adjustment_qty'] != 0
+                    || $row['system_stock'] != 0;
+            })
+            ->values();
+
+        return $rows;
     }
     // public function stokBarangDatasss()
     // {

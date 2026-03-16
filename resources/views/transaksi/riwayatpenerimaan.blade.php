@@ -282,12 +282,38 @@
                     <div class="alert alert-info">
                         <i class="bi bi-info-circle"></i> Catatan: 
                         <ul class="mb-0 mt-1">
-                            <li>Untuk mengurangi stok, masukkan jumlah yang lebih kecil dari jumlah asli</li>
+                            <li>Anda bisa mengubah qty, harga beli, harga jual, satuan, dan metode bayar transaksi</li>
                             <li>Untuk menghapus item, klik tombol hapus dan item akan dikembalikan ke stok</li>
-                            <li>Revisi akan dicatat dalam history</li>
+                            <li>Jika pembayaran diubah ke tempo, tanggal tempo wajib diisi</li>
                         </ul>
                     </div>
-                    
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label form-label-sm">Tanggal Penerimaan</label>
+                            <input type="datetime-local" class="form-control form-control-sm" id="revisiTanggal">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label form-label-sm">Metode Bayar</label>
+                            <select class="form-select form-select-sm" id="revisiMetodeBayar">
+                                <option value="cash">Cash</option>
+                                <option value="tempo">Tempo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3" id="revisiTempoWrapper">
+                            <label class="form-label form-label-sm">Tanggal Tempo</label>
+                            <input type="date" class="form-control form-control-sm" id="revisiTglTempo">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label form-label-sm">Status Bayar</label>
+                            <input type="text" class="form-control form-control-sm" id="revisiStatusBayar" readonly>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label form-label-sm">Catatan</label>
+                            <textarea class="form-control form-control-sm" id="revisiNote" rows="2" placeholder="Catatan revisi transaksi"></textarea>
+                        </div>
+                    </div>
+
                     <div class="table-responsive">
                         <table class="table table-sm table-hover" id="tblRevisi">
                             <thead class="table-light">
@@ -295,10 +321,11 @@
                                     <th width="5%">#</th>
                                     <th width="15%">Kode Barang</th>
                                     <th>Nama Barang</th>
-                                    <th width="10%" class="text-center">Stok Sekarang</th>
                                     <th width="10%" class="text-center">Qty Terima</th>
                                     <th width="10%" class="text-center">Qty Revisi</th>
-                                    <th width="15%" class="text-end">Harga Beli</th>
+                                    <th width="12%" class="text-end">Harga Beli</th>
+                                    <th width="12%" class="text-end">Harga Jual</th>
+                                    <th width="12%">Satuan</th>
                                     <th width="15%" class="text-end">Subtotal</th>
                                     <th width="10%" class="text-center">Aksi</th>
                                 </tr>
@@ -487,7 +514,7 @@
                             let grandTotal = 0;
                             
                             res.detail.forEach((item, index) => {
-                                const subtotal = item.jumlah * item.harga_beli;
+                                const subtotal = Number(item.subtotal || (item.jumlah * item.harga_beli));
                                 grandTotal += subtotal;
                                 
                                 tbody += `<tr>
@@ -516,10 +543,45 @@
                 });
             }
 
+            function buildSatuanOptions(options, selectedId) {
+                return (options || []).map(option => {
+                    const selected = String(option.id) === String(selectedId) ? 'selected' : '';
+                    return `<option value="${option.id}" ${selected}>${option.name}</option>`;
+                }).join('');
+            }
+
+            function formatDateForInput(dateTime) {
+                if (!dateTime) return '';
+                const datePart = dateTime.split(' ')[0];
+                const parts = datePart.split('-');
+                return parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : '';
+            }
+
+            function formatDateTimeForInput(dateTime) {
+                if (!dateTime) return '';
+
+                const [datePart, timePart = '00:00'] = dateTime.split(' ');
+                const parts = datePart.split('-');
+                if (parts.length !== 3) {
+                    return '';
+                }
+
+                const time = timePart.length >= 5 ? timePart.slice(0, 5) : '00:00';
+                return `${parts[2]}-${parts[1]}-${parts[0]}T${time}`;
+            }
+
+            function toggleTempoField() {
+                const isTempo = $('#revisiMetodeBayar').val() === 'tempo';
+                $('#revisiTempoWrapper').toggle(isTempo);
+                $('#revisiStatusBayar').val(isTempo ? 'Pending' : 'Paid');
+                if (!isTempo) {
+                    $('#revisiTglTempo').val('');
+                }
+            }
+
             function loadDetailForRevisi(penerimaanId) {
-                // Gunakan URL langsung
                 const url = `/penerimaan/detail/${penerimaanId}`;
-                
+
                 $.ajax({
                     url: url,
                     method: 'GET',
@@ -527,60 +589,78 @@
                         $('#tblRevisi tbody').html('<tr><td colspan="9" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Memuat data...</td></tr>');
                     },
                     success: function(response) {
-                        if (response.success) {
-                            const tbody = $('#tblRevisi tbody');
-                            tbody.empty();
-                            
-                            if (response.detail.length > 0) {
-                                response.detail.forEach((item, index) => {
-                                    const subtotal = item.jumlah * item.harga_beli;
-                                    const row = `
-                                        <tr>
-                                            <td class="text-center">${index + 1}</td>
-                                            <td>${item.kode_barang || 'N/A'}</td>
-                                            <td>${item.nama_barang}</td>
-                                            <td class="text-center">
-                                                <span class="badge bg-info">-</span>
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="fw-bold">${formatNumber(item.jumlah)}</span>
-                                            </td>
-                                            <td>
-                                                <input type="number" 
-                                                       class="form-control form-control-sm qty-revisi" 
-                                                       value="${item.jumlah}"
-                                                       min="0" 
-                                                       data-id="${item.id}"
-                                                       data-barang-id="${item.barang_id}"
-                                                       data-old-qty="${item.jumlah}"
-                                                       data-harga="${item.harga_beli}"
-                                                       style="width: 80px; margin: 0 auto;">
-                                            </td>
-                                            <td class="text-end">Rp ${formatNumber(item.harga_beli)}</td>
-                                            <td class="text-end fw-bold total-row">Rp ${formatNumber(subtotal)}</td>
-                                            <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-outline-danger btn-hapus-item" 
-                                                        data-id="${item.id}"
-                                                        data-barang-id="${item.barang_id}"
-                                                        data-old-qty="${item.jumlah}"
-                                                        title="Hapus item">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `;
-                                    tbody.append(row);
-                                });
-                            } else {
-                                tbody.html('<tr><td colspan="9" class="text-center py-4 text-muted">Tidak ada data detail</td></tr>');
-                            }
-                            hitungTotalRevisi();
-                        } else {
+                        if (!response.success) {
                             Swal.fire('Error', response.message || 'Gagal memuat detail penerimaan', 'error');
                             $('#revisiModal').modal('hide');
+                            return;
                         }
+
+                        const penerimaan = response.penerimaan;
+                        const satuanOptions = response.satuan_options || [];
+                        const tbody = $('#tblRevisi tbody');
+                        tbody.empty();
+
+                        $('#revisiTanggal').val(formatDateTimeForInput(penerimaan.tgl_penerimaan));
+                        $('#revisiMetodeBayar').val(penerimaan.metode_bayar);
+                        $('#revisiTglTempo').val(formatDateForInput(penerimaan.tgl_tempo));
+                        $('#revisiStatusBayar').val(penerimaan.status_bayar === 'pending' ? 'Pending' : 'Paid');
+                        $('#revisiNote').val(penerimaan.note || '');
+                        toggleTempoField();
+
+                        if (response.detail.length > 0) {
+                            response.detail.forEach((item, index) => {
+                                const subtotal = Number(item.subtotal || (item.jumlah * item.harga_beli));
+                                const row = `
+                                    <tr>
+                                        <td class="text-center">${index + 1}</td>
+                                        <td>${item.kode_barang || 'N/A'}</td>
+                                        <td>${item.nama_barang}</td>
+                                        <td class="text-center">
+                                            <span class="fw-bold">${formatNumber(item.jumlah)}</span>
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm qty-revisi"
+                                                value="${item.jumlah}" min="0"
+                                                data-id="${item.id}"
+                                                data-barang-id="${item.barang_id}"
+                                                data-old-qty="${item.jumlah}"
+                                                data-ppn-persen="${item.ppn_persen || 0}">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm harga-beli-revisi"
+                                                value="${item.harga_beli}" min="0" step="0.01">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm harga-jual-revisi"
+                                                value="${item.harga_jual}" min="0" step="0.01">
+                                        </td>
+                                        <td>
+                                            <select class="form-select form-select-sm satuan-revisi">
+                                                <option value="">Pilih</option>
+                                                ${buildSatuanOptions(satuanOptions, item.idsatuan)}
+                                            </select>
+                                        </td>
+                                        <td class="text-end fw-bold total-row">Rp ${formatNumber(subtotal)}</td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-danger btn-hapus-item"
+                                                data-id="${item.id}"
+                                                data-barang-id="${item.barang_id}"
+                                                data-old-qty="${item.jumlah}"
+                                                title="Hapus item">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                                tbody.append(row);
+                            });
+                        } else {
+                            tbody.html('<tr><td colspan="9" class="text-center py-4 text-muted">Tidak ada data detail</td></tr>');
+                        }
+
+                        hitungTotalRevisi();
                     },
-                    error: function(xhr) {
+                    error: function() {
                         Swal.fire('Error', 'Gagal memuat detail penerimaan', 'error');
                         $('#revisiModal').modal('hide');
                     }
@@ -590,32 +670,25 @@
             function simpanRevisi() {
                 const penerimaanId = $('#revisiModal').data('penerimaan-id');
                 const itemsToRevisi = [];
-                
+
                 $('.qty-revisi').each(function() {
-                    const itemId = $(this).data('id');
-                    const barangId = $(this).data('barang-id');
-                    const oldQty = $(this).data('old-qty');
-                    const newQty = parseInt($(this).val()) || 0;
-                    const harga = $(this).data('harga');
-                    
-                    if (newQty !== oldQty) {
-                        itemsToRevisi.push({
-                            id: itemId,
-                            barang_id: barangId,
-                            old_qty: oldQty,
-                            new_qty: newQty,
-                            harga_beli: harga
-                        });
-                    }
+                    const row = $(this).closest('tr');
+                    itemsToRevisi.push({
+                        id: $(this).data('id'),
+                        barang_id: $(this).data('barang-id'),
+                        old_qty: parseFloat($(this).data('old-qty')) || 0,
+                        new_qty: parseFloat($(this).val()) || 0,
+                        harga_beli: parseFloat(row.find('.harga-beli-revisi').val()) || 0,
+                        harga_jual: parseFloat(row.find('.harga-jual-revisi').val()) || 0,
+                        idsatuan: row.find('.satuan-revisi').val() || null
+                    });
                 });
-                
-                // Cek item yang dihapus
+
                 $('.btn-hapus-item.bg-danger').each(function() {
                     const itemId = $(this).data('id');
                     const barangId = $(this).data('barang-id');
                     const oldQty = $(this).data('old-qty');
-                    
-                    // Hapus dari itemsToRevisi jika sudah ada
+
                     const existingIndex = itemsToRevisi.findIndex(item => item.id === itemId);
                     if (existingIndex > -1) {
                         itemsToRevisi.splice(existingIndex, 1);
@@ -629,15 +702,15 @@
                         action: 'delete'
                     });
                 });
-                
-                if (itemsToRevisi.length === 0) {
-                    Swal.fire('Info', 'Tidak ada perubahan untuk disimpan', 'info');
+
+                if ($('#revisiMetodeBayar').val() === 'tempo' && !$('#revisiTglTempo').val()) {
+                    Swal.fire('Info', 'Tanggal tempo wajib diisi jika metode bayar tempo', 'info');
                     return;
                 }
-                
+
                 Swal.fire({
                     title: 'Konfirmasi Revisi',
-                    html: `<p>Anda akan melakukan revisi pada ${itemsToRevisi.length} item.</p>
+                    html: `<p>Anda akan menyimpan revisi transaksi dan ${itemsToRevisi.length} detail item.</p>
                           <p class="text-warning"><small><i class="bi bi-exclamation-triangle"></i> Revisi akan mempengaruhi stok barang.</small></p>`,
                     icon: 'warning',
                     showCancelButton: true,
@@ -652,6 +725,10 @@
                             method: 'POST',
                             data: {
                                 penerimaan_id: penerimaanId,
+                                tgl_penerimaan: $('#revisiTanggal').val(),
+                                metode_bayar: $('#revisiMetodeBayar').val(),
+                                tgl_tempo: $('#revisiTglTempo').val(),
+                                note: $('#revisiNote').val(),
                                 items: itemsToRevisi,
                                 _token: '{{ csrf_token() }}'
                             },
@@ -678,7 +755,8 @@
                             },
                             error: function(xhr) {
                                 $('#btnSimpanRevisi').prop('disabled', false).html('<i class="bi bi-save"></i> Simpan Revisi');
-                                Swal.fire('Error', 'Gagal menyimpan revisi', 'error');
+                                const message = xhr.responseJSON?.message || 'Gagal menyimpan revisi';
+                                Swal.fire('Error', message, 'error');
                             }
                         });
                     }
@@ -784,11 +862,17 @@
                 let total = 0;
                 
                 $('.qty-revisi').each(function() {
-                    const qty = parseInt($(this).val()) || 0;
-                    const harga = $(this).data('harga');
-                    const rowTotal = qty * harga;
+                    const row = $(this).closest('tr');
+                    if (row.find('.btn-hapus-item').hasClass('bg-danger')) {
+                        row.find('.total-row').text('Rp 0');
+                        return;
+                    }
+                    const qty = parseFloat($(this).val()) || 0;
+                    const hargaBeli = parseFloat(row.find('.harga-beli-revisi').val()) || 0;
+                    const ppnPersen = parseFloat($(this).data('ppn-persen')) || 0;
+                    const rowTotal = (qty * hargaBeli) * (1 + (ppnPersen / 100));
                     
-                    $(this).closest('tr').find('.total-row').text('Rp ' + formatNumber(rowTotal));
+                    row.find('.total-row').text('Rp ' + formatNumber(rowTotal));
                     total += rowTotal;
                 });
                 
@@ -801,15 +885,15 @@
             }
 
             // Event handler untuk perubahan quantity revisi
-            $(document).on('input', '.qty-revisi', function() {
+            $(document).on('input', '.qty-revisi, .harga-beli-revisi, .harga-jual-revisi, .satuan-revisi', function() {
                 const currentVal = parseInt($(this).val()) || 0;
-                
-                if (currentVal < 0) {
+                if ($(this).hasClass('qty-revisi') && currentVal < 0) {
                     $(this).val(0);
                 }
-                
                 hitungTotalRevisi();
             });
+
+            $('#revisiMetodeBayar').on('change', toggleTempoField);
 
             // Event handler untuk tombol hapus item
             $(document).on('click', '.btn-hapus-item', function(e) {
@@ -819,12 +903,12 @@
                 if ($btn.hasClass('bg-danger')) {
                     // Kembalikan ke normal
                     $btn.removeClass('bg-danger text-white').addClass('btn-outline-danger');
-                    $btn.closest('tr').find('.qty-revisi').prop('disabled', false);
+                    $btn.closest('tr').find('.qty-revisi, .harga-beli-revisi, .harga-jual-revisi, .satuan-revisi').prop('disabled', false);
                     $btn.html('<i class="bi bi-trash"></i>');
                 } else {
                     // Tandai untuk dihapus
                     $btn.removeClass('btn-outline-danger').addClass('bg-danger text-white');
-                    $btn.closest('tr').find('.qty-revisi').prop('disabled', true);
+                    $btn.closest('tr').find('.qty-revisi, .harga-beli-revisi, .harga-jual-revisi, .satuan-revisi').prop('disabled', true);
                     $btn.html('<i class="bi bi-check-lg"></i> Dihapus');
                 }
                 

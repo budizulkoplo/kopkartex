@@ -306,18 +306,25 @@ class PenerimaanController extends Controller
                 ], 404);
             }
 
-            // Format detail
             $detail = $penerimaan->details->map(function ($d) {
+                $barang = $d->barang;
+                $baseSubtotal = (float) $d->jumlah * (float) $d->harga_beli;
+                $ppnNominal = (float) $d->ppn;
+                $ppnPersen = $baseSubtotal > 0 ? ($ppnNominal / $baseSubtotal) * 100 : 0;
+
                 return [
                     'id'               => $d->id,
                     'barang_id'        => $d->barang_id,
-                    'kode_barang'      => $d->barang->kode_barang ?? 'N/A',
-                    'nama_barang'      => $d->barang->nama_barang ?? 'Tidak ditemukan',
+                    'kode_barang'      => $barang->kode_barang ?? 'N/A',
+                    'nama_barang'      => $barang->nama_barang ?? 'Tidak ditemukan',
                     'jumlah'           => $d->jumlah,
                     'harga_beli'       => $d->harga_beli,
                     'harga_jual'       => $d->harga_jual,
                     'ppn'              => $d->ppn,
+                    'ppn_persen'       => round($ppnPersen, 2),
                     'subtotal'         => $d->subtotal ?? ($d->jumlah * $d->harga_beli),
+                    'idsatuan'         => $barang->idsatuan ?? null,
+                    'satuan'           => $barang->satuanRelation->name ?? '',
                     'created_at'       => $d->created_at,
                 ];
             });
@@ -339,6 +346,7 @@ class PenerimaanController extends Controller
                     'user_name'      => $penerimaan->user->name ?? '-'
                 ],
                 'detail'      => $detail,
+                'satuan_options' => Satuan::query()->select('id', 'name')->orderBy('name')->get(),
                 'grand_total' => $penerimaan->grandtotal
             ]);
 
@@ -351,69 +359,99 @@ class PenerimaanController extends Controller
     }
 
     public function prosesRevisi(Request $request)
-{
-    DB::beginTransaction();
-    try {
-        $penerimaanId = $request->penerimaan_id;
-        $items = $request->items;
+    {
+        $validated = $request->validate([
+            'penerimaan_id' => 'required|exists:penerimaan,idpenerimaan',
+            'tgl_penerimaan' => 'required|date',
+            'metode_bayar' => 'required|in:cash,tempo',
+            'tgl_tempo' => 'nullable|date',
+            'note' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|exists:penerimaan_detail,id',
+            'items.*.barang_id' => 'required|exists:barang,id',
+            'items.*.old_qty' => 'required|numeric|min:0',
+            'items.*.new_qty' => 'nullable|numeric|min:0',
+            'items.*.harga_beli' => 'nullable|numeric|min:0',
+            'items.*.harga_jual' => 'nullable|numeric|min:0',
+            'items.*.idsatuan' => 'nullable|exists:satuan,id',
+            'items.*.action' => 'nullable|string',
+        ]);
 
-        $penerimaan = Penerimaan::findOrFail($penerimaanId);
+        DB::beginTransaction();
+        try {
+            $penerimaanId = $validated['penerimaan_id'];
+            $penerimaan = Penerimaan::findOrFail($penerimaanId);
 
-        foreach ($items as $item) {
-            $detail = PenerimaanDtl::findOrFail($item['id']);
-            $oldQty = $item['old_qty'];
-            $newQty = $item['new_qty'] ?? $oldQty;
-
-            /*
-             |=====================================================
-             | 1. HANDLE DELETE (PRIORITAS)
-             |=====================================================
-             */
-            if (isset($item['action']) && $item['action'] === 'delete') {
-
-                // lock stok
-                $stok = DB::table('stok_unit')
-                    ->where('barang_id', $detail->barang_id)
-                    ->where('unit_id', Auth::user()->unit_kerja)
-                    ->lockForUpdate()
-                    ->value('stok');
-
-                if ($stok < $oldQty) {
-                    throw new \Exception('Stok tidak cukup untuk menghapus item');
-                }
-
-                DB::statement("
-                    UPDATE stok_unit
-                    SET stok = stok - ?, updated_at = NOW()
-                    WHERE barang_id = ? AND unit_id = ?
-                ", [$oldQty, $detail->barang_id, Auth::user()->unit_kerja]);
-
-                $detail->delete();
-
-                DB::table('revisi_penerimaan')->insert([
-                    'penerimaan_id' => $penerimaanId,
-                    'penerimaan_dtl_id' => $detail->id,
-                    'barang_id' => $detail->barang_id,
-                    'qty_lama' => $oldQty,
-                    'qty_baru' => 0,
-                    'selisih' => -$oldQty,
-                    'keterangan' => 'Hapus item dari penerimaan',
-                    'created_at' => now(),
-                    'created_user' => auth()->id()
-                ]);
-
-                continue; // ⬅️ WAJIB agar tidak lanjut ke revisi
+            if ($validated['metode_bayar'] === 'tempo' && empty($validated['tgl_tempo'])) {
+                throw new Exception('Tanggal tempo wajib diisi jika metode bayar tempo.');
             }
 
-            /*
-             |=====================================================
-             | 2. HANDLE REVISI QTY
-             |=====================================================
-             */
-            if ($newQty != $oldQty) {
-                $selisih = $newQty - $oldQty;
+            $penerimaan->tgl_penerimaan = Carbon::parse($validated['tgl_penerimaan'])->format('Y-m-d H:i:s');
+            $penerimaan->metode_bayar = $validated['metode_bayar'];
+            $penerimaan->tgl_tempo = $validated['metode_bayar'] === 'tempo'
+                ? Carbon::parse($validated['tgl_tempo'])->format('Y-m-d')
+                : null;
+            $penerimaan->status_bayar = $validated['metode_bayar'] === 'tempo' ? 'pending' : 'paid';
+            $penerimaan->note = $validated['note'] ?? null;
+            $penerimaan->save();
 
-                if ($selisih != 0) {
+            foreach ($validated['items'] as $item) {
+                $detail = PenerimaanDtl::with('barang')->findOrFail($item['id']);
+                if ((int) $detail->idpenerimaan !== (int) $penerimaanId) {
+                    throw new Exception('Detail penerimaan tidak sesuai dengan transaksi yang direvisi.');
+                }
+
+                if ((int) $detail->barang_id !== (int) $item['barang_id']) {
+                    throw new Exception('Barang pada detail penerimaan tidak valid.');
+                }
+
+                $oldQty = (float) $item['old_qty'];
+                $newQty = isset($item['new_qty']) ? (float) $item['new_qty'] : $oldQty;
+                $oldHargaBeli = (float) $detail->harga_beli;
+                $oldHargaJual = (float) $detail->harga_jual;
+                $newHargaBeli = isset($item['harga_beli']) ? (float) $item['harga_beli'] : $oldHargaBeli;
+                $newHargaJual = isset($item['harga_jual']) ? (float) $item['harga_jual'] : $oldHargaJual;
+                $ppnBase = $oldQty * $oldHargaBeli;
+                $ppnPercent = $ppnBase > 0 ? ((float) $detail->ppn / $ppnBase) * 100 : 0;
+                $oldSatuanId = $detail->barang?->idsatuan;
+                $newSatuanId = !empty($item['idsatuan']) ? (int) $item['idsatuan'] : $oldSatuanId;
+
+                if (($item['action'] ?? null) === 'delete') {
+                    $stok = DB::table('stok_unit')
+                        ->where('barang_id', $detail->barang_id)
+                        ->where('unit_id', Auth::user()->unit_kerja)
+                        ->lockForUpdate()
+                        ->value('stok');
+
+                    if ($stok < $oldQty) {
+                        throw new Exception('Stok tidak cukup untuk menghapus item');
+                    }
+
+                    DB::statement("
+                        UPDATE stok_unit
+                        SET stok = stok - ?, updated_at = NOW()
+                        WHERE barang_id = ? AND unit_id = ?
+                    ", [$oldQty, $detail->barang_id, Auth::user()->unit_kerja]);
+
+                    $detail->delete();
+
+                    DB::table('revisi_penerimaan')->insert([
+                        'penerimaan_id' => $penerimaanId,
+                        'penerimaan_dtl_id' => $detail->id,
+                        'barang_id' => $detail->barang_id,
+                        'qty_lama' => $oldQty,
+                        'qty_baru' => 0,
+                        'selisih' => -$oldQty,
+                        'keterangan' => 'Hapus item dari penerimaan',
+                        'created_at' => now(),
+                        'created_user' => auth()->id()
+                    ]);
+
+                    continue;
+                }
+
+                $selisih = $newQty - $oldQty;
+                if ($selisih != 0.0) {
                     $stok = DB::table('stok_unit')
                         ->where('barang_id', $detail->barang_id)
                         ->where('unit_id', Auth::user()->unit_kerja)
@@ -421,7 +459,7 @@ class PenerimaanController extends Controller
                         ->value('stok');
 
                     if ($stok + $selisih < 0) {
-                        throw new \Exception('Stok tidak cukup untuk revisi');
+                        throw new Exception('Stok tidak cukup untuk revisi');
                     }
 
                     DB::statement("
@@ -433,52 +471,59 @@ class PenerimaanController extends Controller
                     ", [$detail->barang_id, Auth::user()->unit_kerja, $selisih]);
                 }
 
+                $newPpn = ($newQty * $newHargaBeli) * ($ppnPercent / 100);
                 $detail->jumlah = $newQty;
-                $detail->subtotal = $newQty * $detail->harga_beli;
+                $detail->harga_beli = $newHargaBeli;
+                $detail->harga_jual = $newHargaJual;
+                $detail->ppn = $newPpn;
+                $detail->subtotal = ($newQty * $newHargaBeli) + $newPpn;
                 $detail->save();
 
-                DB::table('revisi_penerimaan')->insert([
-                    'penerimaan_id' => $penerimaanId,
-                    'penerimaan_dtl_id' => $detail->id,
-                    'barang_id' => $detail->barang_id,
-                    'qty_lama' => $oldQty,
-                    'qty_baru' => $newQty,
-                    'selisih' => $selisih,
-                    'keterangan' => 'Revisi penerimaan',
-                    'created_at' => now(),
-                    'created_user' => auth()->id()
-                ]);
+                if ($detail->barang) {
+                    $detail->barang->harga_beli = $newHargaBeli;
+                    $detail->barang->harga_jual = $newHargaJual;
+                    $detail->barang->idsatuan = $newSatuanId;
+                    $detail->barang->save();
+                }
+
+                if (
+                    $selisih != 0.0 ||
+                    $newHargaBeli != $oldHargaBeli ||
+                    $newHargaJual != $oldHargaJual ||
+                    (int) $newSatuanId !== (int) $oldSatuanId
+                ) {
+                    DB::table('revisi_penerimaan')->insert([
+                        'penerimaan_id' => $penerimaanId,
+                        'penerimaan_dtl_id' => $detail->id,
+                        'barang_id' => $detail->barang_id,
+                        'qty_lama' => $oldQty,
+                        'qty_baru' => $newQty,
+                        'selisih' => $selisih,
+                        'keterangan' => 'Revisi penerimaan',
+                        'created_at' => now(),
+                        'created_user' => auth()->id()
+                    ]);
+                }
             }
+
+            $penerimaan->grandtotal = PenerimaanDtl::where('idpenerimaan', $penerimaanId)->sum('subtotal');
+            $penerimaan->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Revisi penerimaan berhasil disimpan'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses revisi: ' . $e->getMessage()
+            ], 500);
         }
-
-        /*
-         |=====================================================
-         | 3. RECALCULATE TOTAL
-         |=====================================================
-         */
-        $newTotal = PenerimaanDtl::where('idpenerimaan', $penerimaanId)
-            ->sum('subtotal');
-
-        $penerimaan->grandtotal = $newTotal;
-        $penerimaan->save();
-
-        DB::commit();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Revisi berhasil disimpan'
-        ]);
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Gagal memproses revisi: ' . $e->getMessage()
-        ], 500);
     }
-}
-
 
     public function batalkanPenerimaan($id)
     {

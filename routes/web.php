@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\StockOpnameController;
+use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\JasaBengkelController;
 use App\Http\Controllers\TransaksiBengkelController;
 use App\Http\Controllers\SupplierController;
@@ -110,6 +111,13 @@ Route::prefix('stock')->middleware($menuAccessMiddleware)->group(function () {
     
     Route::get('/modal-awal', [StockOpnameController::class, 'modalAwal'])->name('stockopname.modalawal');
     Route::get('/modal-awal-ajax', [StockOpnameController::class, 'getModalAwalAjax'])->name('stockopname.modalawalajax');
+});
+
+Route::prefix('stock-adjustment')->middleware($menuAccessMiddleware)->group(function () {
+    Route::get('/', [StockAdjustmentController::class, 'index'])->name('stockadjustment.index');
+    Route::get('/barang', [StockAdjustmentController::class, 'getBarang'])->name('stockadjustment.getbarang');
+    Route::post('/store', [StockAdjustmentController::class, 'store'])->name('stockadjustment.store');
+    Route::get('/detail/{id}', [StockAdjustmentController::class, 'detail'])->name('stockadjustment.detail');
 });
 
 Route::prefix('master/jasabengkel')
@@ -341,6 +349,8 @@ Route::prefix('retur')->middleware($menuAccessMiddleware)->group(function () {
 Route::prefix('laporan')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/stok-barang', [LaporanController::class, 'stokBarang'])->name('laporan.stokbarang');
     Route::get('/stok-barang/data', [LaporanController::class, 'stokBarangData'])->name('laporan.stokbarang.data');
+    Route::get('/stok-detail', [LaporanController::class, 'stokDetail'])->name('laporan.stokdetail');
+    Route::get('/stok-detail/history/{barangId}', [LaporanController::class, 'stokDetailHistory'])->name('laporan.stokdetail.history');
     Route::get('/penjualan', [LaporanController::class, 'penjualan'])->name('laporan.penjualan');
     Route::get('/penjualan/data', [LaporanController::class, 'penjualanData'])->name('laporan.penjualan.data');
     Route::get('/penerimaan', [LaporanController::class, 'penerimaanLaporan'])->name('laporan.penerimaan');
