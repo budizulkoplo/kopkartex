@@ -10,28 +10,33 @@ use Symfony\Component\HttpFoundation\Response;
 
 class GlobalApp
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
-    function buildTree($elements, $parentId = null) {
+    protected function buildTree($elements, array $roleNames, $parentId = null): array
+    {
         $branch = [];
 
         foreach ($elements as $element) {
             if ($element->parent_id == $parentId) {
-                $level=explode(';', $element->role);
-                $children = $this->buildTree($elements, $element->id);
+                $children = $this->buildTree($elements, $roleNames, $element->id);
+
                 if ($children) {
                     $element->children = $children;
                 }
-                //if(in_array(auth()->user()->getRoleNames()->first(), $level))
-                //$element->dd=auth()->user()->getRoleNames()->first();
+
+                if (! $element->hasRoleAccess($roleNames) && empty($children)) {
+                    continue;
+                }
+
+                if ($children) {
+                    $element->setAttribute('children', $children);
+                }
+
                 $branch[] = $element;
             }
-        } 
+        }
+
         return $branch;
     }
+
     public function handle(Request $request, Closure $next, $role = null): Response
     {
         $user = Auth::user();
@@ -53,8 +58,10 @@ class GlobalApp
 
         // Build menu
         $menu = Menu::orderBy('seq', 'asc')->get();
+        $roleNames = $user->getRoleNames()->all();
+
         $request->merge([
-            'menu' => $this->buildTree($menu),
+            'menu' => $this->buildTree($menu, $roleNames),
         ]);
 
         return $next($request);

@@ -59,6 +59,7 @@
                                         <th>Unit</th>
                                         <th>Status</th>
                                         <th>Roles</th>
+                                        <th>Aksi</th>
                                         <th></th><th></th><th></th><th></th><th></th>
                                     </tr>
                                 </thead>
@@ -163,107 +164,39 @@
     </x-slot>
     <x-slot name="jscustom">
         <script>
-            
-            var table = $('#tbusers').DataTable({
-                ordering: false,"responsive": true,"processing": true,"serverSide": true,
-                "ajax": {
-                    "url": "{{ route('users.getdata') }}",
-                    "data":{loc : function() { return $('#floc').val()},role : function() { return $('#frole').val()},},
-                    "async": true,
-                    "type": "GET"
-                },
-                "columns": 
-                [
-                    { "data": "nomor_anggota","orderable": false },
-                    { "data": "username"},
-                    { "data": "nik","orderable": false},
-                    { "data": "name","orderable": false },
-                    { "data": "email","orderable": false },
-                    { "data": "nama_unit"},
-                    { "data": "status"},
-                    { "data": null,"orderable": false},
-                    { "data": null,"orderable": false},
-                    { "data": "idusers","visible": false},
-                    { "data": "jabatan","visible": false},
-                    { "data": "tanggal_masuk","visible": false},
-                    { "data": "username","visible": false},
-                    { "data": "unit_kerja","visible": false},
-                ],
-                "columnDefs": [
-                    { targets: [ 7 ],
-                        render: function (data, type, row, meta) {
-                            let rls='',roles =JSON.parse(row.allrole);
-                            @if (auth()->user()->hasRole('superadmin'))
-                            rls +=`<div class="form-check float-start pe-2">
-                            <input class="form-check-input chkrole" data-id="`+row.id+`" type="checkbox" name="chkrole[]" value="superadmin" `+(row.r1 == 'superadmin'? 'checked':'')+`>
-                            <label class="form-check-label" for="flexCheckDefault">Super Admin</label>
-                            </div>`
-                            @endif
-                            rls +=`<div class="form-check float-start pe-2">
-                            <input class="form-check-input chkrole" data-id="`+row.id+`" type="checkbox" name="chkrole[]" value="admin" `+(row.r2 == 'admin'? 'checked':'')+`>
-                            <label class="form-check-label" for="flexCheckDefault">Admin</label>
-                            </div>`
-                            rls +=`<div class="form-check float-start pe-2">
-                            <input class="form-check-input chkrole" data-id="`+row.id+`" type="checkbox" name="chkrole[]" value="pengurus" `+(row.r3 == 'pengurus'? 'checked':'')+`>
-                            <label class="form-check-label" for="flexCheckDefault">Pengurus</label>
-                            </div>`
-                            rls +=`<div class="form-check float-start pe-2">
-                            <input class="form-check-input chkrole" data-id="`+row.id+`" type="checkbox" name="chkrole[]" value="bendahara" `+(row.r4 == 'bendahara'? 'checked':'')+`>
-                            <label class="form-check-label" for="flexCheckDefault">Bendahara</label>
-                            </div>`
-                            rls +=`<div class="form-check float-start pe-2">
-                            <input class="form-check-input chkrole" data-id="`+row.id+`" type="checkbox" name="chkrole[]" value="anggota" `+(row.r5 == 'anggota'? 'checked':'')+`>
-                            <label class="form-check-label" for="flexCheckDefault">Anggota</label>
-                            </div>`
-                            rls +=`<div class="form-check float-start pe-2">
-                            <input class="form-check-input chkrole" data-id="${row.id}" type="checkbox" name="chkrole[]" value="hrd" `+(row.r6 == 'hrd'? 'checked':'')+`>
-                            <label class="form-check-label" for="flexCheckDefault">HRD</label>
-                            </div>`
-                            
-                            
-                            return rls;
-                        } 
-                    },
-                    { targets: [ 8 ], className: 'dt-right',
-                        render: function (data, type, row, meta) {
-                            let str= `
-                            <span class="badge rounded-pill bg-info formcell" data-bs-toggle="modal" data-bs-target="#exampleModalForm"><i class="bi bi-pencil-square"></i></span>
-                            <span class="badge rounded-pill bg-warning" data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="$('#tuserid').val('`+row.id+`')">
-                                <i class="bi bi-key"></i></span>
-                                    <span class="badge rounded-pill bg-danger"><i class="fa-solid fa-trash-can"></i></span>`
-                            // return `<div class="btn-group" role="group" aria-label="Small button group">
-                            //     <button type="button" class="btn btn-warning btn-sm"><i class="fa-solid fa-user-pen"></i></button>
-                            //     <button type="button" class="btn btn-danger btn-sm"><i class="fa-solid fa-trash-can"></i></button>
-                            //     </div>`;
-                            return str
-                        } 
-                    },
-                ],
-            });
-            table.on( 'draw', function () {
-                $('.chkrole').on('click',function(){
-                    //if ($(this).is(":checked")) {
-                        var selectedID = $(this).data('id');
-                        let checkedValues = $(this).parent().parent().find('.chkrole:checked').map(function() {
-                            return $(this).val();
-                        }).get();
-                        $.ajax({
-                            url: "{{ route('users.assignRole') }}",
-                            method:"POST",data: { iduser:selectedID,name:checkedValues },
-                            success: function(response) {
-                                table.ajax.reload(null, false);
-                            }
-                        });
-                    //}
-                });
+            const assignableRoles = @json($assignableRoles->pluck('name')->values());
 
-            });
-            function clearfrm(){
+            function roleLabel(roleName) {
+                return roleName
+                    .replace(/_/g, ' ')
+                    .replace(/\b\w/g, function (char) { return char.toUpperCase(); });
+            }
+
+            function renderRoleCheckboxes(row) {
+                const selectedRoles = Array.isArray(row.role_names) ? row.role_names : [];
+
+                return assignableRoles.map(function (roleName) {
+                    const checked = selectedRoles.includes(roleName) ? 'checked' : '';
+
+                    return `
+                        <div class="form-check float-start pe-3">
+                            <input class="form-check-input chkrole" data-id="${row.id}" type="checkbox" name="chkrole[]" value="${roleName}" ${checked}>
+                            <label class="form-check-label">${roleLabel(roleName)}</label>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            function renderStatusBadge(status) {
+                const badgeClass = status === 'aktif' ? 'bg-success' : 'bg-secondary';
+                return `<span class="badge ${badgeClass}">${status ?? '-'}</span>`;
+            }
+
+            function resetUserForm() {
                 $('#fidusers').val('');
                 $('input[name="nomor_anggota"]').val('');
                 $('input[name="name"]').val('');
-                $('input[name="username"]').val('');
-                $('input[name="username"]').prop('disabled', false);
+                $('input[name="username"]').val('').prop('disabled', false);
                 $('input[name="nik"]').val('');
                 $('input[name="jabatan"]').val('');
                 $('select[name="unit_kerja"]').val('');
@@ -271,6 +204,106 @@
                 $('input[name="email"]').val('');
                 $('#flexCheckChecked').prop('checked', true);
             }
+
+            const table = $('#tbusers').DataTable({
+                ordering: false,
+                responsive: true,
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: "{{ route('users.getdata') }}",
+                    data: {
+                        loc: function() { return $('#floc').val() },
+                        role: function() { return $('#frole').val() },
+                    },
+                    async: true,
+                    type: "GET"
+                },
+                columns: [
+                    { data: "nomor_anggota", orderable: false },
+                    { data: "username" },
+                    { data: "nik", orderable: false },
+                    { data: "name", orderable: false },
+                    { data: "email", orderable: false },
+                    { data: "nama_unit" },
+                    { data: "status" },
+                    { data: null, orderable: false },
+                    { data: null, orderable: false },
+                    { data: "idusers", visible: false },
+                    { data: "jabatan", visible: false },
+                    { data: "tanggal_masuk", visible: false },
+                    { data: "username", visible: false },
+                    { data: "unit_kerja", visible: false },
+                ],
+                columnDefs: [
+                    {
+                        targets: [6],
+                        render: function (data) {
+                            return renderStatusBadge(data);
+                        }
+                    },
+                    {
+                        targets: [7],
+                        render: function (data, type, row) {
+                            return renderRoleCheckboxes(row);
+                        }
+                    },
+                    {
+                        targets: [8],
+                        className: 'dt-right',
+                        render: function (data, type, row) {
+                            const isActive = row.status === 'aktif';
+                            const toggleClass = isActive ? 'bg-secondary' : 'bg-success';
+                            const toggleIcon = isActive ? 'bi-pause-circle' : 'bi-play-circle';
+                            const toggleTitle = isActive ? 'Nonaktifkan user' : 'Aktifkan user';
+
+                            return `
+                                <span class="badge rounded-pill bg-info formcell" data-bs-toggle="modal" data-bs-target="#exampleModalForm"><i class="bi bi-pencil-square"></i></span>
+                                <span class="badge rounded-pill bg-warning" data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="$('#tuserid').val('${row.id}')">
+                                    <i class="bi bi-key"></i>
+                                </span>
+                                <span class="badge rounded-pill ${toggleClass} btn-status" title="${toggleTitle}" data-id="${row.id}" data-status="${row.status}">
+                                    <i class="bi ${toggleIcon}"></i>
+                                </span>
+                            `;
+                        }
+                    },
+                ],
+            });
+
+            table.on('draw', function () {
+                $('.chkrole').on('click', function () {
+                    const selectedID = $(this).data('id');
+                    const checkedValues = $(this).closest('td').find('.chkrole:checked').map(function() {
+                        return $(this).val();
+                    }).get();
+
+                    $.ajax({
+                        url: "{{ route('users.assignRole') }}",
+                        method: "POST",
+                        data: { iduser: selectedID, name: checkedValues },
+                        success: function() {
+                            table.ajax.reload(null, false);
+                        }
+                    });
+                });
+
+                $('.btn-status').on('click', function () {
+                    const userId = $(this).data('id');
+                    const currentStatus = $(this).data('status');
+                    const nextStatus = currentStatus === 'aktif' ? 'nonaktif' : 'aktif';
+
+                    $.ajax({
+                        url: "{{ route('users.status') }}",
+                        method: "POST",
+                        data: { id: userId, status: nextStatus },
+                        success: function() {
+                            table.ajax.reload(null, false);
+                        }
+                    });
+                });
+            });
+
             $('#frmusers').on('submit', function(e) {
                 e.preventDefault(); // prevent default form submission
                 const form = this;
@@ -292,7 +325,7 @@
                     success: function(response) {
                         table.ajax.reload();
                         $('#exampleModalForm').modal('hide');
-                        clearfrm();
+                        resetUserForm();
                     },
                     error: function(xhr, status) {
                     if (status === 'abort') {
@@ -305,7 +338,7 @@
             });
             $( document ).ready(function() {
                 $('#btnadd').on('click',function(){
-                    clearfrm();
+                    resetUserForm();
                     $.ajax({
                     url: "{{ route('users.getcode') }}",method: "GET",
                     success: function(response) {
@@ -324,7 +357,6 @@
                     $('select[name="unit_kerja"]').val(row.unit_kerja);
                     $('input[name="tanggal_masuk"]').val(row.tanggal_masuk);
                     $('input[name="email"]').val(row.email);
-                    console.log(row.status)
                     if(row.status=='aktif'){
                         $('#flexCheckChecked').prop('checked', true);
                     }else{

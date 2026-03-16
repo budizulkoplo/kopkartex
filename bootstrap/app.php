@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\EnsureMenuAccess;
+use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\GlobalApp;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -13,7 +15,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->web(append: [
+            EnsureUserIsActive::class,
+        ]);
+
         $middleware->alias([
+            'menu.access' => EnsureMenuAccess::class,
+            'active.user' => EnsureUserIsActive::class,
             'global.app' => GlobalApp::class,
             'role'  => RoleMiddleware::class,
         ]);

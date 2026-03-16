@@ -40,6 +40,9 @@ use App\Http\Controllers\Mobile\MobilePinjamanController;
 use App\Http\Controllers\Mobile\MobileStokOpnameController;
 use App\Http\Controllers\MobileController;
 
+$menuAccessMiddleware = ['auth', 'verified', 'menu.access', 'global.app'];
+$superadminMiddleware = ['auth', 'verified', 'role:superadmin', 'global.app'];
+
 Route::get('/login', [AuthenticatedSessionController::class, 'create']);
 
 Route::get('/', function () {
@@ -47,9 +50,9 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [AdminDashboardController::class, 'dashboard'])->middleware('global.app:admin')->name('dashboard');
-    Route::get('/admin/pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIni']);
-    Route::get('/admin/data-pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIniData'])->name('dashboard.pesananHariIniData');
+    Route::get('/dashboard', [AdminDashboardController::class, 'dashboard'])->middleware(['menu.access', 'global.app:admin'])->name('dashboard');
+    Route::get('/admin/pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIni'])->middleware(['menu.access', 'global.app:admin'])->name('dashboard.pesananHariIni');
+    Route::get('/admin/data-pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIniData'])->middleware(['menu.access', 'global.app:admin'])->name('dashboard.pesananHariIniData');
 
 });
 
@@ -67,7 +70,7 @@ Route::middleware('auth', 'global.app')->group(function () {
     Route::post('/profile', [ProfileController::class, 'upload'])->name('profile.upload');
 });
 
-Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('retur')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [ReturController::class, 'index'])->name('retur.form');
     Route::get('/getbarang', [ReturController::class, 'getBarang'])->name('retur.getbarang');
     Route::get('/getbarangbycode', [ReturController::class, 'getBarangByCode'])->name('retur.getbarangbycode');
@@ -84,14 +87,14 @@ Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin|h
     Route::post('/batalkan/{id}', [ReturController::class, 'batalkanRetur'])->name('retur.batalkan');
 });
 
-Route::prefix('ambilbarang')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('ambilbarang')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [AmbilBarangController::class, 'index'])->name('ambil.list');
     Route::get('/getPenjualan', [AmbilBarangController::class, 'getPenjualan'])->name('ambil.getPenjualan');
     Route::get('/getPenjualanDtl/{id}', [AmbilBarangController::class, 'getPenjualanDtl'])->name('ambil.getPenjualanDtl');
     Route::put('/AmbilBarang', [AmbilBarangController::class, 'AmbilBarang'])->name('ambil.AmbilBarang');
     Route::delete('/delitem', [AmbilBarangController::class, 'DeleteItem'])->name('ambil.delitem');
 });
-Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('stock')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [StockOpnameController::class, 'index'])->name('stockopname.index'); // daftar barang
     Route::get('/form', [StockOpnameController::class, 'form'])->name('stockopname.form'); // form opname
     Route::get('/getbarang', [StockOpnameController::class, 'getBarang'])->name('stockopname.getbarang');
@@ -110,7 +113,7 @@ Route::prefix('stock')->middleware(['auth', 'verified', 'role:superadmin|admin|h
 });
 
 Route::prefix('master/jasabengkel')
-    ->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])
+    ->middleware($menuAccessMiddleware)
     ->name('master.jasabengkel.')
     ->group(function () {
         Route::get('/', [JasaBengkelController::class, 'index'])->name('index'); 
@@ -121,13 +124,13 @@ Route::prefix('master/jasabengkel')
         Route::post('/hapus', [JasaBengkelController::class, 'hapus'])->name('hapus'); 
     });
 
-Route::prefix('master')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('master')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/kategori-bengkel', [KategoriBengkelController::class, 'index'])->name('kategori.bengkel.index');
     Route::get('/kategori-bengkel/{id}/edit', [KategoriBengkelController::class, 'edit'])->name('kategori.bengkel.edit');
     Route::put('/kategori-bengkel/{id}', [KategoriBengkelController::class, 'update'])->name('kategori.bengkel.update');
 });
 
-Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('penerimaan')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [PenerimaanController::class, 'index'])->name('penerimaan.form');
     Route::get('/getbarang', [PenerimaanController::class, 'getBarang'])->name('penerimaan.getbarang');
     Route::get('/getbarangbycode', [PenerimaanController::class, 'getBarangByCode'])->name('penerimaan.getbarangbycode');
@@ -148,11 +151,11 @@ Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|ad
     Route::get('/kategori', [PenerimaanController::class, 'getKategori'])->name('penerimaan.kategori');
 });
 
-Route::prefix('penerimaan')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('penerimaan')->middleware($menuAccessMiddleware)->group(function () {
     Route::post('/store-supplier', [PenerimaanController::class, 'storeSupplier'])->name('penerimaan.store-supplier');
 });
 
-Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('penjualan')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [PenjualanController::class, 'index'])->name('jual.form');
     Route::get('/umum', [PenjualanController::class, 'indexUmum'])->name('jual.umum.form');
     Route::get('/umum/getanggota', [PenjualanController::class, 'getAnggotaUmum'])->name('jual.umum.getanggota'); 
@@ -181,7 +184,7 @@ Route::prefix('penjualan')->middleware(['auth', 'verified', 'role:superadmin|adm
     Route::post('retur', [PenjualanController::class, 'prosesRetur'])->name('penjualan.retur');
 });
 
-Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus', 'global.app'])->group(function () {
+Route::prefix('approval')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [ApprovalController::class, 'index'])->name('app.list');
     Route::get('/gethutang', [ApprovalController::class, 'getHutang'])->name('app.gethutang');
     Route::put('/setapp', [ApprovalController::class, 'setapproval'])->name('app.set');
@@ -189,7 +192,7 @@ Route::prefix('approval')->middleware(['auth', 'verified', 'role:superadmin|admi
     Route::get('/dtlcicilan', [ApprovalController::class, 'CicilanDtl'])->name('app.dtlcicilan');
 });
 
-Route::prefix('bengkel')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('bengkel')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [TransaksiBengkelController::class, 'index'])->name('bengkel.form');
     Route::get('/getbarang', [TransaksiBengkelController::class, 'getBarang'])->name('bengkel.getbarang');
     Route::get('/getanggota', [TransaksiBengkelController::class, 'getAnggota'])->name('bengkel.getanggota');
@@ -206,7 +209,7 @@ Route::prefix('bengkel')->middleware(['auth', 'verified', 'role:superadmin|admin
     Route::get('/{id}/cetak', [TransaksiBengkelController::class, 'cetak'])->name('bengkel.cetak');
 });
     
-Route::prefix('mutasi')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('mutasi')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [MutasiStockController::class, 'index'])->name('mutasi.list');
     Route::get('/form', [MutasiStockController::class, 'FormMutasi'])->name('mutasi.form');
     Route::get('/getdata', [MutasiStockController::class, 'GetData'])->name('mutasi.getdata');
@@ -221,26 +224,27 @@ Route::prefix('mutasi')->middleware(['auth', 'verified', 'role:superadmin|admin|
     Route::post('/batalkan', [MutasiStockController::class, 'batalkan'])->name('mutasi.batalkan');
 });
 
-Route::prefix('simpanan')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('simpanan')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [SimpananController::class,'index'])->name('simpanan.list');
     Route::get('/getdata', [SimpananController::class,'getData'])->name('simpanan.getdata');
     Route::post('/store', [SimpananController::class,'store'])->name('simpanan.store');
 });
 
-Route::prefix('users')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->namespace('Users')->group(function () {
+Route::prefix('users')->middleware($menuAccessMiddleware)->namespace('Users')->group(function () {
     Route::get('/list', [UsersController::class, 'index'])->name('users.list');
-    Route::get('/permission', [UserRoleController::class, 'PermissionByRole']);
-    Route::post('/add', [UserRoleController::class, 'addRole']);
-    Route::delete('/delr', [UserRoleController::class, 'deleteRole']);
-    Route::delete('/delp', [UserRoleController::class, 'deletePermission']);
+    Route::get('/permission', [UserRoleController::class, 'PermissionByRole'])->name('users.permission');
+    Route::post('/add', [UserRoleController::class, 'addRole'])->name('users.add');
+    Route::delete('/delr', [UserRoleController::class, 'deleteRole'])->name('users.delr');
+    Route::delete('/delp', [UserRoleController::class, 'deletePermission'])->name('users.delp');
     Route::get('/getdata', [UsersController::class, 'getdata'])->name('users.getdata');
     Route::post('/assignRole', [UsersController::class, 'kasihRole'])->name('users.assignRole');
+    Route::post('/status', [UsersController::class, 'updateStatus'])->name('users.status');
     Route::post('/password/update', [UsersController::class, 'updatePassword'])->name('users.updatepassword');
     Route::get('/getcode', [UsersController::class, 'getcode'])->name('users.getcode');
     Route::post('/store', [UsersController::class, 'Store'])->name('users.store');
 });
 
-Route::prefix('anggota')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->namespace('Anggota')->group(function () {
+Route::prefix('anggota')->middleware($menuAccessMiddleware)->namespace('Anggota')->group(function () {
     Route::get('/list', [AnggotaController::class, 'index'])->name('anggota.list');
     Route::get('/getdata', [AnggotaController::class, 'getdata'])->name('anggota.getdata');
     Route::post('/password/update', [AnggotaController::class, 'updatePassword'])->name('anggota.updatepassword');
@@ -248,7 +252,7 @@ Route::prefix('anggota')->middleware(['auth', 'verified', 'role:superadmin|admin
     Route::post('/store', [AnggotaController::class, 'Store'])->name('anggota.store');
 });
 
-Route::prefix('unit')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('unit')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [UnitController::class, 'index'])->name('unit.list');
     Route::get('/add', [UnitController::class, 'AddForm'])->name('unit.add');
     Route::get('/edit/{id}', [UnitController::class, 'EditForm'])->name('unit.edit');
@@ -257,7 +261,7 @@ Route::prefix('unit')->middleware(['auth', 'verified', 'role:superadmin|admin|hr
     Route::get('/hapus/{id}', [UnitController::class, 'Hapus'])->name('unit.Hapus');
 });
 
-Route::prefix('barang')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('barang')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [BarangController::class, 'index'])->name('barang.list');
     Route::get('/getdata', [BarangController::class, 'getdata'])->name('barang.getdata');
     Route::post('/store', [BarangController::class, 'Store'])->name('barang.store');
@@ -266,7 +270,7 @@ Route::prefix('barang')->middleware(['auth', 'verified', 'role:superadmin|admin|
     Route::delete('/hapus', [BarangController::class, 'Hapus'])->name('barang.hapus');
 });
 
-Route::prefix('barangbengkel')->name('barangbengkel.')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('barangbengkel')->name('barangbengkel.')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [BarangBengkelController::class, 'index'])->name('index');
     Route::get('/getdata', [BarangBengkelController::class, 'getdata'])->name('getdata');
     Route::get('/getdetail', [BarangBengkelController::class, 'getDetail'])->name('getdetail');
@@ -280,7 +284,7 @@ Route::prefix('barangbengkel')->name('barangbengkel.')->middleware(['auth', 'ver
     Route::get('/satuan-options', [BarangBengkelController::class, 'getSatuanOptions'])->name('satuan.options');
 });
     
-Route::prefix('supplier')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('supplier')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [SupplierController::class, 'index'])->name('supplier.list');
     Route::get('/getdata', [SupplierController::class, 'getdata'])->name('supplier.getdata');
     Route::post('/store', [SupplierController::class, 'Store'])->name('supplier.store');
@@ -293,7 +297,7 @@ Route::get('/ss', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified', 'global.app']);
 
-Route::prefix('roles')->middleware(['auth', 'verified', 'role:superadmin', 'global.app'])->group(function () {
+Route::prefix('roles')->middleware($superadminMiddleware)->group(function () {
     Route::get('/list', [UserRoleController::class, 'index'])->name('roles.list');
     Route::get('/permission', [UserRoleController::class, 'PermissionByRole']);
     Route::post('/add', [UserRoleController::class, 'addRole']);
@@ -302,7 +306,7 @@ Route::prefix('roles')->middleware(['auth', 'verified', 'role:superadmin', 'glob
     Route::post('/swcp', [UserRoleController::class, 'PermissionfromRole'])->name('roles.switch');
 });
 
-Route::prefix('menu')->middleware(['auth', 'verified', 'role:superadmin', 'global.app'])->namespace('menus')->group(function () {
+Route::prefix('menu')->middleware($superadminMiddleware)->namespace('menus')->group(function () {
     Route::get('/list', [MenuController::class, 'index'])->name('menu.list');
     Route::get('/data/{role}', [MenuController::class, 'datamenu'])->name('menu.data');
     Route::put('/update', [MenuController::class, 'update'])->name('menu.update');
@@ -328,13 +332,13 @@ Route::prefix('doc')->middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-Route::prefix('retur')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('retur')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [ReturController::class, 'index'])->name('retur.form');
         return response()->json(request()->menu);
 });
 
 //LAPORAN
-Route::prefix('laporan')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('laporan')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/stok-barang', [LaporanController::class, 'stokBarang'])->name('laporan.stokbarang');
     Route::get('/stok-barang/data', [LaporanController::class, 'stokBarangData'])->name('laporan.stokbarang.data');
     Route::get('/penjualan', [LaporanController::class, 'penjualan'])->name('laporan.penjualan');
@@ -413,7 +417,7 @@ Route::middleware(['auth'])->prefix('mobile')->name('mobile.')->group(function (
     Route::post('/stokopname/store', [MobileStokOpnameController::class, 'store'])->name('stokopname.store');
 });
 
-Route::prefix('tagihan')->middleware(['auth', 'verified', 'role:superadmin|admin|hrd|pengurus|bengkel', 'global.app'])->group(function () {
+Route::prefix('tagihan')->middleware($menuAccessMiddleware)->group(function () {
     // Transaksi
     Route::get('/', [TagihanController::class, 'index'])->name('tagihan.index');
     Route::get('/get-barang', [TagihanController::class, 'getBarangTagihan'])->name('tagihan.get_barang');

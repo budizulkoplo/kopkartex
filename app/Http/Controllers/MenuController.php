@@ -22,7 +22,6 @@ class MenuController extends Controller
         
         foreach ( $data as $value) {
             $cekparent = Menu::where('parent_id',$value->id)->orderBy('seq')->count();
-            $level=explode(';', $value->role);
             $hd=array(
                 'text'=>$value->name,
                 'id'=>$value->id,
@@ -34,7 +33,7 @@ class MenuController extends Controller
                     'role'=>(empty($value->parent_id)?true:false),
                     'disabled'=>(empty($value->parent_id) && $cekparent>0 ? true : false),
                     //'disabled'=>false,
-                    'selected'=> in_array($role, $level)?true:false,
+                    'selected'=> $value->role_names->contains($role),
                     )
                 );
             array_push( $menu,$hd);
@@ -43,26 +42,18 @@ class MenuController extends Controller
         return response()->json($menu); 
     }
     public function update(Request $request){
-        // $cekparent = Menu::where('deleted',0)
-        // ->where('id',$request->id)
-        // ->first();
-        
-            $data = Menu::find($request->id);
-            $role=explode(';', $data->role);
-            $role = array_filter($role);
-            $cari=array_search($request->gp,$role);
-           
-            if($request->aktif == 'true'){
-                array_push($role,$request->gp); 
-            }else{
-                unset($role[$cari]);
-            }
-            $hasil=implode(";",$role).';';
-            
-            $ubah = Menu::find($request->id);
-            $ubah->role = ';'.$hasil;
-            $ubah->save();
-            return response()->json($ubah); 
-        
+        $data = Menu::findOrFail($request->id);
+        $roles = $data->role_names->all();
+
+        if ($request->aktif === 'true') {
+            $roles[] = $request->gp;
+        } else {
+            $roles = array_values(array_filter($roles, fn ($role) => $role !== $request->gp));
+        }
+
+        $data->syncRoleNames($roles);
+        $data->save();
+
+        return response()->json($data);
     }
 }

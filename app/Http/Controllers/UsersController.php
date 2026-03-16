@@ -6,10 +6,9 @@ use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -17,175 +16,152 @@ class UsersController extends Controller
 {
     public function index(Request $request): View
     {
+        $assignableRoles = Role::query()
+            ->when(! $request->user()->hasRole('superadmin'), fn ($query) => $query->where('name', '!=', 'superadmin'))
+            ->orderBy('name')
+            ->get();
+
         return view('master.users.list', [
-            'roles' => Role::with('permissions')->get(),
-            'allroles' => Role::all(),
+            'roles' => Role::orderBy('name')->get(),
+            'assignableRoles' => $assignableRoles,
             'unit' => Unit::all(),
         ]);
     }
+
     public function updatePassword(Request $request)
     {
-        // Validate the input
         $request->validate([
             'new_password' => 'required|min:8',
             'userid' => 'required',
         ]);
-        
-        $user = User::find($request->userid);
+
+        $user = User::findOrFail($request->userid);
         $user->password = Hash::make($request->new_password);
         $user->save();
 
-        // Check if current password matches
-        // if (!Hash::check($request->current_password, $user->password)) {
-        //     return back()->withErrors(['current_password' => 'Current password is incorrect']);
-        // }
-
-        // Update the password
         return back()->with('success', 'Password updated successfully');
     }
+
     public function kasihRole(Request $request)
     {
-        $user = User::find($request->iduser);
-        $user->syncRoles([]); 
-        //$user->removeRole('users', 'personalia','admin');
-        foreach ($request->name as $key => $value) {
-            $user->assignRole($value);
-        }
-        return response()->json(true);
-    }
-    public function addRole(Request $request)
-    {
-        $role = Role::create(['name' => $request->name]);
-        return response()->json($role);
-    }
-    public function deleteRole(Request $request)
-    {
-        $role = Role::findByName($request->name); // Replace with your role name
-        // Get all users that have the role
-        $usersWithRole = User::role($role->name)->get();
-        // Detach the role from all users
-        foreach ($usersWithRole as $user) {
-            $user->removeRole($role);
-        }
-        $rtn=$role->delete();
-        return response()->json($rtn);
-    }
-    public function deletePermission(Request $request)
-    {
-        $permission = Permission::findByName($request->name);
-        $users = $permission->users; // Get all users with this permission
-        foreach ($users as $user) {
-            $user->revokePermissionTo($permission->name); // Remove the permission from each user
-        }
-        $rtn=$permission->delete(); // Delete the permission from the system
-        return response()->json($rtn);
-    }
-    public function PermissionByRole(Request $request)
-    {
-        $role = Role::findByName($request->name);
-        $permissions = $role->permissions;
-        return response()->json($permissions);
-    }
-    public function Store(Request $request){
-        $validatedData = $request->validate([
-            'name' => 'required',
-            'email' => 'required',
-            'tanggal_masuk' => 'required',
-            'nik' => 'required',
+        $payload = $request->validate([
+            'iduser' => ['required', 'exists:users,id'],
+            'name' => ['nullable', 'array'],
+            'name.*' => ['string', Rule::exists('roles', 'name')],
         ]);
-        
-        if($validatedData){
-           
-            if(!empty($request->fidusers)){
-                $id=Crypt::decryptString($request->fidusers);
-                $usr = User::find($id);
-            }else{
-                $usr = new User;
-                $usr->nomor_anggota = $this->genCode();
-                $usr->username = $request->username;
-                $usr->password = Hash::make('12345678');
-            }
-            
-            $usr->name = $request->name;
-            $usr->email = $request->email;
-            $usr->tanggal_masuk = $request->tanggal_masuk;
-            $usr->nik = $request->nik;
-            $usr->jabatan = $request->jabatan;
-            $usr->unit_kerja = $request->unit_kerja;
-            $usr->status = $request->status ?'aktif':'nonaktif';
-            $usr->save();
-            //$usr->assignRole($request->role);
 
-            if($usr){
-                return response()->json('success', 200);
-            }else{
-                return response()->json('gagal', 500);
-            }
-        }
+        $user = User::findOrFail($payload['iduser']);
+        $roles = collect($payload['name'] ?? [])
+            ->when(! $request->user()->hasRole('superadmin'), fn ($collection) => $collection->reject(fn ($role) => $role === 'superadmin'))
+            ->values()
+            ->all();
+
+        $user->syncRoles($roles);
+
+        return response()->json([
+            'success' => true,
+            'roles' => $user->fresh()->getRoleNames()->values(),
+        ]);
     }
+
+    public function updateStatus(Request $request)
+    {
+        $payload = $request->validate([
+            'id' => ['required', 'exists:users,id'],
+            'status' => ['required', Rule::in(['aktif', 'nonaktif'])],
+        ]);
+
+        $user = User::findOrFail($payload['id']);
+        $user->status = $payload['status'];
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'status' => $user->status,
+        ]);
+    }
+
+    public function Store(Request $request)
+    {
+        $userId = null;
+
+        if (! empty($request->fidusers)) {
+            $userId = Crypt::decryptString($request->fidusers);
+        }
+
+        $validatedData = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($userId)],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
+            'tanggal_masuk' => ['required', 'date'],
+            'nik' => ['required', 'string', 'max:20'],
+            'jabatan' => ['nullable', 'string', 'max:100'],
+            'unit_kerja' => ['nullable', 'exists:unit,id'],
+            'status' => ['nullable'],
+        ]);
+
+        if ($userId) {
+            $usr = User::findOrFail($userId);
+        } else {
+            $usr = new User;
+            $usr->nomor_anggota = $this->genCode();
+            $usr->password = Hash::make('12345678');
+        }
+
+        $usr->name = $validatedData['name'];
+        $usr->username = $validatedData['username'];
+        $usr->email = $validatedData['email'];
+        $usr->tanggal_masuk = $validatedData['tanggal_masuk'];
+        $usr->nik = $validatedData['nik'];
+        $usr->jabatan = $validatedData['jabatan'] ?? null;
+        $usr->unit_kerja = $validatedData['unit_kerja'] ?? null;
+        $usr->status = $request->boolean('status') ? 'aktif' : 'nonaktif';
+        $usr->save();
+
+        return response()->json('success', 200);
+    }
+
     function genCode(){
         $total = User::withTrashed()->whereDate('created_at', date("Y-m-d"))->count();
         $nomorUrut = $total + 1;
         $newcode='KTX-'.date("ymd").str_pad($nomorUrut, 3, '0', STR_PAD_LEFT);
         return $newcode;
     }
+
     public function getCode(){
         return response()->json($this->genCode(), 200);
     }
-    public function getdata(Request $request){
-        $user = User::leftJoin('unit','unit.id','users.unit_kerja')
-        ->leftJoin('model_has_roles as radmin', function ($join) {
-            $join->on('radmin.model_id', '=', 'users.id')->where('radmin.role_id', '=', 1);
-        })
-        ->leftJoin('model_has_roles as rsuperadmin', function ($join) {
-            $join->on('rsuperadmin.model_id', '=', 'users.id')->where('rsuperadmin.role_id', '=', 2);
-        })
-        ->leftJoin('model_has_roles as rpengurus', function ($join) {
-            $join->on('rpengurus.model_id', '=', 'users.id')->where('rpengurus.role_id', '=', 4);
-        })
-        ->leftJoin('model_has_roles as rbendahara', function ($join) {
-            $join->on('rbendahara.model_id', '=', 'users.id')->where('rbendahara.role_id', '=', 5);
-        })
-        ->leftJoin('model_has_roles as ranggota', function ($join) {
-            $join->on('ranggota.model_id', '=', 'users.id')->where('ranggota.role_id', '=', 6);
-        })
-        ->leftJoin('model_has_roles as hrd', function ($join) {
-            $join->on('hrd.model_id', '=', 'users.id')->where('hrd.role_id', '=', 7);
-        })
-        ->leftJoin('roles as r1','r1.id', 'rsuperadmin.role_id')
-        ->leftJoin('roles as r2','r2.id', 'radmin.role_id')
-        ->leftJoin('roles as r3','r3.id', 'rpengurus.role_id')
-        ->leftJoin('roles as r4','r4.id', 'rbendahara.role_id')
-        ->leftJoin('roles as r5','r5.id', 'ranggota.role_id')
-        ->leftJoin('roles as r6','r6.id', 'hrd.role_id')
-        ->select('users.*','unit.nama_unit','r1.name as r1','r2.name as r2','r3.name as r3','r4.name as r4','r5.name as r5','r6.name as r6');
-        return DataTables::of($user)
-                ->addIndexColumn()
-                ->addColumn('idusers', function($row) {
-                    return Crypt::encryptString($row->id);
-                })
-                ->filter(function ($query) use ($request) {
-                    if($request->role != 'all'){
-                        $query->where(function ($query) use ($request) {
-                            $query->orWhere('r1.id', $request->role)
-                                  ->orWhere('r2.id', $request->role)
-                                  ->orWhere('r3.id', $request->role)
-                                  ->orWhere('r4.id', $request->role)
-                                  ->orWhere('r5.id', $request->role)
-                                  ->orWhere('r6.id', $request->role);
-                        });
-                    }
-                    if ($request->has('search') && $request->search != '') {
-                        $query->where(function ($query2) use($request) {
-                            return $query2
-                            ->orWhere('users.name','like','%'.$request->search['value'].'%')
-                            ->orWhere('users.nomor_anggota','like','%'.$request->search['value'].'%');
-                        }); 
-                    }
-                })
-                ->addColumn('allrole', function ($user) {
-                // Calculate or set your custom value here
-                return Role::all();
-                })->make(true);
+
+    public function getdata(Request $request)
+    {
+        $users = User::query()
+            ->with(['roles:id,name', 'unit:id,nama_unit'])
+            ->select('users.*');
+
+        if ($request->filled('role') && $request->role !== 'all') {
+            $users->whereHas('roles', fn ($query) => $query->where('roles.id', $request->role));
+        }
+
+        return DataTables::eloquent($users)
+            ->addIndexColumn()
+            ->addColumn('idusers', fn ($row) => Crypt::encryptString($row->id))
+            ->addColumn('nama_unit', fn ($row) => $row->unit->nama_unit ?? '-')
+            ->addColumn('role_names', fn ($row) => $row->roles->pluck('name')->values()->all())
+            ->filter(function ($query) use ($request) {
+                $search = $request->input('search.value');
+
+                if (! $search) {
+                    return;
+                }
+
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('users.name', 'like', '%' . $search . '%')
+                        ->orWhere('users.username', 'like', '%' . $search . '%')
+                        ->orWhere('users.nomor_anggota', 'like', '%' . $search . '%')
+                        ->orWhere('users.nik', 'like', '%' . $search . '%')
+                        ->orWhere('users.email', 'like', '%' . $search . '%');
+                });
+            })
+            ->toJson();
     }
 }
