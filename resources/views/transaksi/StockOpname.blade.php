@@ -67,7 +67,7 @@
                                                         <td>
                                                             <input type="hidden" name="code[]" value="{{ $selectedBarang->code }}" required>
                                                             <input type="hidden" name="id[]" value="{{ $selectedBarang->id }}" required>
-                                                            <input type="number" class="form-control form-control-sm qty" min="0" name="qty[]" value="{{ $detail->qty }}" required>
+                                                            <input type="number" class="form-control form-control-sm qty" min="0" step="0.001" name="qty[]" value="{{ $detail->qty }}" required>
                                                         </td>
                                                         <td>
                                                             <input type="date" class="form-control form-control-sm" name="exp[]" value="{{ $detail->expired_date ? \Carbon\Carbon::parse($detail->expired_date)->format('Y-m-d') : '' }}">
@@ -88,7 +88,7 @@
                                                     <td>
                                                         <input type="hidden" name="code[]" value="{{ $selectedBarang->code }}" required>
                                                         <input type="hidden" name="id[]" value="{{ $selectedBarang->id }}" required>
-                                                        <input type="number" class="form-control form-control-sm qty" min="0" name="qty[]" required>
+                                                        <input type="number" class="form-control form-control-sm qty" min="0" step="0.001" name="qty[]" required>
                                                     </td>
                                                     <td>
                                                         <input type="date" class="form-control form-control-sm" name="exp[]">
@@ -159,7 +159,7 @@
             function calculateTotal() {
                 let total = 0;
                 $('.qty').each(function() {
-                    total += parseInt($(this).val()) || 0;
+                    total += parseFloat($(this).val()) || 0;
                 });
                 $('#total-qty').text(total);
                 $('#total-fisik').text(total);
@@ -174,7 +174,7 @@
                     <td>
                         <input type="hidden" class="form-control form-control-sm" name="code[]" value="{{ $selectedBarang->code }}" required>
                         <input type="hidden" class="form-control form-control-sm" name="id[]" value="{{ $selectedBarang->id }}" required>
-                        <input type="number" class="form-control form-control-sm qty" min="0" name="qty[]" value="0" required>
+                        <input type="number" class="form-control form-control-sm qty" min="0" step="0.001" name="qty[]" value="0" required>
                     </td>
                     <td>
                         <input type="date" class="form-control form-control-sm" name="exp[]">
@@ -252,12 +252,12 @@
                     }
 
                     const totalFisik = calculateTotal();
-                    const stokSistem = parseInt('{{ $selectedBarang->stok_sistem ?? 0 }}');
+                    const stokSistem = parseFloat('{{ $selectedBarang->stok_sistem ?? 0 }}');
                     
                     // Validasi minimal ada 1 qty > 0
                     let hasQty = false;
                     $('.qty').each(function() {
-                        if (parseInt($(this).val()) > 0) {
+                        if (parseFloat($(this).val()) > 0) {
                             hasQty = true;
                             return false;
                         }

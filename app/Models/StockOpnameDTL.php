@@ -25,6 +25,7 @@ class StockOpnameDTL extends Model
     ];
     
     protected $casts = [
+        'qty' => 'decimal:3',
         'expired_date' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

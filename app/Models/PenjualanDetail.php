@@ -19,6 +19,11 @@ class PenjualanDetail extends Model
         'harga',
     ];
 
+    protected $casts = [
+        'qty' => 'decimal:3',
+        'harga' => 'decimal:2',
+    ];
+
     public function barang()
     {
         return $this->belongsTo(Barang::class, 'barang_id', 'id');

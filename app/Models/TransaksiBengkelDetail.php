@@ -22,9 +22,9 @@ class TransaksiBengkelDetail extends Model
     ];
 
     protected $casts = [
-        'harga' => 'float',
-        'total' => 'float',
-        'qty' => 'integer'
+        'harga' => 'decimal:2',
+        'total' => 'decimal:2',
+        'qty' => 'decimal:3'
     ];
 
     public function transaksi()

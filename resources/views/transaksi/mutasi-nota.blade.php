@@ -163,7 +163,7 @@
                         {{ strlen($item->nama_barang . ' (' . $item->type . ')') > 32 ? '...' : '' }}
                     </span>
                 </td>
-                <td class="txt-center">{{ number_format($item->qty, 0) }}</td>
+                <td class="txt-center">{{ number_format($item->qty, 3, ',', '.') }}</td>
                
             </tr>
             @endforeach

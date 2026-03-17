@@ -22,7 +22,7 @@ class StokUnit extends Model
     ];
     
     protected $casts = [
-        'stok' => 'integer',
+        'stok' => 'decimal:3',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime'

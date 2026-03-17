@@ -127,19 +127,20 @@ class MutasiStockController extends Controller
             $quantities = $request->input('qty');
             $barang = $request->input('id');
             foreach ($barang as $index => $id) {
+                $qty = (float) ($quantities[$index] ?? 0);
                 $dtl = new MutasiStokDetail;
                 $dtl->mutasi_id = $idhdr;
                 $dtl->barang_id = $barang[$index];
-                $dtl->qty = $quantities[$index];
+                $dtl->qty = $qty;
                 $dtl->save();
                 DB::statement("
                     INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at,created_at) VALUES (?, ?, ? ,NOW(),NOW())
                     ON DUPLICATE KEY UPDATE stok = stok - ?,updated_at=VALUES(updated_at),created_at=VALUES(created_at)", 
-                    [$barang[$index], $request->unit1, $quantities[$index], $quantities[$index]]);
+                    [$barang[$index], $request->unit1, $qty, $qty]);
                 DB::statement("
                     INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at,created_at) VALUES (?, ?, ? ,NOW(),NOW())
                     ON DUPLICATE KEY UPDATE stok = stok + ?,updated_at=VALUES(updated_at),created_at=VALUES(created_at)", 
-                    [$barang[$index], $request->unit2, $quantities[$index], $quantities[$index]]);
+                    [$barang[$index], $request->unit2, $qty, $qty]);
             }
             DB::commit();
             return response()->json($hdr);
@@ -336,14 +337,14 @@ class MutasiStockController extends Controller
             throw new Exception('Barang sudah dikembalikan sebelumnya.');
         }
         
-        $qty = (int) $dtl->qty;
+        $qty = (float) $dtl->qty;
 
         // Kembalikan stok ke unit asal
         DB::table('stok_unit')
             ->where('barang_id', $request->idbarang)
             ->where('unit_id', $cekhdr->dari_unit)
             ->update([
-                'stok' => DB::raw("stok + {$qty}")
+                'stok' => DB::raw('stok + ' . $qty)
             ]);
             
         // Kurangi stok dari unit tujuan
@@ -351,7 +352,7 @@ class MutasiStockController extends Controller
             ->where('barang_id', $request->idbarang)
             ->where('unit_id', $cekhdr->ke_unit)
             ->update([
-                'stok' => DB::raw("stok - {$qty}")
+                'stok' => DB::raw('stok - ' . $qty)
             ]);
             
         // Update status detail menjadi canceled

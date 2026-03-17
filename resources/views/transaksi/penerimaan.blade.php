@@ -538,7 +538,7 @@
                         existingRow = true;
                         // Update quantity jika barang sudah ada
                         const qtyInput = $(this).find('input[name="qty[]"]');
-                        const currentQty = parseInt(qtyInput.val()) || 0;
+                        const currentQty = parseFloat(qtyInput.val()) || 0;
                         qtyInput.val(currentQty + 1);
                         
                         // Update harga jika berbeda
@@ -583,7 +583,7 @@
                             ${typeBadge}
                         </td>
                         <td>
-                            <input type="number" value="1" class="form-control form-control-sm qty" min="1" name="qty[]" style="width: 90px;" required>
+                            <input type="number" value="1" class="form-control form-control-sm qty" min="0.001" step="0.001" name="qty[]" style="width: 90px;" required>
                         </td>
                         <td>
                             <input type="number" value="${datarow.harga_beli || 0}" step="0.01" class="form-control form-control-sm harga_beli" name="harga_beli[]" style="width: 100px;" required>

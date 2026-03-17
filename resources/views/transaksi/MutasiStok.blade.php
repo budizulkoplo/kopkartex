@@ -284,9 +284,9 @@
                         existingRowId = $(this).attr('id');
                         
                         // Update quantity jika barang sudah ada
-                        const currentQty = parseInt($(this).find('input[name="qty[]"]').val()) || 0;
+                        const currentQty = parseFloat($(this).find('input[name="qty[]"]').val()) || 0;
                         const newQty = currentQty + 1;
-                        const maxQty = parseInt($(this).find('input[name="qty[]"]').attr('max')) || 0;
+                        const maxQty = parseFloat($(this).find('input[name="qty[]"]').attr('max')) || 0;
                         
                         if (newQty <= maxQty) {
                             $(this).find('input[name="qty[]"]').val(newQty);
@@ -325,7 +325,7 @@
                             <small class="text-muted">tersedia</small>
                         </td>
                         <td class="text-center">
-                            <input type="number" value="1" class="form-control form-control-sm qty-mutasi" min="1" 
+                            <input type="number" value="1" class="form-control form-control-sm qty-mutasi" min="0.001" step="0.001" 
                                    max="${datarow.stok || 0}" name="qty[]" required>
                             <small class="text-muted">mutasi</small>
                         </td>
@@ -575,8 +575,8 @@
 
                 // Update totals on change Qty
                 $('#tbmutasi').on('input', 'input[name="qty[]"]', function() {
-                    const max = parseInt($(this).attr('max')) || 0;
-                    const value = parseInt($(this).val()) || 0;
+                    const max = parseFloat($(this).attr('max')) || 0;
+                    const value = parseFloat($(this).val()) || 0;
                     
                     if (value > max) {
                         $(this).val(max);
@@ -641,8 +641,8 @@
                     // Validasi quantity
                     let qtyError = false;
                     $('input[name="qty[]"]').each(function() {
-                        const qty = parseInt($(this).val()) || 0;
-                        const max = parseInt($(this).attr('max')) || 0;
+                        const qty = parseFloat($(this).val()) || 0;
+                        const max = parseFloat($(this).attr('max')) || 0;
                         
                         if (qty <= 0 || qty > max) {
                             qtyError = true;
@@ -654,7 +654,7 @@
                         Swal.fire({
                             icon: 'warning',
                             title: 'Perhatian',
-                            text: 'Quantity harus antara 1 dan stok tersedia!'
+                            text: 'Quantity harus lebih dari 0 dan tidak melebihi stok tersedia!'
                         });
                         return;
                     }

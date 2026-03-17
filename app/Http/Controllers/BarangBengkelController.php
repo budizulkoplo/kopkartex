@@ -51,7 +51,7 @@ class BarangBengkelController extends Controller
                     $stok = StokUnit::where('barang_id', $row->id)
                         ->where('unit_id', 5)
                         ->value('stok') ?? 0;
-                    return number_format($stok, 0, ',', '.');
+                    return number_format($stok, 3, ',', '.');
                 })
                 ->filter(function ($query) use ($request) {
                     if ($request->has('search') && !empty($request->search['value'])) {

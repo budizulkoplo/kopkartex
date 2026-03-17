@@ -79,7 +79,7 @@ class StockAdjustmentController extends Controller
                     'text' => $item->kode_barang . ' - ' . $item->nama_barang,
                     'kode_barang' => $item->kode_barang,
                     'nama_barang' => $item->nama_barang,
-                    'stok' => (int) $item->stok,
+                    'stok' => (float) $item->stok,
                     'idsatuan' => $item->idsatuan,
                     'satuan' => $item->satuan_name,
                 ];
@@ -96,9 +96,9 @@ class StockAdjustmentController extends Controller
             'items' => 'required|array|min:1',
             'items.*.barang_id' => 'required|exists:barang,id',
             'items.*.adjustment_type' => 'required|in:set,add,subtract,convert',
-            'items.*.adjustment_value' => 'nullable|integer|min:0',
+            'items.*.adjustment_value' => 'nullable|numeric|min:0',
             'items.*.new_satuan_id' => 'nullable|exists:satuan,id',
-            'items.*.conversion_factor' => 'nullable|integer|min:1',
+            'items.*.conversion_factor' => 'nullable|numeric|min:0.001',
             'items.*.note' => 'nullable|string',
         ]);
 
@@ -131,12 +131,12 @@ class StockAdjustmentController extends Controller
                 }
 
                 $barang = Barang::query()->lockForUpdate()->findOrFail($item['barang_id']);
-                $oldStock = (int) $stokUnit->stok;
+                $oldStock = (float) $stokUnit->stok;
                 $oldSatuanId = $barang->idsatuan;
                 $oldSatuanName = optional($barang->satuanRelation)->name;
                 $newSatuanId = $oldSatuanId;
                 $conversionFactor = null;
-                $adjustmentValue = (int) ($item['adjustment_value'] ?? 0);
+                $adjustmentValue = (float) ($item['adjustment_value'] ?? 0);
 
                 switch ($item['adjustment_type']) {
                     case 'set':
@@ -155,7 +155,7 @@ class StockAdjustmentController extends Controller
                         break;
 
                     case 'convert':
-                        $conversionFactor = (int) ($item['conversion_factor'] ?? 0);
+                        $conversionFactor = (float) ($item['conversion_factor'] ?? 0);
                         $newSatuanId = (int) ($item['new_satuan_id'] ?? 0);
 
                         if ($conversionFactor < 1) {
@@ -259,20 +259,20 @@ class StockAdjustmentController extends Controller
 
     protected function defaultDetailNote(
         string $type,
-        int $oldStock,
-        int $newStock,
+        float $oldStock,
+        float $newStock,
         ?string $oldSatuanName,
         ?string $newSatuanName,
-        ?int $conversionFactor
+        ?float $conversionFactor
     ): string {
         if ($type === 'convert') {
-            return 'Konversi satuan dari ' . ($oldSatuanName ?: '-') . ' ke ' . ($newSatuanName ?: '-') . ' dengan faktor ' . (int) $conversionFactor . '. Stok ' . $oldStock . ' menjadi ' . $newStock . '.';
+            return 'Konversi satuan dari ' . ($oldSatuanName ?: '-') . ' ke ' . ($newSatuanName ?: '-') . ' dengan faktor ' . number_format((float) $conversionFactor, 3, ',', '.') . '. Stok ' . number_format($oldStock, 3, ',', '.') . ' menjadi ' . number_format($newStock, 3, ',', '.') . '.';
         }
 
         return match ($type) {
-            'set' => 'Set stok dari ' . $oldStock . ' menjadi ' . $newStock . '.',
-            'add' => 'Tambah stok dari ' . $oldStock . ' menjadi ' . $newStock . '.',
-            'subtract' => 'Kurangi stok dari ' . $oldStock . ' menjadi ' . $newStock . '.',
+            'set' => 'Set stok dari ' . number_format($oldStock, 3, ',', '.') . ' menjadi ' . number_format($newStock, 3, ',', '.') . '.',
+            'add' => 'Tambah stok dari ' . number_format($oldStock, 3, ',', '.') . ' menjadi ' . number_format($newStock, 3, ',', '.') . '.',
+            'subtract' => 'Kurangi stok dari ' . number_format($oldStock, 3, ',', '.') . ' menjadi ' . number_format($newStock, 3, ',', '.') . '.',
             default => 'Adjustment stok.',
         };
     }

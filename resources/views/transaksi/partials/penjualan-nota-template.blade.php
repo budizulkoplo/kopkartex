@@ -145,7 +145,7 @@
             <table class="item-table">
                 <tr>
                     <td class="col-nama">{{ strtoupper($item->nama_barang ?? '-') }}</td>
-                    <td class="col-qty">{{ number_format((float) $item->qty, 0, ',', '.') }}</td>
+                    <td class="col-qty">{{ number_format((float) $item->qty, 3, ',', '.') }}</td>
                     <td class="col-harga">{{ number_format((float) $item->harga, 0, ',', '.') }}</td>
                     <td class="col-total">{{ number_format(((float) $item->harga) * ((float) $item->qty), 0, ',', '.') }}</td>
                 </tr>

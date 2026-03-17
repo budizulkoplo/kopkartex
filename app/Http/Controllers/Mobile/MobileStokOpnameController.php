@@ -73,7 +73,7 @@ class MobileStokOpnameController extends BaseMobileController
 
                 $dataGrouped[$idBarang]['code'] = $request->code[$index];
                 $dataGrouped[$idBarang]['items'][] = [
-                    'qty' => (int) $qty,
+                    'qty' => (float) $qty,
                     'exp' => $exp,
                 ];
             }

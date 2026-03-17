@@ -23,7 +23,7 @@ class ModalAwal extends Model
     protected $casts = [
         'harga_modal' => 'decimal:2',
         'nilai_total_barang' => 'decimal:2',
-        'stok' => 'integer'
+        'stok' => 'decimal:3'
     ];
 
     /**

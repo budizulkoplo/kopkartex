@@ -20,6 +20,13 @@ class PenerimaanDtl extends Model
         'updated_at',
         'deleted_at'
     ];
+
+    protected $casts = [
+        'jumlah' => 'decimal:3',
+        'harga_beli' => 'decimal:2',
+        'harga_jual' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+    ];
     
     public function penerimaan()
     {

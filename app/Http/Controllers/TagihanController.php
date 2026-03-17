@@ -130,7 +130,7 @@ class TagihanController extends Controller
             'nomor_invoice' => 'required|unique:penjualan,nomor_invoice',
             'items' => 'required|array|min:1',
             'items.*.barang_id' => 'required|exists:barang,id',
-            'items.*.qty' => 'required|integer|min:1',
+            'items.*.qty' => 'required|numeric|min:0.001',
             'items.*.harga' => 'required|numeric|min:0',
             'items.*.subtotal' => 'required|numeric|min:0',
             'total' => 'required|numeric|min:0',

@@ -324,7 +324,7 @@ class ReturController extends Controller
                 $dtl = new ReturBarangDetail;
                 $dtl->idretur = $idhdr;
                 $dtl->barang_id = $barangId;
-                $dtl->qty = $quantities[$index];
+                $dtl->qty = (float) $quantities[$index];
                 $dtl->harga_beli = $hargaBeliArr[$index] ?? 0;
                 $dtl->harga_jual = $hargaJualArr[$index] ?? 0;
                 $dtl->subtotal = $subtotal;

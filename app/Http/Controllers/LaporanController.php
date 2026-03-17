@@ -181,7 +181,7 @@ class LaporanController extends Controller
             ->first();
 
         $history = collect();
-        $runningStock = (int) ($modalAwal->stok ?? 0);
+        $runningStock = (float) ($modalAwal->stok ?? 0);
 
         $history->push([
             'tanggal' => $start->copy()->subSecond()->format('Y-m-d H:i:s'),
@@ -270,16 +270,16 @@ class LaporanController extends Controller
             ->values()
             ->map(function ($row, $index) use (&$runningStock) {
                 if ($index > 0) {
-                    $runningStock += (int) $row['qty_masuk'];
-                    $runningStock -= (int) $row['qty_keluar'];
+                    $runningStock += (float) $row['qty_masuk'];
+                    $runningStock -= (float) $row['qty_keluar'];
                 }
 
                 return [
                     'tanggal' => Carbon::parse($row['tanggal'])->format('d-m-Y H:i'),
                     'jenis' => $row['jenis'],
                     'referensi' => $row['referensi'],
-                    'qty_masuk' => (int) $row['qty_masuk'],
-                    'qty_keluar' => (int) $row['qty_keluar'],
+                    'qty_masuk' => (float) $row['qty_masuk'],
+                    'qty_keluar' => (float) $row['qty_keluar'],
                     'saldo' => $runningStock,
                     'keterangan' => $row['keterangan'] ?? '-',
                 ];
@@ -293,10 +293,10 @@ class LaporanController extends Controller
                 'barang' => $barang->kode_barang . ' - ' . $barang->nama_barang,
                 'satuan' => $barang->satuanRelation->name ?? '-',
                 'bulan' => $bulan,
-                'stok_awal' => (int) ($summary['opening_stock'] ?? 0),
-                'stok_hitung' => (int) ($summary['calculated_stock'] ?? 0),
-                'stok_sistem' => (int) ($summary['system_stock'] ?? 0),
-                'selisih' => (int) ($summary['selisih'] ?? 0),
+                'stok_awal' => (float) ($summary['opening_stock'] ?? 0),
+                'stok_hitung' => (float) ($summary['calculated_stock'] ?? 0),
+                'stok_sistem' => (float) ($summary['system_stock'] ?? 0),
+                'selisih' => (float) ($summary['selisih'] ?? 0),
                 'nominal_sistem' => (float) ($summary['nominal_system'] ?? 0),
             ],
             'details' => $details,
@@ -397,13 +397,13 @@ class LaporanController extends Controller
             ->orderBy('b.nama_barang')
             ->get()
             ->map(function ($row) {
-                $calculatedStock = (int) $row->opening_stock
-                    + (int) $row->penerimaan_qty
-                    - (int) $row->retur_qty
-                    - (int) $row->penjualan_qty
-                    + (int) $row->adjustment_qty;
+                $calculatedStock = (float) $row->opening_stock
+                    + (float) $row->penerimaan_qty
+                    - (float) $row->retur_qty
+                    - (float) $row->penjualan_qty
+                    + (float) $row->adjustment_qty;
 
-                $systemStock = (int) $row->system_stock;
+                $systemStock = (float) $row->system_stock;
                 $hargaModal = (float) ($row->opening_price ?: $row->harga_beli ?: 0);
 
                 return [
@@ -412,11 +412,11 @@ class LaporanController extends Controller
                     'nama_barang' => $row->nama_barang,
                     'satuan' => $row->satuan,
                     'harga_modal' => $hargaModal,
-                    'opening_stock' => (int) $row->opening_stock,
-                    'penerimaan_qty' => (int) $row->penerimaan_qty,
-                    'retur_qty' => (int) $row->retur_qty,
-                    'penjualan_qty' => (int) $row->penjualan_qty,
-                    'adjustment_qty' => (int) $row->adjustment_qty,
+                    'opening_stock' => (float) $row->opening_stock,
+                    'penerimaan_qty' => (float) $row->penerimaan_qty,
+                    'retur_qty' => (float) $row->retur_qty,
+                    'penjualan_qty' => (float) $row->penjualan_qty,
+                    'adjustment_qty' => (float) $row->adjustment_qty,
                     'calculated_stock' => $calculatedStock,
                     'system_stock' => $systemStock,
                     'selisih' => $systemStock - $calculatedStock,
@@ -1839,7 +1839,7 @@ private function formatDbfField($value, $maxLength)
                 return date('d/m/Y', strtotime($row->tanggal));
             })
             ->editColumn('qty', function($row) {
-                return number_format($row->qty, 0, ',', '.');
+                return number_format($row->qty, 3, ',', '.');
             })
             ->editColumn('harga', function($row) {
                 return number_format($row->harga, 0, ',', '.');
@@ -1997,7 +1997,7 @@ private function formatDbfField($value, $maxLength)
             echo '<td class="text-center">' . ($row->satuan ?? '-') . '</td>';
             echo '<td class="text-right">' . number_format($row->harga_modal, 2, ',', '.') . '</td>';
             echo '<td>' . ($row->unit ?? '-') . '</td>';
-            echo '<td class="text-right">' . number_format($row->stok, 0, ',', '.') . '</td>';
+            echo '<td class="text-right">' . number_format($row->stok, 3, ',', '.') . '</td>';
             echo '<td class="text-right">' . number_format($row->nilai_total_barang, 2, ',', '.') . '</td>';
             echo '</tr>';
         }
@@ -2005,7 +2005,7 @@ private function formatDbfField($value, $maxLength)
         // Total
         echo '<tr class="total-row">';
         echo '<td colspan="7" class="text-right">TOTAL</td>';
-        echo '<td class="text-right">' . number_format($totalStok, 0, ',', '.') . '</td>';
+        echo '<td class="text-right">' . number_format($totalStok, 3, ',', '.') . '</td>';
         echo '<td class="text-right">' . number_format($totalModal, 2, ',', '.') . '</td>';
         echo '</tr>';
         
@@ -2017,4 +2017,3 @@ private function formatDbfField($value, $maxLength)
     }
 
 }
-

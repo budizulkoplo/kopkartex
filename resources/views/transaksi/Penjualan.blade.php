@@ -73,7 +73,7 @@
                                         <i class="bi bi-plus-circle"></i> QTY JUAL:
                                     </div>
                                     <div style="width: 150px;">
-                                        <input type="number" class="form-control form-control-sm" id="input-qty-jual" value="1" min="1" onfocus="this.select()">
+                                        <input type="number" class="form-control form-control-sm" id="input-qty-jual" value="1" min="0.001" step="0.001" onfocus="this.select()">
                                     </div>
                                     <div class="ms-3 text-muted small">
                                         <i class="bi bi-arrow-return-left"></i> isi qty, lalu Enter untuk input produk
@@ -311,10 +311,10 @@
                 // Hitung subtotal dari semua barang
                 $('#tbterima tbody tr').each(function(index, element) {
                     var row = $(this);
-                    var barangqty = parseInt(row.find('.barangqty').val()) || 0;
-                    var hargajual = parseInt(row.find('.hargajual').val()) || 0;
+                    var barangqty = parseFloat(row.find('.barangqty').val()) || 0;
+                    var hargajual = parseFloat(row.find('.hargajual').val()) || 0;
                     var idbarang = row.find('.idbarang').val();
-                    var stok = parseInt(row.find('.stok').val()) || 0;
+                    var stok = parseFloat(row.find('.stok').val()) || 0;
                     
                     // Update total per item
                     var totalItem = barangqty * hargajual;
@@ -337,7 +337,7 @@
                 if (obj) {
                     let idbarangObj = $(obj).closest('tr').find('.idbarang').val();
                     var cekbarang = barangtmp.find(item => item.idbarang === parseInt(idbarangObj));
-                    let qty = parseInt($(obj).val() || 0);
+                    let qty = parseFloat($(obj).val() || 0);
 
                     if (cekbarang && qty > cekbarang.stok) {
                         $(obj).val(cekbarang.stok);
@@ -436,9 +436,9 @@
             
             // Fungsi untuk menambah produk yang sama (update qty)
             function incrementExistingProduct(idbarang, rowElement, additionalQty = 1) {
-                const currentQty = parseInt(rowElement.find('.barangqty').val()) || 0;
-                const stok = parseInt(rowElement.find('.stok').val()) || 0;
-                const maxQty = parseInt(rowElement.find('.barangqty').attr('max')) || stok;
+                const currentQty = parseFloat(rowElement.find('.barangqty').val()) || 0;
+                const stok = parseFloat(rowElement.find('.stok').val()) || 0;
+                const maxQty = parseFloat(rowElement.find('.barangqty').attr('max')) || stok;
                 
                 let newQty = currentQty + additionalQty;
                 
@@ -506,13 +506,14 @@
                         </td>
                         <td class="hargajualtext">${datarow.harga_jual ? formatRupiahWithDecimal(datarow.harga_jual) : ''}</td>
                         <td>
-                            <span class="stoktext">${datarow.stok}</span>
+                            <span class="stoktext">${parseFloat(datarow.stok || 0).toFixed(3).replace(/\.?0+$/, '')}</span>
                             <input type="hidden" class="stok" name="stok[]" value="${datarow.stok}">
                         </td>
                         <td>
                             <input type="number" class="form-control form-control-sm w-auto barangqty" 
                                    onfocus="this.select()" 
-                                   min="1" 
+                                   min="0.001" 
+                                   step="0.001" 
                                    max="${datarow.stok}" 
                                    name="qty[]" 
                                    onkeyup="kalkulasi(this)" 
@@ -575,8 +576,8 @@
                         }
                         
                         let stokInfo = data.stok > 0 ? 
-                            `<span class="text-success">Stok: ${data.stok}</span>` : 
-                            `<span class="text-danger">Stok: ${data.stok}</span>`;
+                            `<span class="text-success">Stok: ${parseFloat(data.stok || 0).toFixed(3).replace(/\.?0+$/, '')}</span>` : 
+                            `<span class="text-danger">Stok: ${parseFloat(data.stok || 0).toFixed(3).replace(/\.?0+$/, '')}</span>`;
                         
                         let cicilanInfo = data.kategori_cicilan == 0 ? 
                             `<span class="badge bg-warning">Cicilan 1x</span>` : 
@@ -626,7 +627,7 @@
                     row.find('.hargajual').val(data.harga_jual);
                     row.find('.hargajualtext').text(formatRupiahWithDecimal(data.harga_jual));
                     row.find('.hargabeli').val(data.harga_beli || 0);
-                    row.find('.stoktext').text(data.stok);
+                    row.find('.stoktext').text(parseFloat(data.stok || 0).toFixed(3).replace(/\.?0+$/, ''));
                     row.find('.stok').val(data.stok);
                     row.find('.barangqty').val(1);
                     row.find('.barangqty').attr("max", data.stok);
@@ -949,7 +950,7 @@
                         e.preventDefault();
                         
                         let selectedItem = $('#barcode-search').data('selected-item');
-                        let qty = parseInt($(this).val()) || 1;
+                        let qty = parseFloat($(this).val()) || 1;
                         
                         if (selectedItem) {
                             addRow(selectedItem, qty);

@@ -78,7 +78,7 @@
                                         <i class="bi bi-plus-circle"></i> QTY:
                                     </div>
                                     <div style="width: 150px;">
-                                        <input type="number" class="form-control form-control-sm" id="input-qty" value="1" min="1" onfocus="this.select()">
+                                        <input type="number" class="form-control form-control-sm" id="input-qty" value="1" min="0.001" step="0.001" onfocus="this.select()">
                                     </div>
                                     <div class="ms-3 text-muted small">
                                         <i class="bi bi-arrow-return-left"></i> isi qty, lalu Enter untuk input produk
@@ -133,12 +133,12 @@
                                                         </td>
                                                         <td>
                                                             <input type="number" name="qty[]" class="form-control form-control-sm barangqty"
-                                                                   value="{{ $detail->qty }}" min="1" max="{{ $detail->barang->stok?->stok ?? 999 }}"
+                                                                   value="{{ $detail->qty }}" min="0.001" step="0.001" max="{{ $detail->barang->stok?->stok ?? 999 }}"
                                                                    onfocus="this.select()" onkeyup="kalkulasi()" required>
                                                             <input type="hidden" name="harga_jual[]" class="hargajual" value="{{ $detail->harga }}">
                                                         </td>
                                                         <td class="hargajualtext">{{ number_format($detail->harga, 0, ',', '.') }}</td>
-                                                        <td class="totalitm">{{ number_format($detail->qty * $detail->harga, 0, ',', '.') }}</td>
+                                                        <td class="totalitm">{{ number_format($detail->qty * $detail->harga, 2, ',', '.') }}</td>
                                                         <td>
                                                             <span class="badge btn bg-danger dellist" onclick="removeBarangRow($(this).closest('tr'))">
                                                                 <i class="bi bi-trash3-fill"></i>
@@ -479,9 +479,9 @@
                 // Cek apakah produk sudah ada
                 if (datarow && datarow.id && existingBarang[datarow.id]) {
                     let existingRow = existingBarang[datarow.id];
-                    let currentQty = parseInt(existingRow.find('.barangqty').val()) || 0;
+                    let currentQty = parseFloat(existingRow.find('.barangqty').val()) || 0;
                     let newQty = currentQty + qty;
-                    let maxStok = parseInt(existingRow.find('.barangqty').attr('max')) || datarow.stok;
+                    let maxStok = parseFloat(existingRow.find('.barangqty').attr('max')) || datarow.stok;
                     
                     if (newQty > maxStok) {
                         newQty = maxStok;
@@ -517,7 +517,7 @@
                         </td>
                         <td>
                             <input type="number" name="qty[]" class="form-control form-control-sm barangqty" 
-                                   value="${qty}" min="1" max="${datarow ? datarow.stok : 999}" 
+                                   value="${qty}" min="0.001" step="0.001" max="${datarow ? datarow.stok : 999}" 
                                    onfocus="this.select()" onkeyup="kalkulasi()" required>
                             <input type="hidden" name="harga_jual[]" class="hargajual" value="${datarow ? datarow.harga_jual : 0}">
                         </td>
@@ -659,9 +659,9 @@
                     // Cek apakah produk sudah ada di row lain
                     if (data.id && existingBarang[data.id] && existingBarang[data.id] !== row) {
                         let existingRow = existingBarang[data.id];
-                        let currentQty = parseInt(existingRow.find('.barangqty').val()) || 0;
+                        let currentQty = parseFloat(existingRow.find('.barangqty').val()) || 0;
                         let newQty = currentQty + 1;
-                        let maxStok = parseInt(existingRow.find('.barangqty').attr('max')) || data.stok;
+                        let maxStok = parseFloat(existingRow.find('.barangqty').attr('max')) || data.stok;
                         
                         if (newQty > maxStok) {
                             newQty = maxStok;
@@ -850,7 +850,7 @@
                         e.preventDefault();
                         
                         let selectedItem = $('#barcode-search').data('selected-item');
-                        let qty = parseInt($(this).val()) || 1;
+                        let qty = parseFloat($(this).val()) || 1;
                         
                         if (selectedItem) {
                             addBarangRow(selectedItem, qty);
@@ -976,7 +976,7 @@
                         items.push({
                             jenis: 'barang',
                             id: $(this).find('.idbarang').val(),
-                            qty: parseInt($(this).find('.barangqty').val()) || 0,
+                            qty: parseFloat($(this).find('.barangqty').val()) || 0,
                             harga: parseFloat($(this).find('.hargajual').val()) || 0,
                             kategori_cicilan: parseInt($(this).find('.namabarang option:selected').data('cicilan')) || 1
                         });

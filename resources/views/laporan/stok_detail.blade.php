@@ -61,10 +61,10 @@
                                         <td>{{ $row['nama_barang'] }}</td>
                                         <td>{{ $row['satuan'] }}</td>
                                         <td class="text-end">{{ number_format($row['opening_stock']) }}</td>
-                                        <td class="text-end text-success">{{ number_format($row['penerimaan_qty']) }}</td>
-                                        <td class="text-end text-danger">{{ number_format($row['retur_qty']) }}</td>
-                                        <td class="text-end text-danger">{{ number_format($row['penjualan_qty']) }}</td>
-                                        <td class="text-end {{ $row['adjustment_qty'] >= 0 ? 'text-primary' : 'text-danger' }}">{{ number_format($row['adjustment_qty']) }}</td>
+                                        <td class="text-end text-success">{{ number_format($row['penerimaan_qty'], 3, ',', '.') }}</td>
+                                        <td class="text-end text-danger">{{ number_format($row['retur_qty'], 3, ',', '.') }}</td>
+                                        <td class="text-end text-danger">{{ number_format($row['penjualan_qty'], 3, ',', '.') }}</td>
+                                        <td class="text-end {{ $row['adjustment_qty'] >= 0 ? 'text-primary' : 'text-danger' }}">{{ number_format($row['adjustment_qty'], 3, ',', '.') }}</td>
                                         <td class="text-end fw-bold">{{ number_format($row['calculated_stock']) }}</td>
                                         <td class="text-end fw-bold">{{ number_format($row['system_stock']) }}</td>
                                         <td class="text-end {{ $row['selisih'] == 0 ? 'text-success' : 'text-danger fw-bold' }}">{{ number_format($row['selisih']) }}</td>
@@ -86,10 +86,10 @@
                                 <tr class="table-primary fw-bold">
                                     <td colspan="4" class="text-end">TOTAL</td>
                                     <td class="text-end">{{ number_format($totals['opening_stock']) }}</td>
-                                    <td class="text-end">{{ number_format($totals['penerimaan_qty']) }}</td>
-                                    <td class="text-end">{{ number_format($totals['retur_qty']) }}</td>
-                                    <td class="text-end">{{ number_format($totals['penjualan_qty']) }}</td>
-                                    <td class="text-end">{{ number_format($totals['adjustment_qty']) }}</td>
+                                    <td class="text-end">{{ number_format($totals['penerimaan_qty'], 3, ',', '.') }}</td>
+                                    <td class="text-end">{{ number_format($totals['retur_qty'], 3, ',', '.') }}</td>
+                                    <td class="text-end">{{ number_format($totals['penjualan_qty'], 3, ',', '.') }}</td>
+                                    <td class="text-end">{{ number_format($totals['adjustment_qty'], 3, ',', '.') }}</td>
                                     <td class="text-end">{{ number_format($totals['calculated_stock']) }}</td>
                                     <td class="text-end">{{ number_format($totals['system_stock']) }}</td>
                                     <td class="text-end">{{ number_format($totals['selisih']) }}</td>

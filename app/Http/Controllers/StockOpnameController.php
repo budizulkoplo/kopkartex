@@ -209,7 +209,7 @@ class StockOpnameController extends Controller
                 'tgl_opname' => 'required|date',
                 'barang_id' => 'required|integer',
                 'qty' => 'required|array',
-                'qty.*' => 'required|integer|min:0',
+                'qty.*' => 'required|numeric|min:0',
                 'exp' => 'required|array',
                 'exp.*' => 'nullable|date'
             ]);
@@ -224,7 +224,7 @@ class StockOpnameController extends Controller
             $barang = Barang::findOrFail($barangId);
             
             // Hitung total stok fisik
-            $totalFisik = array_sum($request->qty);
+            $totalFisik = array_sum(array_map('floatval', $request->qty));
             
             // Ambil stok sistem
             $stokSistem = StokUnit::where('barang_id', $barangId)
