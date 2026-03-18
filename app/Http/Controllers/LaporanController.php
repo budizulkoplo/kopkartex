@@ -165,6 +165,110 @@ class LaporanController extends Controller
         ]);
     }
 
+    public function stokDetailData(Request $request)
+    {
+        $bulan = $request->get('bulan', now()->format('Y-m'));
+        $keyword = trim((string) $request->get('keyword', ''));
+        $unitId = Auth::user()->unit_kerja;
+        $unit = Unit::find($unitId);
+        $summary = $this->buildStokDetailSummary($bulan, $unitId, $keyword)->values();
+
+        return response()->json([
+            'success' => true,
+            'unit' => $unit?->nama_unit ?? '-',
+            'bulan' => $bulan,
+            'keyword' => $keyword,
+            'rows' => $summary,
+            'totals' => [
+                'opening_stock' => $summary->sum('opening_stock'),
+                'penerimaan_qty' => $summary->sum('penerimaan_qty'),
+                'retur_qty' => $summary->sum('retur_qty'),
+                'penjualan_qty' => $summary->sum('penjualan_qty'),
+                'adjustment_qty' => $summary->sum('adjustment_qty'),
+                'calculated_stock' => $summary->sum('calculated_stock'),
+                'system_stock' => $summary->sum('system_stock'),
+                'selisih' => $summary->sum('selisih'),
+                'nominal_calculated' => $summary->sum('nominal_calculated'),
+                'nominal_system' => $summary->sum('nominal_system'),
+            ],
+        ]);
+    }
+
+    public function stokDetailExport(Request $request)
+    {
+        $bulan = $request->get('bulan', now()->format('Y-m'));
+        $keyword = trim((string) $request->get('keyword', ''));
+        $unitId = Auth::user()->unit_kerja;
+        $unit = Unit::find($unitId);
+        $summary = $this->buildStokDetailSummary($bulan, $unitId, $keyword)->values();
+
+        $headers = [
+            'No',
+            'Kode Barang',
+            'Nama Barang',
+            'Satuan',
+            'Stok Awal',
+            'Penerimaan',
+            'Retur',
+            'Penjualan',
+            'Adjustment',
+            'Stok Hitung',
+            'Stok Sistem',
+            'Selisih',
+            'Nilai Hitung',
+            'Nilai Sistem',
+        ];
+
+        $rows = $summary->values()->map(function ($row, $index) {
+            return [
+                $index + 1,
+                $row['kode_barang'],
+                $row['nama_barang'],
+                $row['satuan'],
+                $row['opening_stock'],
+                $row['penerimaan_qty'],
+                $row['retur_qty'],
+                $row['penjualan_qty'],
+                $row['adjustment_qty'],
+                $row['calculated_stock'],
+                $row['system_stock'],
+                $row['selisih'],
+                $row['nominal_calculated'],
+                $row['nominal_system'],
+            ];
+        })->all();
+
+        $totals = [[
+            '',
+            '',
+            '',
+            'TOTAL',
+            $summary->sum('opening_stock'),
+            $summary->sum('penerimaan_qty'),
+            $summary->sum('retur_qty'),
+            $summary->sum('penjualan_qty'),
+            $summary->sum('adjustment_qty'),
+            $summary->sum('calculated_stock'),
+            $summary->sum('system_stock'),
+            $summary->sum('selisih'),
+            $summary->sum('nominal_calculated'),
+            $summary->sum('nominal_system'),
+        ]];
+
+        return $this->downloadHtmlTableAsExcel(
+            'stok_detail_' . str_replace('-', '', $bulan) . '_' . now()->format('YmdHis') . '.xls',
+            'Laporan Stok Detail',
+            [
+                'Periode' => $bulan,
+                'Unit' => $unit?->nama_unit ?? '-',
+                'Keyword' => $keyword !== '' ? $keyword : 'Semua barang',
+            ],
+            $headers,
+            $rows,
+            $totals
+        );
+    }
+
     public function stokDetailHistory(Request $request, $barangId)
     {
         $bulan = $request->get('bulan', now()->format('Y-m'));
@@ -1413,25 +1517,9 @@ public function pinbrg(Request $request)
 private function getDataPinbrg(Request $request)
 {
     $period = $request->input('period', date('Y-m'));
-    $search = $request->input('search.value'); // Parameter pencarian dari DataTables
+    $search = trim((string) ($request->input('search.value') ?? $request->input('search') ?? $request->input('search_term') ?? ''));
     
-    $query = Pinbrg::query();
-    
-    // Filter by period
-    if ($request->filled('period')) {
-        $query->where('period', $period);
-    }
-    
-    // Filter by search - menggunakan parameter dari DataTables
-    if (!empty($search)) {
-        $query->where(function($q) use ($search) {
-            $q->where('NO_AGT', 'like', "%{$search}%")
-              ->orWhere('NOPIN', 'like', "%{$search}%")
-              ->orWhere('NO_BADGE', 'like', "%{$search}%")
-              ->orWhere('unit_usaha', 'like', "%{$search}%")
-              ->orWhere('lokasi', 'like', "%{$search}%");
-        });
-    }
+    $query = $this->buildPinbrgQuery($period, $search);
     
     // Untuk cek data
     if ($request->input('check_data') == 'true') {
@@ -1450,35 +1538,25 @@ private function getDataPinbrg(Request $request)
         ];
         return response()->json(['totals' => $totals]);
     }
+
+    if ($request->input('all_data') == 'true') {
+        return response()->json([
+            'data' => $query->orderByDesc('TG_PIN')->get()->map(function ($row) {
+                return $this->transformPinbrgRow($row);
+            })->values(),
+        ]);
+    }
     
     return DataTables::eloquent($query)
         ->addIndexColumn()
-        ->addColumn('TG_PIN_formatted', function($row) {
-            return $row->TG_PIN ? date('d/m/Y', strtotime($row->TG_PIN)) : '-';
-        })
-        ->addColumn('TOTAL_HARGA_formatted', function($row) {
-            return 'Rp ' . number_format($row->TOTAL_HARGA, 0, ',', '.');
-        })
-        ->addColumn('JUM_PIN_formatted', function($row) {
-            return 'Rp ' . number_format($row->JUM_PIN, 0, ',', '.');
-        })
-        ->addColumn('SISA_PIN_formatted', function($row) {
-            return 'Rp ' . number_format($row->SISA_PIN, 0, ',', '.');
-        })
-        ->addColumn('ANGS_X_formatted', function($row) {
-            return 'Rp ' . number_format($row->ANGS_X, 0, ',', '.');
-        })
-        ->addColumn('ANGSUR1_formatted', function($row) {
-            return $row->ANGSUR1 > 0 ? 'Rp ' . number_format($row->ANGSUR1, 0, ',', '.') : '-';
-        })
-        ->addColumn('ANGSUR2_formatted', function($row) {
-            return $row->ANGSUR2 > 0 ? 'Rp ' . number_format($row->ANGSUR2, 0, ',', '.') : '-';
-        })
-        ->addColumn('STATUS_badge', function($row) {
-            $badgeClass = $row->STATUS == '1' ? 'bg-success' : 'bg-warning';
-            $statusText = $row->STATUS == '1' ? 'Aktif' : 'Non-Aktif';
-            return '<span class="badge ' . $badgeClass . '">' . $statusText . '</span>';
-        })
+        ->addColumn('TG_PIN_formatted', fn ($row) => $this->transformPinbrgRow($row)['TG_PIN_formatted'])
+        ->addColumn('TOTAL_HARGA_formatted', fn ($row) => $this->transformPinbrgRow($row)['TOTAL_HARGA_formatted'])
+        ->addColumn('JUM_PIN_formatted', fn ($row) => $this->transformPinbrgRow($row)['JUM_PIN_formatted'])
+        ->addColumn('SISA_PIN_formatted', fn ($row) => $this->transformPinbrgRow($row)['SISA_PIN_formatted'])
+        ->addColumn('ANGS_X_formatted', fn ($row) => $this->transformPinbrgRow($row)['ANGS_X_formatted'])
+        ->addColumn('ANGSUR1_formatted', fn ($row) => $this->transformPinbrgRow($row)['ANGSUR1_formatted'])
+        ->addColumn('ANGSUR2_formatted', fn ($row) => $this->transformPinbrgRow($row)['ANGSUR2_formatted'])
+        ->addColumn('STATUS_badge', fn ($row) => $this->transformPinbrgRow($row)['STATUS_badge'])
         ->rawColumns(['STATUS_badge'])
         ->make(true);
 }
@@ -1738,6 +1816,100 @@ private function formatDbfField($value, $maxLength)
     }
     
     return $stringValue;
+}
+
+private function buildPinbrgQuery(string $period, string $search = '')
+{
+    return Pinbrg::query()
+        ->when($period !== '', function ($query) use ($period) {
+            $query->where('period', $period);
+        })
+        ->when($search !== '', function ($query) use ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('NO_AGT', 'like', "%{$search}%")
+                    ->orWhere('NOPIN', 'like', "%{$search}%")
+                    ->orWhere('NO_PIN', 'like', "%{$search}%")
+                    ->orWhere('NO_BADGE', 'like', "%{$search}%")
+                    ->orWhere('unit_usaha', 'like', "%{$search}%")
+                    ->orWhere('lokasi', 'like', "%{$search}%");
+            });
+        });
+}
+
+private function transformPinbrgRow($row): array
+{
+    $statusActive = (string) $row->STATUS === '1';
+
+    return [
+        'period' => $row->period,
+        'unit_usaha' => $row->unit_usaha,
+        'lokasi' => $row->lokasi,
+        'NO_AGT' => $row->NO_AGT,
+        'NOPIN' => $row->NOPIN,
+        'NO_PIN' => $row->NO_PIN,
+        'TG_PIN_formatted' => $row->TG_PIN ? date('d/m/Y', strtotime($row->TG_PIN)) : '-',
+        'TOTAL_HARGA_formatted' => 'Rp ' . number_format($row->TOTAL_HARGA, 0, ',', '.'),
+        'JUM_PIN_formatted' => 'Rp ' . number_format($row->JUM_PIN, 0, ',', '.'),
+        'SISA_PIN_formatted' => 'Rp ' . number_format($row->SISA_PIN, 0, ',', '.'),
+        'ANGS_X_formatted' => 'Rp ' . number_format($row->ANGS_X, 0, ',', '.'),
+        'ANGSUR1_formatted' => $row->ANGSUR1 > 0 ? 'Rp ' . number_format($row->ANGSUR1, 0, ',', '.') : '-',
+        'ANGSUR2_formatted' => $row->ANGSUR2 > 0 ? 'Rp ' . number_format($row->ANGSUR2, 0, ',', '.') : '-',
+        'JENIS' => $row->JENIS,
+        'NO_BADGE' => $row->NO_BADGE,
+        'KEL' => $row->KEL,
+        'STATUS_badge' => '<span class="badge ' . ($statusActive ? 'bg-success' : 'bg-warning') . '">' . ($statusActive ? 'Aktif' : 'Non-Aktif') . '</span>',
+        'STATUS_text' => $statusActive ? 'Aktif' : 'Non-Aktif',
+    ];
+}
+
+private function downloadHtmlTableAsExcel(string $filename, string $title, array $filters, array $headers, array $rows, array $footerRows = [])
+{
+    header("Content-Type: application/vnd.ms-excel");
+    header("Content-Disposition: attachment; filename=\"{$filename}\"");
+    header("Cache-Control: max-age=0");
+
+    echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+    echo '<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">';
+    echo '<style>
+        body { font-family: Arial, sans-serif; }
+        table { border-collapse: collapse; width: 100%; }
+        th { background-color: #f2f2f2; border: 1px solid #000; padding: 5px; text-align: center; font-weight: bold; }
+        td { border: 1px solid #000; padding: 4px; vertical-align: top; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .total-row { background-color: #d1e7ff; font-weight: bold; }
+        .meta td { border: none; padding: 2px 0; }
+        .title { font-size: 18px; font-weight: bold; margin-bottom: 12px; }
+    </style></head><body>';
+    echo '<div class="title">' . e($title) . '</div>';
+    echo '<table class="meta">';
+    foreach ($filters as $label => $value) {
+        echo '<tr><td style="width:120px;"><strong>' . e($label) . '</strong></td><td>: ' . e((string) $value) . '</td></tr>';
+    }
+    echo '</table><br>';
+    echo '<table><thead><tr>';
+    foreach ($headers as $header) {
+        echo '<th>' . e($header) . '</th>';
+    }
+    echo '</tr></thead><tbody>';
+    foreach ($rows as $row) {
+        echo '<tr>';
+        foreach ($row as $value) {
+            $class = is_numeric($value) ? 'text-right' : '';
+            echo '<td class="' . $class . '">' . e((string) $value) . '</td>';
+        }
+        echo '</tr>';
+    }
+    foreach ($footerRows as $row) {
+        echo '<tr class="total-row">';
+        foreach ($row as $value) {
+            $class = is_numeric($value) ? 'text-right' : '';
+            echo '<td class="' . $class . '">' . e((string) $value) . '</td>';
+        }
+        echo '</tr>';
+    }
+    echo '</tbody></table></body></html>';
+    exit;
 }
 
     public function penjualanBengkelDetail(Request $request)

@@ -114,6 +114,17 @@
                         exportOptions: {
                             columns: ':visible'
                         }
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="bi bi-printer"></i> Print',
+                        className: 'btn btn-primary btn-sm',
+                        exportOptions: {
+                            columns: ':visible'
+                        },
+                        title: function () {
+                            return 'Laporan Penerimaan Barang - ' + $('#bulan').val();
+                        }
                     }
                 ]
             });

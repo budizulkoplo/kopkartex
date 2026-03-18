@@ -104,6 +104,15 @@
                         text: '<i class="bi bi-file-earmark-excel"></i> Export Excel',
                         className: 'btn btn-success btn-sm',
                         exportOptions: { columns: ':visible' }
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="bi bi-printer"></i> Print',
+                        className: 'btn btn-primary btn-sm',
+                        exportOptions: { columns: ':visible' },
+                        title: function () {
+                            return 'Laporan Retur - ' + $('#tanggal').val();
+                        }
                     }
                 ]
             });

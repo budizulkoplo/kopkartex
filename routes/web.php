@@ -350,6 +350,8 @@ Route::prefix('laporan')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/stok-barang', [LaporanController::class, 'stokBarang'])->name('laporan.stokbarang');
     Route::get('/stok-barang/data', [LaporanController::class, 'stokBarangData'])->name('laporan.stokbarang.data');
     Route::get('/stok-detail', [LaporanController::class, 'stokDetail'])->name('laporan.stokdetail');
+    Route::get('/stok-detail/data', [LaporanController::class, 'stokDetailData'])->name('laporan.stokdetail.data');
+    Route::get('/stok-detail/export', [LaporanController::class, 'stokDetailExport'])->name('laporan.stokdetail.export');
     Route::get('/stok-detail/history/{barangId}', [LaporanController::class, 'stokDetailHistory'])->name('laporan.stokdetail.history');
     Route::get('/penjualan', [LaporanController::class, 'penjualan'])->name('laporan.penjualan');
     Route::get('/penjualan/data', [LaporanController::class, 'penjualanData'])->name('laporan.penjualan.data');

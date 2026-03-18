@@ -19,6 +19,12 @@
                         <div class="col-auto">
                             <button type="submit" class="btn btn-sm btn-success">Filter</button>
                         </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="exportExcel()">Export Excel</button>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-sm btn-warning" onclick="printReport()">Cetak</button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -161,6 +167,150 @@
 
     <x-slot name="jscustom">
         <script>
+            function currentFilters() {
+                const params = new URLSearchParams(window.location.search);
+
+                return {
+                    bulan: params.get('bulan') || @json($bulan),
+                    keyword: params.get('keyword') || @json($keyword),
+                };
+            }
+
+            async function fetchStokDetailRows() {
+                const filters = currentFilters();
+                const response = await fetch(`{{ route('laporan.stokdetail.data') }}?${new URLSearchParams(filters).toString()}`);
+
+                if (!response.ok) {
+                    throw new Error('Gagal mengambil data stok detail');
+                }
+
+                return response.json();
+            }
+
+            async function exportExcel() {
+                const filters = currentFilters();
+                window.location.href = `{{ route('laporan.stokdetail.export') }}?${new URLSearchParams(filters).toString()}`;
+            }
+
+            function formatNumber(value, decimals = 0) {
+                return new Intl.NumberFormat('id-ID', {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }).format(Number(value || 0));
+            }
+
+            async function printReport() {
+                try {
+                    const response = await fetchStokDetailRows();
+                    const rows = response.rows || [];
+
+                    if (!rows.length) {
+                        Swal.fire('Info', 'Tidak ada data untuk dicetak.', 'info');
+                        return;
+                    }
+
+                    let printHTML = `
+                        <html>
+                        <head>
+                            <title>Laporan Stok Detail</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; padding: 20px; color: #000; }
+                                h2 { margin: 0 0 6px; }
+                                .meta { margin-bottom: 16px; font-size: 12px; }
+                                table { border-collapse: collapse; width: 100%; font-size: 11px; }
+                                th, td { border: 1px solid #000; padding: 5px; }
+                                th { background: #f2f2f2; text-align: center; }
+                                .text-end { text-align: right; }
+                                .total-row { background: #d9edf7; font-weight: bold; }
+                                @media print {
+                                    body { padding: 0; }
+                                    @page { size: landscape; margin: 10mm; }
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <h2>Laporan Stok Detail</h2>
+                            <div class="meta">
+                                <div>Periode: ${response.bulan}</div>
+                                <div>Unit: ${response.unit}</div>
+                                <div>Keyword: ${response.keyword || 'Semua barang'}</div>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Kode</th>
+                                        <th>Nama Barang</th>
+                                        <th>Satuan</th>
+                                        <th>Stok Awal</th>
+                                        <th>Penerimaan</th>
+                                        <th>Retur</th>
+                                        <th>Penjualan</th>
+                                        <th>Adjustment</th>
+                                        <th>Stok Hitung</th>
+                                        <th>Stok Sistem</th>
+                                        <th>Selisih</th>
+                                        <th>Nilai Hitung</th>
+                                        <th>Nilai Sistem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    rows.forEach((row, index) => {
+                        printHTML += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${row.kode_barang}</td>
+                                <td>${row.nama_barang}</td>
+                                <td>${row.satuan}</td>
+                                <td class="text-end">${formatNumber(row.opening_stock)}</td>
+                                <td class="text-end">${formatNumber(row.penerimaan_qty, 3)}</td>
+                                <td class="text-end">${formatNumber(row.retur_qty, 3)}</td>
+                                <td class="text-end">${formatNumber(row.penjualan_qty, 3)}</td>
+                                <td class="text-end">${formatNumber(row.adjustment_qty, 3)}</td>
+                                <td class="text-end">${formatNumber(row.calculated_stock)}</td>
+                                <td class="text-end">${formatNumber(row.system_stock)}</td>
+                                <td class="text-end">${formatNumber(row.selisih)}</td>
+                                <td class="text-end">Rp ${formatNumber(row.nominal_calculated, 2)}</td>
+                                <td class="text-end">Rp ${formatNumber(row.nominal_system, 2)}</td>
+                            </tr>
+                        `;
+                    });
+
+                    printHTML += `
+                                <tr class="total-row">
+                                    <td colspan="4" class="text-end">TOTAL</td>
+                                    <td class="text-end">${formatNumber(response.totals.opening_stock)}</td>
+                                    <td class="text-end">${formatNumber(response.totals.penerimaan_qty, 3)}</td>
+                                    <td class="text-end">${formatNumber(response.totals.retur_qty, 3)}</td>
+                                    <td class="text-end">${formatNumber(response.totals.penjualan_qty, 3)}</td>
+                                    <td class="text-end">${formatNumber(response.totals.adjustment_qty, 3)}</td>
+                                    <td class="text-end">${formatNumber(response.totals.calculated_stock)}</td>
+                                    <td class="text-end">${formatNumber(response.totals.system_stock)}</td>
+                                    <td class="text-end">${formatNumber(response.totals.selisih)}</td>
+                                    <td class="text-end">Rp ${formatNumber(response.totals.nominal_calculated, 2)}</td>
+                                    <td class="text-end">Rp ${formatNumber(response.totals.nominal_system, 2)}</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </body>
+                        </html>
+                    `;
+
+                    const printWindow = window.open('', '_blank', 'width=1400,height=900');
+                    printWindow.document.open();
+                    printWindow.document.write(printHTML);
+                    printWindow.document.close();
+                    printWindow.onload = function () {
+                        printWindow.focus();
+                        printWindow.print();
+                    };
+                } catch (error) {
+                    Swal.fire('Error', error.message || 'Gagal mencetak laporan.', 'error');
+                }
+            }
+
             $(document).on('click', '.btn-detail-stok', function() {
                 const barangId = $(this).data('id');
                 const bulan = @json($bulan);

@@ -393,12 +393,7 @@
             }
 
             function exportData() {
-                const params = new URLSearchParams({
-                    periode: currentPeriode,
-                    unit: $('#unit').val()
-                });
-                
-                
+                table.button('.buttons-excel').trigger();
             }
 
             $(document).ready(function() {

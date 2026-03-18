@@ -36,6 +36,12 @@
                                 <button type="button" class="btn btn-sm btn-danger" id="btnExportDbf">
                                     <i class="bi bi-file-earmark-binary"></i> Export to DBF
                                 </button>
+                                <button type="button" class="btn btn-sm btn-success" id="btnExportExcel">
+                                    <i class="bi bi-file-earmark-excel"></i> Export Excel
+                                </button>
+                                <button type="button" class="btn btn-sm btn-warning" id="btnPrintPinbrg">
+                                    <i class="bi bi-printer"></i> Cetak
+                                </button>
                                 <button type="button" class="btn btn-sm btn-secondary" id="btnResetFilter">
                                     <i class="bi bi-arrow-clockwise"></i> Reset
                                 </button>
@@ -164,6 +170,7 @@
                             
                             // Tambahkan parameter custom
                             d.period = $('#period').val();
+                            d.search_term = $('#search').val();
                             
                             // Untuk pencarian, gunakan parameter search bawaan DataTables
                             // Tidak perlu d.search manual karena sudah ada d.search.value
@@ -284,7 +291,7 @@
                         type: "GET",
                         data: {
                             period: $('#period').val(),
-                            search: $('#search').val(),
+                            search_term: $('#search').val(),
                             get_totals: true
                         },
                         success: function(response) {
@@ -390,6 +397,7 @@
                         type: "GET",
                         data: {
                             period: period,
+                            search_term: $('#search').val(),
                             check_data: true
                         },
                         success: function(response) {
@@ -451,6 +459,174 @@
                             });
                         }
                     });
+                });
+
+                async function fetchAllPinbrgData() {
+                    const params = new URLSearchParams({
+                        period: $('#period').val(),
+                        search_term: $('#search').val(),
+                        all_data: 'true'
+                    });
+
+                    const response = await fetch(`{{ route('laporan.pinbrg') }}?${params.toString()}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Gagal mengambil data pinbrg');
+                    }
+
+                    return response.json();
+                }
+
+                function exportPinbrgExcel(rows) {
+                    const data = rows.map((row, index) => ({
+                        No: index + 1,
+                        Periode: row.period,
+                        'Unit Usaha': row.unit_usaha,
+                        Lokasi: row.lokasi,
+                        'No. Anggota': row.NO_AGT,
+                        'No. Invoice': row.NOPIN,
+                        'No. Pin': row.NO_PIN,
+                        'Tgl Pinjam': row.TG_PIN_formatted,
+                        'Total Harga': row.TOTAL_HARGA_formatted.replace(/[^0-9-]/g, ''),
+                        'Jumlah Pinjaman': row.JUM_PIN_formatted.replace(/[^0-9-]/g, ''),
+                        'Sisa Pinjaman': row.SISA_PIN_formatted.replace(/[^0-9-]/g, ''),
+                        'Angs ke-1': row.ANGSUR1_formatted === '-' ? 0 : row.ANGSUR1_formatted.replace(/[^0-9-]/g, ''),
+                        'Angs ke-2': row.ANGSUR2_formatted === '-' ? 0 : row.ANGSUR2_formatted.replace(/[^0-9-]/g, ''),
+                        Jenis: row.JENIS,
+                        'No. Badge': row.NO_BADGE,
+                        Kel: row.KEL,
+                        Status: row.STATUS_text
+                    }));
+
+                    const worksheet = XLSX.utils.json_to_sheet(data);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, 'PINBRG');
+                    XLSX.writeFile(workbook, `pinbrg_${$('#period').val().replace('-', '')}.xlsx`);
+                }
+
+                function printPinbrg(rows) {
+                    let html = `
+                        <html>
+                        <head>
+                            <title>Laporan PINBRG</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; padding: 20px; color: #000; }
+                                h2 { margin: 0 0 6px; }
+                                .meta { margin-bottom: 16px; font-size: 12px; }
+                                table { border-collapse: collapse; width: 100%; font-size: 10px; }
+                                th, td { border: 1px solid #000; padding: 4px; }
+                                th { background: #f2f2f2; text-align: center; }
+                                .text-end { text-align: right; }
+                                @media print {
+                                    body { padding: 0; }
+                                    @page { size: landscape; margin: 10mm; }
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <h2>Laporan Pinjaman Barang (PINBRG)</h2>
+                            <div class="meta">
+                                <div>Periode: ${$('#period').val()}</div>
+                                <div>Pencarian: ${$('#search').val() || 'Semua data'}</div>
+                                <div>Total Data: ${rows.length}</div>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Periode</th>
+                                        <th>Unit Usaha</th>
+                                        <th>Lokasi</th>
+                                        <th>No. Anggota</th>
+                                        <th>No. Invoice</th>
+                                        <th>No. Pin</th>
+                                        <th>Tgl Pinjam</th>
+                                        <th>Total Harga</th>
+                                        <th>Jumlah Pinjaman</th>
+                                        <th>Sisa Pinjaman</th>
+                                        <th>Angs 1</th>
+                                        <th>Angs 2</th>
+                                        <th>Jenis</th>
+                                        <th>No. Badge</th>
+                                        <th>Kel</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    rows.forEach((row, index) => {
+                        html += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${row.period}</td>
+                                <td>${row.unit_usaha ?? '-'}</td>
+                                <td>${row.lokasi ?? '-'}</td>
+                                <td>${row.NO_AGT ?? '-'}</td>
+                                <td>${row.NOPIN ?? '-'}</td>
+                                <td>${row.NO_PIN ?? '-'}</td>
+                                <td>${row.TG_PIN_formatted}</td>
+                                <td class="text-end">${row.TOTAL_HARGA_formatted}</td>
+                                <td class="text-end">${row.JUM_PIN_formatted}</td>
+                                <td class="text-end">${row.SISA_PIN_formatted}</td>
+                                <td class="text-end">${row.ANGSUR1_formatted}</td>
+                                <td class="text-end">${row.ANGSUR2_formatted}</td>
+                                <td>${row.JENIS ?? '-'}</td>
+                                <td>${row.NO_BADGE ?? '-'}</td>
+                                <td>${row.KEL ?? '-'}</td>
+                                <td>${row.STATUS_text}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += '</tbody></table></body></html>';
+
+                    const printWindow = window.open('', '_blank', 'width=1400,height=900');
+                    printWindow.document.open();
+                    printWindow.document.write(html);
+                    printWindow.document.close();
+                    printWindow.onload = function() {
+                        printWindow.focus();
+                        printWindow.print();
+                    };
+                }
+
+                async function processPinbrgOutput(type) {
+                    try {
+                        const response = await fetchAllPinbrgData();
+                        const rows = response.data || [];
+
+                        if (!rows.length) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Tidak Ada Data',
+                                text: 'Tidak ada data untuk diproses.'
+                            });
+                            return;
+                        }
+
+                        if (type === 'excel') {
+                            exportPinbrgExcel(rows);
+                        } else {
+                            printPinbrg(rows);
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: error.message || 'Gagal memproses data pinbrg.'
+                        });
+                    }
+                }
+
+                $('#btnExportExcel').click(function() {
+                    processPinbrgOutput('excel');
+                });
+
+                $('#btnPrintPinbrg').click(function() {
+                    processPinbrgOutput('print');
                 });
                 
                 // Reset filter
