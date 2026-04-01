@@ -17,9 +17,22 @@ use Illuminate\Support\Facades\Hash;
 
 class StockOpnameController extends Controller
 {
+    private function resolveBulan(?string $bulan): string
+    {
+        if (!is_string($bulan) || !preg_match('/^\d{4}-\d{2}$/', $bulan)) {
+            return Carbon::now()->format('Y-m');
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m', $bulan)->format('Y-m');
+        } catch (\Throwable $e) {
+            return Carbon::now()->format('Y-m');
+        }
+    }
+
     public function index(Request $request): View
     {
-        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
+        $bulan = $this->resolveBulan($request->bulan);
         $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
         $endDate = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
         
@@ -115,7 +128,7 @@ class StockOpnameController extends Controller
         $selectedBarang = null;
         $existingData = null;
         $unitId = Auth::user()->unit_kerja;
-        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
+        $bulan = $this->resolveBulan($request->bulan);
 
         if ($request->has('barang_id')) {
             $barangId = $request->barang_id;
@@ -312,7 +325,7 @@ class StockOpnameController extends Controller
         
         $kode = $request->kode;
         $unitId = Auth::user()->unit_kerja;
-        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
+        $bulan = $this->resolveBulan($request->bulan);
 
         // Cari di barang
         $barang = DB::table('barang')
@@ -444,7 +457,7 @@ class StockOpnameController extends Controller
     public function getBarangAjax(Request $request)
     {
         $unitId = Auth::user()->unit_kerja;
-        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
+        $bulan = $this->resolveBulan($request->bulan);
 
         $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
         $endDate   = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
@@ -625,7 +638,7 @@ class StockOpnameController extends Controller
      */
     public function modalAwal(Request $request): View
     {
-        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
+        $bulan = $this->resolveBulan($request->bulan);
         $unitId = Auth::user()->unit_kerja;
         
         $dataModal = ModalAwal::with(['barang', 'unit'])
@@ -645,7 +658,7 @@ class StockOpnameController extends Controller
     public function getModalAwalAjax(Request $request)
     {
         $unitId = Auth::user()->unit_kerja;
-        $bulan = $request->bulan ?? Carbon::now()->format('Y-m');
+        $bulan = $this->resolveBulan($request->bulan);
 
         $query = ModalAwal::query()
             ->where('periode', $bulan)

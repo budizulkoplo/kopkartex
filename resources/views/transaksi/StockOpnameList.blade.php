@@ -65,7 +65,7 @@
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         <form method="GET" action="{{ route('stockopname.index') }}" class="d-flex">
                             <div class="input-group input-group-sm">
-                                <input type="month" name="bulan" value="{{ $bulan }}" class="form-control">
+                                <input type="month" id="bulan" name="bulan" value="{{ $bulan }}" class="form-control">
                                 <button type="submit" class="btn btn-warning">
                                     <i class="bi bi-filter"></i> Filter
                                 </button>
@@ -252,15 +252,17 @@
                     $('#formScan').on('submit', function(e) {
                         e.preventDefault();
                         let kode = $('#kodeScan').val();
+                        let bulan = $('#bulan').val() || "{{ $bulan }}";
                         if (!kode) return;
 
                         $.post("{{ route('stockopname.scan') }}", { 
                             kode: kode, 
+                            bulan: bulan,
                             _token: "{{ csrf_token() }}" 
                         })
                         .done(function(res) {
                             if (res.status === 'found') {
-                                window.location.href = "{{ url('/stock/form') }}" + "?barang_id=" + res.data.id + "&bulan=" + $('#bulan').val();
+                                window.location.href = res.form_url ?? ("{{ url('/stock/form') }}" + "?barang_id=" + res.data.id + "&bulan=" + encodeURIComponent(bulan));
                             } else if (res.status === 'old') {
                                 Swal.fire({
                                     title: 'Barang tidak ada di master!',
@@ -276,7 +278,7 @@
                                             _token: "{{ csrf_token() }}" 
                                         })
                                         .done(function(res2) {
-                                            window.location.href = "{{ url('/stock/form') }}" + "?barang_id=" + res2.data.id + "&bulan=" + $('#bulan').val();
+                                            window.location.href = "{{ url('/stock/form') }}" + "?barang_id=" + res2.data.id + "&bulan=" + encodeURIComponent(bulan);
                                         });
                                     }
                                 });
