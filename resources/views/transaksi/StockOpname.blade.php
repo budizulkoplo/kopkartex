@@ -41,7 +41,7 @@
                             <div class="alert alert-warning alert-dismissible fade show mb-3">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
                                 <strong>Perhatian!</strong> Barang ini sudah memiliki data stock opname untuk bulan ini. 
-                                Input baru akan menggantikan data yang sudah ada.
+                                Input baru akan menggantikan draft yang sudah ada. Stok sistem baru diperbarui saat proses selesai opname.
                                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
                         @endif
@@ -136,7 +136,7 @@
                                     <i class="bi bi-arrow-clockwise"></i> Reset
                                 </button>
                                 <button type="submit" class="btn btn-success">
-                                    <i class="bi bi-floppy-fill"></i> Simpan
+                                    <i class="bi bi-floppy-fill"></i> Simpan Draft
                                 </button>
                             </div>
                         </div>
@@ -273,15 +273,16 @@
                     // }
 
                     Swal.fire({
-                        title: "Simpan Stock Opname?",
+                        title: "Simpan Draft Stock Opname?",
                         html: `<strong>Stok Sistem:</strong> ${stokSistem}<br>
                                <strong>Stok Fisik:</strong> ${totalFisik}<br>
-                               <strong>Selisih:</strong> ${totalFisik - stokSistem}`,
+                               <strong>Selisih:</strong> ${totalFisik - stokSistem}<br>
+                               <small>Stok sistem belum berubah sampai proses selesai opname.</small>`,
                         icon: "warning",
                         showCancelButton: true,
                         confirmButtonColor: "#3085d6",
                         cancelButtonColor: "#d33",
-                        confirmButtonText: "Ya, Simpan!",
+                        confirmButtonText: "Ya, Simpan Draft!",
                         cancelButtonText: "Batal"
                     }).then((result) => {
                         if (result.isConfirmed) {
@@ -328,7 +329,7 @@
                                 },
                                 complete: function() {
                                     $('button[type="submit"]').prop('disabled', false)
-                                        .html('<i class="bi bi-floppy-fill"></i> Simpan');
+                                        .html('<i class="bi bi-floppy-fill"></i> Simpan Draft');
                                 }
                             });
                         }

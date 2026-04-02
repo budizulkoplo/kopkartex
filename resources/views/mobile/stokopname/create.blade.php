@@ -38,7 +38,7 @@
 
         <button type="button" id="btnTambah" class="btn btn-outline-primary btn-sm w-100 mb-3">+ Tambah Baris</button>
 
-        <button type="submit" class="btn btn-success w-100">Simpan Opname</button>
+        <button type="submit" class="btn btn-success w-100">Simpan Draft Opname</button>
     </form>
 </div>
 

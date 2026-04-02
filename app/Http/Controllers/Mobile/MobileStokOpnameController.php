@@ -15,6 +15,8 @@ use Exception;
 
 class MobileStokOpnameController extends BaseMobileController
 {
+    private const STATUS_DRAFT = 'draft';
+
     // Halaman scan barcode
     public function index()
     {
@@ -81,10 +83,20 @@ class MobileStokOpnameController extends BaseMobileController
             foreach ($dataGrouped as $idBarang => $group) {
                 $totalQty = array_sum(array_column($group['items'], 'qty'));
 
-                $stoksys = StokUnit::firstOrCreate(
-                    ['barang_id' => $idBarang, 'unit_id' => $unitId],
-                    ['stok' => 0]
-                );
+                $stoksys = StokUnit::withTrashed()
+                    ->where('barang_id', $idBarang)
+                    ->where('unit_id', $unitId)
+                    ->first();
+
+                if (!$stoksys) {
+                    $stoksys = new StokUnit();
+                    $stoksys->barang_id = $idBarang;
+                    $stoksys->unit_id = $unitId;
+                    $stoksys->stok = 0;
+                    $stoksys->save();
+                } elseif ($stoksys->trashed()) {
+                    $stoksys->restore();
+                }
 
                 $hdr = StockOpnameHDR::firstOrNew([
                     'id_unit'   => $unitId,
@@ -96,7 +108,7 @@ class MobileStokOpnameController extends BaseMobileController
                 $hdr->user        = $userId;
                 $hdr->stock_sistem= $stoksys->stok;
                 $hdr->stock_fisik = $totalQty;
-                $hdr->status      = "sukses";
+                $hdr->status      = self::STATUS_DRAFT;
                 $hdr->save();
 
                 // replace detail lama
@@ -111,16 +123,13 @@ class MobileStokOpnameController extends BaseMobileController
                     ]);
                 }
 
-                // update stok sistem
-                $stoksys->stok = $totalQty;
-                $stoksys->save();
             }
 
             DB::commit();
             return response()->json([
                 'success'  => true,
                 'redirect' => route('mobile.stokopname.index'),
-                'message'  => 'Stock opname berhasil disimpan.'
+                'message'  => 'Stock opname berhasil disimpan sebagai draft.'
             ]);
         } catch (Exception $e) {
             DB::rollBack();

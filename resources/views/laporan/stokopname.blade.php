@@ -341,7 +341,9 @@
                     
                     // Format status
                     const statusClass = row.status === "pending" ? "status-pending" : "status-success";
-                    const statusText = row.status === "pending" ? "Pending" : "Sukses";
+                    const statusText = row.status === "pending"
+                        ? "Pending"
+                        : (row.status === "draft" ? "Draft" : "Selesai");
                     
                     printHTML += `
                         <tr>
@@ -502,7 +504,10 @@
                             if (data.status === "pending") {
                                 return '<span class="badge bg-warning text-dark">Pending</span>';
                             }
-                            return '<span class="badge bg-success">Sukses</span>';
+                            if (data.status === "draft") {
+                                return '<span class="badge bg-success">Draft</span>';
+                            }
+                            return '<span class="badge bg-secondary">Selesai</span>';
                         },
                         className: "text-center"
                     }

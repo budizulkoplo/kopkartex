@@ -168,8 +168,8 @@
                                 if (periodeSelesai) {
                                     return '<span class="badge bg-secondary">Selesai</span>';
                                 }
-                                if (data === 'sukses') {
-                                    return '<span class="badge bg-success">Sukses</span>';
+                                if (data === 'draft') {
+                                    return '<span class="badge bg-success">Draft</span>';
                                 } else if (data === 'pending') {
                                     return '<span class="badge bg-warning text-dark">Pending</span>';
                                 }
@@ -193,7 +193,7 @@
                     pageLength: 25,
                     responsive: true,
                     createdRow: function(row, data, dataIndex) {
-                        if (data.status === 'sukses') {
+                        if (data.status === 'draft') {
                             $(row).addClass('table-warning');
                         }
                     }
@@ -301,6 +301,7 @@
                         <p>Proses ini akan:</p>
                         <ul class="text-start">
                             <li>Menutup periode opname bulan ${bulan}</li>
+                            <li>Memperbarui stok sistem berdasarkan hasil draft opname</li>
                             <li>Menyimpan data ke tabel modal awal</li>
                             <li><strong>Data tidak dapat diubah setelah ini!</strong></li>
                         </ul>

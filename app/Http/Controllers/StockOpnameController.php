@@ -17,6 +17,10 @@ use Illuminate\Support\Facades\Hash;
 
 class StockOpnameController extends Controller
 {
+    private const STATUS_PENDING = 'pending';
+    private const STATUS_DRAFT = 'draft';
+    private const STATUS_SELESAI = 'selesai';
+
     private function resolveBulan(?string $bulan): string
     {
         if (!is_string($bulan) || !preg_match('/^\d{4}-\d{2}$/', $bulan)) {
@@ -107,7 +111,7 @@ class StockOpnameController extends Controller
                 $opnameHdr->stock_sistem = $barang->stok_sistem;
                 $opnameHdr->stock_fisik = 0; // Belum diisi
                 $opnameHdr->user = $userId;
-                $opnameHdr->status = 'pending';
+                $opnameHdr->status = self::STATUS_PENDING;
                 $opnameHdr->save();
             }
 
@@ -151,9 +155,13 @@ class StockOpnameController extends Controller
                     ->first();
                     
                 // Ambil stok sistem saat ini
-                $stokSistem = StokUnit::where('barang_id', $barangId)
-                    ->where('unit_id', $unitId)
-                    ->value('stok') ?? 0;
+                $stokSistem = $existingData?->stock_sistem;
+
+                if ($stokSistem === null) {
+                    $stokSistem = StokUnit::where('barang_id', $barangId)
+                        ->where('unit_id', $unitId)
+                        ->value('stok') ?? 0;
+                }
                     
                 $selectedBarang->stok_sistem = $stokSistem;
             }
@@ -267,7 +275,7 @@ class StockOpnameController extends Controller
             $opnameHdr->stock_sistem = $stokSistem;
             $opnameHdr->stock_fisik = $totalFisik;
             $opnameHdr->user = $userId;
-            $opnameHdr->status = 'sukses';
+            $opnameHdr->status = self::STATUS_DRAFT;
             $opnameHdr->keterangan = $request->keterangan ?? null;
             $opnameHdr->save();
             
@@ -286,25 +294,11 @@ class StockOpnameController extends Controller
                 }
             }
             
-            // Update stok unit
-            $stokUnit = StokUnit::where('barang_id', $barangId)
-                ->where('unit_id', $unitId)
-                ->first();
-                
-            if (!$stokUnit) {
-                $stokUnit = new StokUnit();
-                $stokUnit->barang_id = $barangId;
-                $stokUnit->unit_id = $unitId;
-            }
-            
-            $stokUnit->stok = $totalFisik;
-            $stokUnit->save();
-
             DB::commit();
             
             return response()->json([
                 'success' => true,
-                'message' => 'Stock opname berhasil disimpan.',
+                'message' => 'Stock opname berhasil disimpan sebagai draft. Stok sistem akan diperbarui saat proses selesai opname.',
                 'redirect' => route('stockopname.index', ['bulan' => $bulan])
             ]);
             
@@ -487,9 +481,9 @@ class StockOpnameController extends Controller
                     'bulan'     => $bulan
                 ]);
 
-                $btnClass = $row->status == 'sukses' ? 'btn-warning' : 'btn-primary';
-                $btnText  = $row->status == 'sukses' ? 'Revisi' : 'Input';
-                $btnIcon  = $row->status == 'sukses' ? 'bi-pencil-square' : 'bi-input-cursor';
+                $btnClass = $row->status == self::STATUS_DRAFT ? 'btn-warning' : 'btn-primary';
+                $btnText  = $row->status == self::STATUS_DRAFT ? 'Revisi' : 'Input';
+                $btnIcon  = $row->status == self::STATUS_DRAFT ? 'bi-pencil-square' : 'bi-input-cursor';
 
                 return '<a href="'.$url.'" class="btn btn-sm '.$btnClass.'">
                     <i class="bi '.$btnIcon.'"></i> '.$btnText.'
@@ -544,19 +538,36 @@ class StockOpnameController extends Controller
                 )
                 ->get();
 
-            // 3. Ambil data opname yang sudah diinput (status sukses)
+            // 3. Ambil data opname periode ini. Record draft akan dipakai
+            // sebagai stok final ketika proses opname ditutup.
             $dataOpname = StockOpnameHDR::where('id_unit', $unitId)
                 ->whereBetween('tgl_opname', [$startDate, $endDate])
                 ->get()
                 ->keyBy('id_barang'); // Group by id_barang untuk mudah diakses
 
-            // 4. Insert ke modal_awal untuk semua barang
+            // 4. Update stok sistem final sekaligus insert ke modal_awal untuk semua barang
             foreach ($semuaBarang as $barang) {
                 // Cek apakah barang ini sudah diopname
                 $opnameBarang = $dataOpname->get($barang->id_barang);
                 
                 // Jika sudah diopname, ambil stok_fisik, jika belum, set 0
                 $stokFisik = $opnameBarang ? $opnameBarang->stock_fisik : 0;
+
+                $stokUnit = StokUnit::withTrashed()
+                    ->where('barang_id', $barang->id_barang)
+                    ->where('unit_id', $unitId)
+                    ->first();
+
+                if (!$stokUnit) {
+                    $stokUnit = new StokUnit();
+                    $stokUnit->barang_id = $barang->id_barang;
+                    $stokUnit->unit_id = $unitId;
+                } elseif ($stokUnit->trashed()) {
+                    $stokUnit->restore();
+                }
+
+                $stokUnit->stok = $stokFisik;
+                $stokUnit->save();
                 
                 // Ambil harga beli dari barang
                 $hargaBeli = $barang->harga_beli ?? 0;
@@ -573,11 +584,11 @@ class StockOpnameController extends Controller
                 ]);
             }
 
-            // 5. Update status semua opname menjadi 'selesai' 
+            // 5. Update status semua opname menjadi selesai
             // (termasuk yang statusnya pending akan dianggap selesai dengan stok 0)
             StockOpnameHDR::where('id_unit', $unitId)
                 ->whereBetween('tgl_opname', [$startDate, $endDate])
-                ->update(['status' => 'selesai']);
+                ->update(['status' => self::STATUS_SELESAI]);
 
             // 6. Untuk barang yang belum ada record opname sama sekali, buat record baru dengan status selesai dan stok 0
             $barangYangSudahAdaRecord = StockOpnameHDR::where('id_unit', $unitId)
@@ -598,7 +609,7 @@ class StockOpnameController extends Controller
                     'stock_sistem' => $barang->stok_sistem,
                     'stock_fisik' => 0,
                     'user' => Auth::user()->id,
-                    'status' => 'selesai',
+                    'status' => self::STATUS_SELESAI,
                     'keterangan' => 'Auto generate saat selesai opname (stok 0)'
                 ]);
             }
