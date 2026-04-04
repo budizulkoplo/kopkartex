@@ -9,14 +9,18 @@
 
     <div class="app-content">
         <div class="container-fluid my-4">
-            <h2 class="mb-4">📊 Dashboard Penjualan</h2>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+                <div>
+                    <h2 class="mb-1">Dashboard {{ $context['transaction_label'] }}</h2>
+                    <small class="text-muted">Unit aktif: {{ $context['unit_name'] }} ({{ ucfirst($context['unit_jenis']) }})</small>
+                </div>
+            </div>
 
             <div class="row g-4 mt-2">
-                <!-- Chart Penjualan per Bulan -->
                 <div class="col-md-6">
                     <div class="card shadow-sm">
                         <div class="card-header bg-primary text-white">
-                            Penjualan per Bulan (6 Bulan Terakhir)
+                            Grafik {{ $context['transaction_label'] }} per Bulan
                         </div>
                         <div class="card-body">
                             <canvas id="chartBulanan"></canvas>
@@ -24,12 +28,11 @@
                     </div>
                 </div>
 
-                <!-- Daftar Ambil Pesanan -->
                 <div class="col-md-6">
                     <div class="card shadow-sm">
                         <div class="card-header bg-info text-white d-flex align-items-center pt-1 pb-1">
-                            <h6 class="mb-0">Daftar Ambil Pesanan Hari Ini</h6>
-                            <a href="/ambilbarang" class="btn btn-sm btn-warning ms-auto">Ambil Pesanan</a>
+                            <h6 class="mb-0">{{ $context['today_label'] }}</h6>
+                            <a href="{{ $context['today_route'] }}" class="btn btn-sm btn-warning ms-auto">{{ $context['today_action_label'] }}</a>
                         </div>
                         <div class="card-body p-2">
                             <div class="table-responsive">
@@ -60,6 +63,7 @@
                                                         'pending' => 'warning',
                                                         'batal' => 'danger',
                                                         'hutang' => 'secondary',
+                                                        'canceled' => 'danger',
                                                         default => 'info'
                                                     };
                                                 @endphp
@@ -71,7 +75,7 @@
                                     </tbody>
                                 </table>
                                 @if($pesananTerbaru->isEmpty())
-                                <p class="text-center text-muted my-3">Tidak ada pesanan hari ini</p>
+                                <p class="text-center text-muted my-3">Tidak ada transaksi hari ini</p>
                                 @endif
                             </div>
                         </div>
@@ -80,23 +84,26 @@
             </div>
 
             <div class="row g-4 mt-2">
-                <!-- Chart Metode Bayar -->
                 <div class="col-md-6">
                     <div class="card shadow-sm">
                         <div class="card-header bg-success text-white">
-                            Metode Pembayaran
+                            Metode Pembayaran {{ $context['transaction_label'] }}
                         </div>
                         <div class="card-body">
                             <canvas id="chartMetode"></canvas>
                             <div class="mt-3">
                                 <table class="table table-sm">
                                     <tbody>
-                                        @foreach($metode as $key => $jumlah)
+                                        @forelse($metode as $key => $jumlah)
                                         <tr>
                                             <td>{{ ucfirst($key) }}</td>
                                             <td class="text-end">{{ $jumlah }} transaksi</td>
                                         </tr>
-                                        @endforeach
+                                        @empty
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted">Belum ada data</td>
+                                        </tr>
+                                        @endforelse
                                     </tbody>
                                 </table>
                             </div>
@@ -104,23 +111,26 @@
                     </div>
                 </div>
 
-                <!-- Chart Status Transaksi -->
                 <div class="col-md-6">
                     <div class="card shadow-sm">
                         <div class="card-header bg-warning text-dark">
-                            Status Transaksi
+                            Status {{ $context['transaction_label'] }}
                         </div>
                         <div class="card-body">
                             <canvas id="chartStatus"></canvas>
                             <div class="mt-3">
                                 <table class="table table-sm">
                                     <tbody>
-                                        @foreach($status as $key => $jumlah)
+                                        @forelse($status as $key => $jumlah)
                                         <tr>
                                             <td>{{ ucfirst($key) }}</td>
                                             <td class="text-end">{{ $jumlah }} transaksi</td>
                                         </tr>
-                                        @endforeach
+                                        @empty
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted">Belum ada data</td>
+                                        </tr>
+                                        @endforelse
                                     </tbody>
                                 </table>
                             </div>
@@ -130,11 +140,10 @@
             </div>
 
             <div class="row g-4 mt-2">
-                <!-- Chart Top Barang -->
                 <div class="col-md-12">
                     <div class="card shadow-sm">
                         <div class="card-header bg-warning text-dark">
-                            Top 10 Barang Stok Terbanyak
+                            {{ $context['stock_label'] }}
                         </div>
                         <div class="card-body">
                             <canvas id="chartTopBarang"></canvas>
@@ -148,13 +157,17 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach($topBarang as $index => $barang)
+                                        @forelse($topBarang as $index => $barang)
                                         <tr>
                                             <td>{{ $index + 1 }}</td>
                                             <td>{{ $barang->nama_barang }}</td>
                                             <td class="text-end">{{ number_format($barang->total_stok, 0, ',', '.') }}</td>
                                         </tr>
-                                        @endforeach
+                                        @empty
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Belum ada data stok</td>
+                                        </tr>
+                                        @endforelse
                                     </tbody>
                                 </table>
                             </div>
@@ -165,51 +178,27 @@
         </div>
     </div>
 
-    <!-- Custom CSS -->
     <x-slot name="csscustom">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     </x-slot>
 
-    <!-- Custom JS -->
     <x-slot name="jscustom">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
         <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/min/moment.min.js"></script>
         <script>
-            // Format Rupiah Helper
-            function formatRupiah(angka, prefix) {
-                var number_string = angka.toString().replace(/[^,\d]/g, ''),
-                    split = number_string.split(','),
-                    sisa = split[0].length % 3,
-                    rupiah = split[0].substr(0, sisa),
-                    ribuan = split[0].substr(sisa).match(/\d{3}/gi);
-
-                if (ribuan) {
-                    separator = sisa ? '.' : '';
-                    rupiah += separator + ribuan.join('.');
-                }
-
-                rupiah = split[1] != undefined ? rupiah + ',' + split[1] : rupiah;
-                return prefix == undefined ? rupiah : (rupiah ? 'Rp ' + rupiah : '');
-            }
-
-            // Data dari Backend
             const bulan = @json($bulanan->pluck('bulan'));
             const totalBulanan = @json($bulanan->pluck('total'));
-
             const metodeLabels = @json(array_keys($metode->toArray()));
             const metodeData = @json(array_values($metode->toArray()));
-
             const statusLabels = @json(array_keys($status->toArray()));
             const statusData = @json(array_values($status->toArray()));
-
-            // Data dari Backend (Top Barang)
             const topBarangLabels = @json($topBarang->pluck('nama_barang'));
             const topBarangData = @json($topBarang->pluck('total_stok'));
+            const transactionLabel = @json($context['transaction_label']);
 
-            // Warna untuk chart
             const chartColors = {
                 primary: 'rgba(54, 162, 235, 0.6)',
                 success: 'rgba(75, 192, 192, 0.6)',
@@ -219,13 +208,12 @@
                 secondary: 'rgba(201, 203, 207, 0.6)'
             };
 
-            // --- Chart Penjualan Bulanan ---
             new Chart(document.getElementById("chartBulanan"), {
                 type: "bar",
                 data: {
                     labels: bulan,
                     datasets: [{
-                        label: "Total Penjualan (Rp)",
+                        label: `${transactionLabel} (Rp)`,
                         data: totalBulanan,
                         backgroundColor: chartColors.primary,
                         borderColor: chartColors.primary.replace('0.6', '1'),
@@ -244,7 +232,7 @@
                         }
                     },
                     scales: {
-                        y: { 
+                        y: {
                             beginAtZero: true,
                             ticks: {
                                 callback: function(value) {
@@ -256,7 +244,6 @@
                 }
             });
 
-            // --- Chart Metode Bayar ---
             new Chart(document.getElementById("chartMetode"), {
                 type: "doughnut",
                 data: {
@@ -274,14 +261,13 @@
                 }
             });
 
-            // --- Chart Status Transaksi ---
             new Chart(document.getElementById("chartStatus"), {
                 type: "pie",
                 data: {
                     labels: statusLabels.map(label => label.charAt(0).toUpperCase() + label.slice(1)),
                     datasets: [{
                         data: statusData,
-                        backgroundColor: [chartColors.success, chartColors.warning, chartColors.secondary, chartColors.danger]
+                        backgroundColor: [chartColors.success, chartColors.warning, chartColors.secondary, chartColors.danger, chartColors.info]
                     }]
                 },
                 options: {
@@ -292,7 +278,6 @@
                 }
             });
 
-            // --- Chart Top 10 Barang ---
             new Chart(document.getElementById("chartTopBarang"), {
                 type: "bar",
                 data: {
@@ -308,8 +293,8 @@
                 options: {
                     indexAxis: "y",
                     responsive: true,
-                    scales: { 
-                        x: { 
+                    scales: {
+                        x: {
                             beginAtZero: true,
                             ticks: {
                                 callback: function(value) {
@@ -321,8 +306,7 @@
                 }
             });
 
-            // DataTables untuk pesanan hari ini (AJAX)
-            var table = $('#tbdatatable').DataTable({
+            const table = $('#tbdatatable').DataTable({
                 processing: true,
                 serverSide: true,
                 paging: false,
@@ -332,50 +316,51 @@
                 ordering: false,
                 ajax: "{{ route('dashboard.pesananHariIniData') }}",
                 columns: [
-                    { 
-                        data: 'DT_RowIndex', 
-                        name: 'DT_RowIndex', 
-                        orderable: false, 
-                        searchable: false 
+                    {
+                        data: 'DT_RowIndex',
+                        name: 'DT_RowIndex',
+                        orderable: false,
+                        searchable: false
                     },
-                    { 
-                        data: 'nomor_invoice', 
-                        name: 'nomor_invoice' 
+                    {
+                        data: 'nomor_invoice',
+                        name: 'nomor_invoice'
                     },
-                    { 
-                        data: 'tanggal', 
+                    {
+                        data: 'tanggal',
                         name: 'tanggal',
                         render: function(data) {
                             return data ? moment(data).format("DD-MM-YYYY") : "";
                         }
                     },
-                    { 
-                        data: 'customer', 
-                        name: 'customer' 
+                    {
+                        data: 'customer',
+                        name: 'customer'
                     },
-                    { 
-                        data: 'grandtotal', 
+                    {
+                        data: 'grandtotal',
                         name: 'grandtotal',
                         render: function(data) {
-                            return 'Rp ' + parseInt(data).toLocaleString('id-ID');
+                            return 'Rp ' + parseInt(data || 0).toLocaleString('id-ID');
                         }
                     },
-                    { 
-                        data: 'status', 
+                    {
+                        data: 'status',
                         name: 'status',
                         render: function(data) {
                             const badgeClass = {
-                                'lunas': 'success',
-                                'pending': 'warning',
-                                'batal': 'danger',
-                                'hutang': 'secondary'
+                                lunas: 'success',
+                                pending: 'warning',
+                                batal: 'danger',
+                                hutang: 'secondary',
+                                canceled: 'danger'
                             }[data] || 'info';
-                            
+
                             return `<span class="badge bg-${badgeClass}">${data ? data.charAt(0).toUpperCase() + data.slice(1) : ''}</span>`;
                         }
                     },
-                    { 
-                        data: 'metode_bayar', 
+                    {
+                        data: 'metode_bayar',
                         name: 'metode_bayar',
                         render: function(data) {
                             return data ? data.charAt(0).toUpperCase() + data.slice(1) : '';
@@ -383,11 +368,10 @@
                     }
                 ],
                 language: {
-                    emptyTable: "Tidak ada data pesanan hari ini"
+                    emptyTable: "Tidak ada data transaksi hari ini"
                 }
             });
 
-            // Refresh otomatis setiap 10 detik
             setInterval(function() {
                 table.ajax.reload(null, false);
             }, 10000);

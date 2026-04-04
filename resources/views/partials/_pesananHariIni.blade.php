@@ -6,13 +6,22 @@
     <td>{{ $p->customer ?? '-' }}</td>
     <td>{{ number_format($p->grandtotal,0,',','.') }}</td>
     <td>
-        <span class="badge bg-{{ $p->status_ambil == 'finish' ? 'success' : 'warning' }}">
-            {{ ucfirst($p->status_ambil ?? '-') }}
+        @php
+            $badgeClass = match($p->status ?? null) {
+                'lunas' => 'success',
+                'pending' => 'warning',
+                'batal', 'canceled' => 'danger',
+                'hutang' => 'secondary',
+                default => 'info'
+            };
+        @endphp
+        <span class="badge bg-{{ $badgeClass }}">
+            {{ ucfirst($p->status ?? '-') }}
         </span>
     </td>
 </tr>
 @empty
 <tr>
-    <td colspan="7" class="text-center">Belum ada pesanan</td>
+    <td colspan="7" class="text-center">Belum ada transaksi</td>
 </tr>
 @endforelse
