@@ -25,7 +25,11 @@
         table { width: 100%; border-collapse: collapse; }
         td { vertical-align: top; }
 
-        @media print { body { width: 9.5cm; } }
+        @media print { body { width: 9.5cm; } 
+            * {
+                font-size: 9pt !important;
+            }
+        }   
     </style>
 </head>
 
