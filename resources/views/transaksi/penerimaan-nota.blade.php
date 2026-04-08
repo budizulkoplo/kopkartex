@@ -174,10 +174,8 @@
                 $subtotal = $dtl->sum(function($item) {
                     return $item->harga_beli * $item->jumlah;
                 });
-                $totalHargaJual = $dtl->sum(function($item) {
-                    return $item->harga_jual * $item->jumlah;
-                });
                 $totalPpn = $dtl->sum('ppn');
+                $grandTotal = $dtl->sum('subtotal');
             @endphp
 
             <tr>
@@ -192,7 +190,7 @@
             @endif
             <tr>
                 <td colspan="4" class="txt-right"><b>Grand Total</b></td>
-                <td class="txt-right"><b>{{ number_format($hdr->grandtotal, 0) }}</b></td>
+                <td class="txt-right"><b>{{ number_format($grandTotal, 0) }}</b></td>
             </tr>
             
         </table>

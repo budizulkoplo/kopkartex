@@ -581,10 +581,13 @@ class PenerimaanController extends Controller
 
     public function nota($invoice): View
     {   
-        $hdr = Penerimaan::join('users','users.id','penerimaan.user_id')
+        $hdr = Penerimaan::with('details')
+            ->join('users','users.id','penerimaan.user_id')
             ->select('penerimaan.*','users.name as petugas')
             ->where('penerimaan.nomor_invoice',$invoice)
             ->firstOrFail();
+
+        $hdr->grandtotal = $hdr->effective_grandtotal;
 
         $dtl = PenerimaanDtl::join('barang','barang.id','penerimaan_detail.barang_id')
             ->select(
