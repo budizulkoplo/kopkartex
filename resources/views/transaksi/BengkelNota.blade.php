@@ -7,8 +7,9 @@
         body{
             margin:0;
             font-family:"Courier New", monospace;
-            font-size:10pt; /* diseragamkan */
-            padding-left:3mm; /* tambah jarak kiri */
+            font-size:10pt; 
+            padding-left:3mm; 
+            padding-top:6mm; 
             box-sizing:border-box;
         }
 
