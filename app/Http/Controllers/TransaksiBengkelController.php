@@ -76,26 +76,23 @@ class TransaksiBengkelController extends Controller
             ->limit(10)
             ->get();
 
-        $formatted = $users->map(function ($user) {
+        $isLimitControlled = KonfigBunga::isDebtLimitControlEnabled();
 
-            // batas hutang
-            $batas = (!empty($user->limit_hutang) && $user->limit_hutang > 0)
-                ? $user->limit_hutang
-                : (0.35 * $user->gaji);
-
-            // total hutang aktif
+        $formatted = $users->map(function ($user) use ($isLimitControlled) {
+            $batas = KonfigBunga::resolveDebtLimit($user);
             $totalHutang = $user->total_toko + $user->total_bengkel;
-
-            // sisa limit
-            $sisaLimit = $batas - $totalHutang;
+            $sisaLimit = $isLimitControlled && $batas !== null
+                ? max($batas - $totalHutang, 0)
+                : 0;
 
             return [
                 'id'            => $user->id,
                 'name'          => $user->name,
                 'nomor_anggota' => $user->nomor_anggota,
-                'limit_hutang'  => max($sisaLimit, 0),
+                'limit_hutang'  => $sisaLimit,
                 'total_hutang'  => $totalHutang,
                 'gaji'          => $user->gaji,
+                'control_limit' => $isLimitControlled ? 1 : 0,
             ];
         });
 
@@ -340,11 +337,9 @@ class TransaksiBengkelController extends Controller
 
                 $totalcicilan = $totalToko + $totalBengkel;
 
-                $batas = (!empty($user->limit_hutang) && $user->limit_hutang > 0)
-                    ? $user->limit_hutang
-                    : 0.35 * $user->gaji;
+                $batas = KonfigBunga::resolveDebtLimit($user);
 
-                if (($totalcicilan + $cicilanpertama) > $batas) {
+                if ($batas !== null && ($totalcicilan + $cicilanpertama) > $batas) {
                     DB::rollBack();
                     return response()->json(
                         'Tidak dapat diproses, Melebihi batas limitxx hutang. Sisa limit: Rp ' . number_format($totalBengkel, 0, ',', '.'),
@@ -714,9 +709,7 @@ public function revise($id): View|RedirectResponse
 
         $totalCicilanLain = $totalToko + $totalBengkel;
 
-        $batas = (!empty($user->limit_hutang) && $user->limit_hutang > 0)
-            ? $user->limit_hutang
-            : 0.35 * $user->gaji;
+        $batas = KonfigBunga::resolveDebtLimit($user);
 
         // Hitung cicilan pertama
         $bunga = KonfigBunga::select('bunga_barang')->first();
@@ -851,3 +844,4 @@ public function revise($id): View|RedirectResponse
     }
 
 }
+

@@ -190,8 +190,8 @@ class BelanjaController extends BaseMobileController
 
                 $totalcicilan = PenjualanCicil::where(['anggota_id'=>Auth::user()->id,'status'=>'hutang'])->sum('total_cicilan');
 
-                $batas = 0.35 * Auth::user()->gaji; // 35% dari gaji
-                if (($totalcicilan+$cicilanpertama) > $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
+                $batas = KonfigBunga::resolveDebtLimit(Auth::user());
+                if ($batas !== null && ($totalcicilan + $cicilanpertama) > $batas) { //PR  hitung hutang yg masih aktif jika < $user->limit_hutang maka lolos
                     return response()->json('Tidak dapat diproses, Melebihi batas limit',500);
                 }
 
@@ -293,3 +293,6 @@ class BelanjaController extends BaseMobileController
     }
 
 }
+
+
+

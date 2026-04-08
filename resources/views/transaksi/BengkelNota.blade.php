@@ -7,7 +7,7 @@
         body{
             margin:0;
             font-family:"Courier New", monospace;
-            font-size:12px; /* diseragamkan */
+            font-size:10pt; /* diseragamkan */
             padding-left:3mm; /* tambah jarak kiri */
             box-sizing:border-box;
         }
@@ -60,7 +60,7 @@ if($isCicilan){
 
 <!-- HEADER -->
 <div class="center">
-    <b style="font-size:13px">CV MANDIRI SEJAHTERA</b>
+    <b style="font-size:10pt">CV MANDIRI SEJAHTERA</b>
 </div>
 
 <table>

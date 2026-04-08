@@ -128,13 +128,9 @@ class AmbilBarangController extends Controller
                         ->sum('total_cicilan');
 
                     // Cek limit hutang
-                    if (!empty($user->limit_hutang) && $user->limit_hutang > 0) {
-                        $batas = $user->limit_hutang;
-                    } else {
-                        $batas = 0.35 * $user->gaji;
-                    }
+                    $batas = KonfigBunga::resolveDebtLimit($user);
                     
-                    if (($totalcicilan + $cicilanpertama) > $batas) {
+                    if ($batas !== null && ($totalcicilan + $cicilanpertama) > $batas) {
                         DB::rollBack();
                         return response()->json('Tidak dapat diproses, Melebihi batas limit', 500);
                     }
@@ -218,3 +214,4 @@ class AmbilBarangController extends Controller
     }
 
 }
+

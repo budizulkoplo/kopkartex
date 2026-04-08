@@ -143,13 +143,21 @@ class PenjualanController extends Controller
         ->groupBy('users.id', 'users.name', 'users.nomor_anggota', 'users.limit_hutang')
         ->get();
 
-        $formatted = $users->map(function ($user) {
+        $isLimitControlled = KonfigBunga::isDebtLimitControlEnabled();
+
+        $formatted = $users->map(function ($user) use ($isLimitControlled) {
+            $batas = KonfigBunga::resolveDebtLimit($user);
+            $sisaLimit = $isLimitControlled && $batas !== null
+                ? max($batas - (float) $user->total_pokok, 0)
+                : 0;
+
             return [
                 'id' => $user->id,
                 'name' => $user->name,
                 'nomor_anggota' => $user->nomor_anggota,
-                'limit_hutang' => $user->limit_hutang - $user->total_pokok,
+                'limit_hutang' => $sisaLimit,
                 'total_pokok' => $user->total_pokok,
+                'control_limit' => $isLimitControlled ? 1 : 0,
             ];
         });
 
@@ -316,13 +324,9 @@ class PenjualanController extends Controller
                 $totalcicilan = PenjualanCicil::where(['anggota_id'=>$request->idcustomer,'status'=>'hutang'])
                 ->sum('total_cicilan');
 
-                if (!empty($user->limit_hutang) && $user->limit_hutang > 0) {
-                    $batas = $user->limit_hutang;
-                } else {
-                    $batas = 0.35 * $user->gaji;
-                }
+                $batas = KonfigBunga::resolveDebtLimit($user);
                 
-                if (($totalcicilan+$cicilanpertama) > $batas) {
+                if ($batas !== null && ($totalcicilan + $cicilanpertama) > $batas) {
                     return response()->json('Tidak dapat diproses, Melebihi batas limit',500);
                 }
 
@@ -830,11 +834,9 @@ class PenjualanController extends Controller
             ->where('penjualan_id', '!=', $penjualan->id)
             ->sum('total_cicilan');
 
-        $batas = (!empty($user->limit_hutang) && $user->limit_hutang > 0)
-            ? $user->limit_hutang
-            : (0.35 * $user->gaji);
+        $batas = KonfigBunga::resolveDebtLimit($user);
 
-        if (($totalCicilanAktif + $cicilanPertama) > $batas) {
+        if ($batas !== null && ($totalCicilanAktif + $cicilanPertama) > $batas) {
             throw new Exception('Tidak dapat diproses, melebihi batas limit');
         }
 
@@ -984,3 +986,6 @@ class PenjualanController extends Controller
     }
 
 }
+
+
+

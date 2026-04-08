@@ -514,7 +514,7 @@
                             let grandTotal = 0;
                             
                             res.detail.forEach((item, index) => {
-                                const subtotal = Number(item.subtotal || (item.jumlah * item.harga_beli));
+                                const subtotal = Number(item.subtotal || ((item.jumlah * item.harga_beli) + item.ppn));
                                 grandTotal += subtotal;
                                 
                                 tbody += `<tr>
@@ -609,7 +609,7 @@
 
                         if (response.detail.length > 0) {
                             response.detail.forEach((item, index) => {
-                                const subtotal = Number(item.subtotal || (item.jumlah * item.harga_beli));
+                                const subtotal = Number(item.subtotal || ((item.jumlah * item.harga_beli) + item.ppn));
                                 const row = `
                                     <tr>
                                         <td class="text-center">${index + 1}</td>
@@ -932,3 +932,4 @@
         </script>
     </x-slot>
 </x-app-layout>
+

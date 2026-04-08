@@ -37,7 +37,7 @@ class Penerimaan extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
-        'grandtotal' => 'float'
+        'grandtotal' => 'decimal:2'
     ];
     
     public function details()
@@ -53,5 +53,17 @@ class Penerimaan extends Model
     public function supplier()
     {
         return $this->belongsTo(Supplier::class, 'idsupplier', 'id');
+    }
+
+    public function getEffectiveGrandtotalAttribute(): float
+    {
+        if ($this->relationLoaded('details')) {
+            return round(
+                $this->details->sum(fn ($detail) => (float) $detail->subtotal),
+                2
+            );
+        }
+
+        return round((float) $this->grandtotal, 2);
     }
 }

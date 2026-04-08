@@ -74,6 +74,7 @@ class PenerimaanController extends Controller
             $barang->kategori = $kategori ? $kategori->name : '';
             return response()->json($barang);
         }else{
+
             return response()->json(['error' => 'Barang tidak ditemukan'], 404);
         }
     }
@@ -207,6 +208,7 @@ class PenerimaanController extends Controller
             $hdr->save();
 
             DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Penerimaan berhasil disimpan',
@@ -215,6 +217,7 @@ class PenerimaanController extends Controller
             ]);
         } catch (Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
@@ -251,6 +254,7 @@ class PenerimaanController extends Controller
             $supplier->email = $request->email ?? null;
             $supplier->save();
 
+
             return response()->json([
                 'success' => true,
                 'supplier' => [
@@ -282,6 +286,10 @@ class PenerimaanController extends Controller
         }
 
         $penerimaan = $query->paginate(25)->withQueryString();
+        $penerimaan->getCollection()->transform(function ($item) {
+            $item->grandtotal = $item->effective_grandtotal;
+            return $item;
+        });
 
         return view('transaksi.riwayatpenerimaan', [
             'penerimaan' => $penerimaan,
@@ -329,6 +337,9 @@ class PenerimaanController extends Controller
                 ];
             });
 
+
+            $grandTotal = round($detail->sum(fn ($item) => (float) $item['subtotal']), 2);
+
             return response()->json([
                 'success'     => true,
                 'penerimaan'  => [
@@ -342,12 +353,12 @@ class PenerimaanController extends Controller
                     'metode_bayar'   => $penerimaan->metode_bayar,
                     'tgl_tempo'      => $penerimaan->tgl_tempo ? $penerimaan->tgl_tempo->format('d-m-Y') : null,
                     'status_bayar'   => $penerimaan->status_bayar,
-                    'grandtotal'     => $penerimaan->grandtotal,
+                    'grandtotal'     => $grandTotal,
                     'user_name'      => $penerimaan->user->name ?? '-'
                 ],
                 'detail'      => $detail,
                 'satuan_options' => Satuan::query()->select('id', 'name')->orderBy('name')->get(),
-                'grand_total' => $penerimaan->grandtotal
+                'grand_total' => $grandTotal
             ]);
 
         } catch (\Exception $e) {
@@ -551,6 +562,7 @@ class PenerimaanController extends Controller
             
             DB::commit();
             
+
             return response()->json([
                 'success' => true,
                 'message' => 'Penerimaan berhasil dibatalkan'
@@ -559,6 +571,7 @@ class PenerimaanController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             
+
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal membatalkan penerimaan: ' . $e->getMessage()
@@ -604,6 +617,7 @@ class PenerimaanController extends Controller
             }
             
             $penerimaan->save();
+
 
             return response()->json([
                 'success' => true,
@@ -672,6 +686,7 @@ class PenerimaanController extends Controller
             
             DB::commit();
             
+
             return response()->json([
                 'success' => true,
                 'message' => 'Penerimaan berhasil diperbarui',
@@ -679,6 +694,7 @@ class PenerimaanController extends Controller
             ]);
         } catch (Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
@@ -739,6 +755,7 @@ class PenerimaanController extends Controller
             $satuan = Satuan::find($request->idsatuan);
             $kategori = Kategori::find($request->idkategori);
 
+
             return response()->json([
                 'success' => true,
                 'barang' => [
@@ -754,6 +771,7 @@ class PenerimaanController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menambahkan barang: ' . $e->getMessage()
@@ -761,3 +779,7 @@ class PenerimaanController extends Controller
         }
     }
 }
+
+
+
+
