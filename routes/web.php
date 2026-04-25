@@ -51,7 +51,7 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [AdminDashboardController::class, 'dashboard'])->middleware(['menu.access', 'global.app:admin'])->name('dashboard');
+    Route::get('/dashboard', [AdminDashboardController::class, 'dashboard'])->middleware(['menu.access', 'global.app:admin|superadmin|keuangan|bendahara'])->name('dashboard');
     Route::get('/admin/pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIni'])->middleware(['menu.access', 'global.app:admin'])->name('dashboard.pesananHariIni');
     Route::get('/admin/data-pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIniData'])->middleware(['menu.access', 'global.app:admin'])->name('dashboard.pesananHariIniData');
 
