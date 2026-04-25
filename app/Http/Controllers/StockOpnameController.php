@@ -78,6 +78,10 @@ class StockOpnameController extends Controller
                 $opname->delete();
             }
 
+            ModalAwal::where('periode', $bulanOpname)
+                ->where('unit_id', $unitId)
+                ->delete();
+
             // 2. Ambil semua barang yang ada di unit
             $barangList = DB::table('barang')
                 ->leftJoin('stok_unit', function ($join) use ($unitId) {
@@ -92,9 +96,15 @@ class StockOpnameController extends Controller
                         $q->where('barang.kelompok_unit', '<>', 'bengkel');
                     }
                 })
+                ->where(function ($q) {
+                    $q->whereNull('barang.status_produk')
+                        ->orWhere('barang.status_produk', 'aktif');
+                })
                 ->select(
                     'barang.id as id_barang',
                     'barang.kode_barang',
+                    'barang.nama_barang',
+                    'barang.harga_beli',
                     DB::raw('IFNULL(stok_unit.stok, 0) as stok_sistem')
                 )
                 ->orderBy('barang.kode_barang')
@@ -113,6 +123,17 @@ class StockOpnameController extends Controller
                 $opnameHdr->user = $userId;
                 $opnameHdr->status = self::STATUS_PENDING;
                 $opnameHdr->save();
+
+                ModalAwal::create([
+                    'periode' => $bulanOpname,
+                    'barang_id' => $barang->id_barang,
+                    'kode_barang' => $barang->kode_barang,
+                    'nama_barang' => $barang->nama_barang,
+                    'harga_modal' => $barang->harga_beli ?? 0,
+                    'unit_id' => $unitId,
+                    'stok' => $barang->stok_sistem,
+                    'nilai_total_barang' => ($barang->harga_beli ?? 0) * $barang->stok_sistem,
+                ]);
             }
 
             DB::commit();
@@ -180,6 +201,10 @@ class StockOpnameController extends Controller
                 $join->on('barang.id', '=', 'stok_unit.barang_id')
                     ->where('stok_unit.unit_id', $unitId);
             })
+            ->where(function ($q) {
+                $q->whereNull('barang.status_produk')
+                    ->orWhere('barang.status_produk', 'aktif');
+            })
             ->where(function($q) use ($query) {
                 $q->where('barang.kode_barang', 'like', "%{$query}%")
                   ->orWhere('barang.nama_barang', 'like', "%{$query}%");
@@ -206,6 +231,10 @@ class StockOpnameController extends Controller
                     ->where('stok_unit.unit_id', $unitId);
             })
             ->where('barang.kode_barang', $request->kode)
+            ->where(function ($q) {
+                $q->whereNull('barang.status_produk')
+                    ->orWhere('barang.status_produk', 'aktif');
+            })
             ->select(
                 'barang.id',
                 'barang.kode_barang as code',
@@ -247,11 +276,6 @@ class StockOpnameController extends Controller
             // Hitung total stok fisik
             $totalFisik = array_sum(array_map('floatval', $request->qty));
             
-            // Ambil stok sistem
-            $stokSistem = StokUnit::where('barang_id', $barangId)
-                ->where('unit_id', $unitId)
-                ->value('stok') ?? 0;
-                
             // Cek apakah sudah ada data opname untuk bulan ini
             $bulan = Carbon::parse($tglOpname)->format('Y-m');
             $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
@@ -269,10 +293,12 @@ class StockOpnameController extends Controller
                 $opnameHdr->id_unit = $unitId;
                 $opnameHdr->id_barang = $barangId;
                 $opnameHdr->kode_barang = $barang->kode_barang;
+                $opnameHdr->stock_sistem = StokUnit::where('barang_id', $barangId)
+                    ->where('unit_id', $unitId)
+                    ->value('stok') ?? 0;
             }
             
             // Update header
-            $opnameHdr->stock_sistem = $stokSistem;
             $opnameHdr->stock_fisik = $totalFisik;
             $opnameHdr->user = $userId;
             $opnameHdr->status = self::STATUS_DRAFT;
@@ -293,12 +319,28 @@ class StockOpnameController extends Controller
                     $detail->save();
                 }
             }
+
+            $stokUnit = StokUnit::withTrashed()
+                ->where('barang_id', $barangId)
+                ->where('unit_id', $unitId)
+                ->first();
+
+            if (!$stokUnit) {
+                $stokUnit = new StokUnit();
+                $stokUnit->barang_id = $barangId;
+                $stokUnit->unit_id = $unitId;
+            } elseif ($stokUnit->trashed()) {
+                $stokUnit->restore();
+            }
+
+            $stokUnit->stok = $totalFisik;
+            $stokUnit->save();
             
             DB::commit();
             
             return response()->json([
                 'success' => true,
-                'message' => 'Stock opname berhasil disimpan sebagai draft. Stok sistem akan diperbarui saat proses selesai opname.',
+                'message' => 'Stock opname berhasil disimpan. Stok realtime sistem sudah diperbarui, sementara modal awal tetap memakai snapshot saat start opname.',
                 'redirect' => route('stockopname.index', ['bulan' => $bulan])
             ]);
             
@@ -510,18 +552,13 @@ class StockOpnameController extends Controller
 
         DB::beginTransaction();
         try {
-            // 1. Hapus data modal_awal untuk periode dan unit yang sama jika ada
-            ModalAwal::where('periode', $bulan)
+            // 1. Ambil snapshot modal awal yang sudah dikunci saat start opname.
+            $snapshotModalAwal = ModalAwal::where('periode', $bulan)
                 ->where('unit_id', $unitId)
-                ->delete();
+                ->get()
+                ->keyBy('barang_id');
 
-            // 2. Ambil semua barang yang seharusnya ada di unit ini
             $semuaBarang = DB::table('barang')
-                ->leftJoin('stok_unit', function ($join) use ($unitId) {
-                    $join->on('barang.id', '=', 'stok_unit.barang_id')
-                        ->where('stok_unit.unit_id', '=', $unitId)
-                        ->whereNull('stok_unit.deleted_at');
-                })
                 ->where(function ($q) use ($unitId) {
                     if ($unitId == 5) {
                         $q->where('barang.kelompok_unit', 'bengkel');
@@ -529,68 +566,50 @@ class StockOpnameController extends Controller
                         $q->where('barang.kelompok_unit', '<>', 'bengkel');
                     }
                 })
+                ->where(function ($q) {
+                    $q->whereNull('barang.status_produk')
+                        ->orWhere('barang.status_produk', 'aktif');
+                })
                 ->select(
                     'barang.id as id_barang',
                     'barang.kode_barang',
                     'barang.nama_barang',
-                    'barang.harga_beli', // Menggunakan harga_beli sebagai modal
-                    DB::raw('IFNULL(stok_unit.stok, 0) as stok_sistem')
+                    'barang.harga_beli'
                 )
                 ->get();
 
-            // 3. Ambil data opname periode ini. Record draft akan dipakai
-            // sebagai stok final ketika proses opname ditutup.
+            // 2. Ambil data opname periode ini untuk validasi dan finalisasi status
             $dataOpname = StockOpnameHDR::where('id_unit', $unitId)
                 ->whereBetween('tgl_opname', [$startDate, $endDate])
                 ->get()
                 ->keyBy('id_barang'); // Group by id_barang untuk mudah diakses
 
-            // 4. Update stok sistem final sekaligus insert ke modal_awal untuk semua barang
+            // 3. Pastikan snapshot modal awal tetap memakai nilai yang dikunci saat start opname.
             foreach ($semuaBarang as $barang) {
-                // Cek apakah barang ini sudah diopname
-                $opnameBarang = $dataOpname->get($barang->id_barang);
-                
-                // Jika sudah diopname, ambil stok_fisik, jika belum, set 0
-                $stokFisik = $opnameBarang ? $opnameBarang->stock_fisik : 0;
+                $snapshot = $snapshotModalAwal->get($barang->id_barang);
 
-                $stokUnit = StokUnit::withTrashed()
-                    ->where('barang_id', $barang->id_barang)
-                    ->where('unit_id', $unitId)
-                    ->first();
-
-                if (!$stokUnit) {
-                    $stokUnit = new StokUnit();
-                    $stokUnit->barang_id = $barang->id_barang;
-                    $stokUnit->unit_id = $unitId;
-                } elseif ($stokUnit->trashed()) {
-                    $stokUnit->restore();
-                }
-
-                $stokUnit->stok = $stokFisik;
-                $stokUnit->save();
-                
-                // Ambil harga beli dari barang
-                $hargaBeli = $barang->harga_beli ?? 0;
-                
-                ModalAwal::create([
-                    'periode' => $bulan,
-                    'barang_id' => $barang->id_barang,
-                    'kode_barang' => $barang->kode_barang,
-                    'nama_barang' => $barang->nama_barang,
-                    'harga_modal' => $hargaBeli, // Simpan harga_beli ke field harga_modal
-                    'unit_id' => $unitId,
-                    'stok' => $stokFisik,
-                    'nilai_total_barang' => $stokFisik * $hargaBeli
-                ]);
+                ModalAwal::firstOrCreate(
+                    [
+                        'periode' => $bulan,
+                        'barang_id' => $barang->id_barang,
+                        'unit_id' => $unitId,
+                    ],
+                    [
+                        'kode_barang' => $barang->kode_barang,
+                        'nama_barang' => $barang->nama_barang,
+                        'harga_modal' => $barang->harga_beli ?? 0,
+                        'stok' => $snapshot?->stok ?? 0,
+                        'nilai_total_barang' => ($snapshot?->stok ?? 0) * ($barang->harga_beli ?? 0),
+                    ]
+                );
             }
 
-            // 5. Update status semua opname menjadi selesai
-            // (termasuk yang statusnya pending akan dianggap selesai dengan stok 0)
+            // 4. Update status semua opname menjadi selesai
             StockOpnameHDR::where('id_unit', $unitId)
                 ->whereBetween('tgl_opname', [$startDate, $endDate])
                 ->update(['status' => self::STATUS_SELESAI]);
 
-            // 6. Untuk barang yang belum ada record opname sama sekali, buat record baru dengan status selesai dan stok 0
+            // 5. Untuk barang yang belum ada record opname sama sekali, buat record selesai memakai snapshot awal
             $barangYangSudahAdaRecord = StockOpnameHDR::where('id_unit', $unitId)
                 ->whereBetween('tgl_opname', [$startDate, $endDate])
                 ->pluck('id_barang')
@@ -601,22 +620,24 @@ class StockOpnameController extends Controller
             });
             
             foreach ($barangBelumAdaRecord as $barang) {
+                $snapshot = $snapshotModalAwal->get($barang->id_barang);
+
                 StockOpnameHDR::create([
                     'tgl_opname' => $endDate, // Gunakan tanggal terakhir bulan
                     'id_unit' => $unitId,
                     'id_barang' => $barang->id_barang,
                     'kode_barang' => $barang->kode_barang,
-                    'stock_sistem' => $barang->stok_sistem,
-                    'stock_fisik' => 0,
+                    'stock_sistem' => $snapshot?->stok ?? 0,
+                    'stock_fisik' => $snapshot?->stok ?? 0,
                     'user' => Auth::user()->id,
                     'status' => self::STATUS_SELESAI,
-                    'keterangan' => 'Auto generate saat selesai opname (stok 0)'
+                    'keterangan' => 'Auto generate saat selesai opname (belum diinput, memakai stok snapshot awal)'
                 ]);
             }
 
             DB::commit();
 
-            // Hitung total modal
+            // Hitung total modal snapshot awal
             $totalModal = ModalAwal::where('periode', $bulan)
                 ->where('unit_id', $unitId)
                 ->sum('nilai_total_barang');
@@ -625,7 +646,7 @@ class StockOpnameController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Stock opname selesai. Data modal awal berhasil disimpan.',
+                'message' => 'Stock opname selesai. Snapshot modal awal tetap tersimpan dari saat start opname dan data realtime stok tetap dipakai untuk cross check.',
                 'data' => [
                     'total_barang' => $semuaBarang->count(),
                     'barang_diopname' => $dataOpname->count(),

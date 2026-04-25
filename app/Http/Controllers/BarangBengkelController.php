@@ -35,6 +35,13 @@ class BarangBengkelController extends Controller
                 ->where('kelompok_unit', 'bengkel')
                 ->select('barang.*');
 
+            $statusProduk = $request->input('status_produk', 'aktif');
+            if ($statusProduk === 'aktif') {
+                $barang->aktif();
+            } elseif ($statusProduk === 'nonaktif') {
+                $barang->where('status_produk', 'nonaktif');
+            }
+
             if ($request->has('kategori') && $request->kategori != 'all') {
                 $barang->whereHas('kategoriRelation', function ($query) use ($request) {
                     $query->where('kategori.id', $request->kategori);
@@ -82,6 +89,9 @@ class BarangBengkelController extends Controller
                 })
                 ->editColumn('img', function ($q) {
                     return $q->img;
+                })
+                ->editColumn('status_produk', function ($q) {
+                    return $q->status_produk ?: 'aktif';
                 })
                 ->addColumn('aksi', function ($q) {
                     $encryptedId = Crypt::encryptString($q->id);
@@ -132,6 +142,7 @@ class BarangBengkelController extends Controller
                     'satuan' => $barang->satuanRelation ? $barang->satuanRelation->name : '',
                     'harga_beli' => $barang->harga_beli,
                     'harga_jual' => $barang->harga_jual,
+                    'status_produk' => $barang->status_produk ?: 'aktif',
                     'img' => $barang->img,
                     'stok' => $stok
                 ]
@@ -177,6 +188,7 @@ class BarangBengkelController extends Controller
             'harga_jual'  => 'nullable|numeric|min:0',
             'idkategori'  => 'required|exists:kategori,id',
             'idsatuan'    => 'required|exists:satuan,id',
+            'status_produk' => 'nullable|in:aktif,nonaktif',
             'img'         => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
@@ -224,6 +236,7 @@ class BarangBengkelController extends Controller
                 $barang = new Barang;
                 $barang->kode_barang = $request->kode_barang;
                 $barang->kelompok_unit = 'bengkel';
+                $barang->status_produk = 'aktif';
             }
 
             $barang->nama_barang = $request->nama_barang;
@@ -231,6 +244,7 @@ class BarangBengkelController extends Controller
             $barang->harga_jual  = $request->harga_jual ?? 0;
             $barang->idkategori  = $request->idkategori;
             $barang->idsatuan    = $request->idsatuan;
+            $barang->status_produk = $request->input('status_produk', $barang->status_produk ?: 'aktif');
 
             // Handle upload image
             if ($request->hasFile('img')) {
@@ -339,6 +353,7 @@ class BarangBengkelController extends Controller
             $barang->kelompok_unit = 'bengkel';
             $barang->idkategori = $request->idkategori;
             $barang->idsatuan = $request->idsatuan;
+            $barang->status_produk = 'aktif';
             $barang->save();
 
             // Tambah ke stok unit untuk semua unit
@@ -428,5 +443,24 @@ class BarangBengkelController extends Controller
                   ->orderBy('name')
                   ->get(['id', 'name']);
         return response()->json($satuan);
+    }
+
+    public function updateStatus(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|string',
+            'status_produk' => 'required|in:aktif,nonaktif',
+        ]);
+
+        $id = Crypt::decryptString($request->id);
+        $barang = Barang::where('kelompok_unit', 'bengkel')->findOrFail($id);
+        $barang->status_produk = $request->status_produk;
+        $barang->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status produk bengkel berhasil diperbarui.',
+            'status_produk' => $barang->status_produk,
+        ]);
     }
 }

@@ -30,6 +30,16 @@
                                             </select>
                                         </div>
                                     </div>
+                                    <div class="col">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-warning text-white">Status</span>
+                                            <select class="form-select form-select-sm" id="fstatusproduk">
+                                                <option value="aktif">Aktif</option>
+                                                <option value="all">Semua</option>
+                                                <option value="nonaktif">Nonaktif</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="card-tools">
@@ -53,6 +63,7 @@
                                         <th width="10%">Stok</th>
                                         <th width="10%">Harga Beli</th>
                                         <th width="10%">Harga Jual</th>
+                                        <th width="10%">Status</th>
                                         <th width="5%">Foto</th>
                                         <th width="10%">Aksi</th>
                                     </tr>
@@ -141,6 +152,13 @@
                                 <label class="form-label">Stok Unit 5 (Bengkel)</label>
                                 <input type="text" class="form-control form-control-sm" name="stok_display" id="stok" readonly>
                                 <small class="text-muted">Stok saat ini (readonly)</small>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Status Produk</label>
+                                <select class="form-select form-select-sm" name="status_produk" id="statusProduk">
+                                    <option value="aktif">Aktif</option>
+                                    <option value="nonaktif">Nonaktif</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -251,6 +269,7 @@
                     url: "{{ route('barangbengkel.getdata') }}",
                     data: function(d) {
                         d.kategori = $('#fkategori').val();
+                        d.status_produk = $('#fstatusproduk').val();
                     },
                     type: "GET"
                 },
@@ -270,6 +289,21 @@
                     },
                     { data: "harga_beli" },
                     { data: "harga_jual" },
+                    {
+                        data: "status_produk",
+                        render: function(data, type, row) {
+                            const isAktif = (data || 'aktif') === 'aktif';
+                            const nextStatus = isAktif ? 'nonaktif' : 'aktif';
+                            return `
+                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                    <span class="badge bg-${isAktif ? 'success' : 'secondary'}">${isAktif ? 'Aktif' : 'Nonaktif'}</span>
+                                    <button class="btn btn-xs btn-outline-${isAktif ? 'secondary' : 'success'} bengkel-status-btn"
+                                        data-id="${row.id}" data-status="${nextStatus}">
+                                        ${isAktif ? 'Nonaktifkan' : 'Aktifkan'}
+                                    </button>
+                                </div>`;
+                        }
+                    },
                     { 
                         data: "img", 
                         orderable: false, 
@@ -290,7 +324,7 @@
             });
 
             // Filter change
-            $('#fkategori').on('change', function() {
+            $('#fkategori, #fstatusproduk').on('change', function() {
                 table.ajax.reload();
             });
 
@@ -411,6 +445,7 @@
                             $('#hargaBeli').val(data.harga_beli);
                             $('#hargaJual').val(data.harga_jual);
                             $('#stok').val(data.stok);
+                            $('#statusProduk').val(data.status_produk || 'aktif');
                             
                             if (data.img) {
                                 $('#previewImg').show().attr('src', '/storage/produk/bengkel/' + data.img);
@@ -469,6 +504,32 @@
                 });
             });
 
+            $(document).on('click', '.bengkel-status-btn', function() {
+                const encryptedId = $(this).data('id');
+                const status = $(this).data('status');
+
+                $.ajax({
+                    url: "{{ route('barangbengkel.status') }}",
+                    method: "POST",
+                    data: {
+                        id: encryptedId,
+                        status_produk: status,
+                        _token: "{{ csrf_token() }}"
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            table.ajax.reload(null, false);
+                            Swal.fire('Berhasil', response.message, 'success');
+                        } else {
+                            Swal.fire('Error!', response.message, 'error');
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire('Error!', xhr.responseJSON?.message || 'Gagal mengubah status produk', 'error');
+                    }
+                });
+            });
+
             // Reset form saat tambah baru
             $('#btnadd').on('click', function() {
                 resetForm();
@@ -485,6 +546,7 @@
                 $('#hargaInfo').html('').hide();
                 $('#kode_barang').removeClass('is-invalid');
                 $('#kode_barang').next('.invalid-feedback').remove();
+                $('#statusProduk').val('aktif');
             }
 
             // Quick Add validation

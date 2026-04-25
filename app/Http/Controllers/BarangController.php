@@ -34,6 +34,13 @@ class BarangController extends Controller
         $barang = Barang::with(['kategoriRelation', 'satuanRelation'])
             ->select('barang.*');
 
+        $statusProduk = $request->input('status_produk', 'aktif');
+        if ($statusProduk === 'aktif') {
+            $barang->aktif();
+        } elseif ($statusProduk === 'nonaktif') {
+            $barang->where('status_produk', 'nonaktif');
+        }
+
         // Filter berdasarkan kategori (menggunakan idkategori yang baru)
         if ($request->kategori != 'all') {
             $barang->whereHas('kategoriRelation', function ($query) use ($request) {
@@ -79,6 +86,9 @@ class BarangController extends Controller
             ->editColumn('img', function ($barang) {
                 return $barang->img;
             })
+            ->editColumn('status_produk', function ($barang) {
+                return $barang->status_produk ?: 'aktif';
+            })
             ->editColumn('id', function ($barang) {
                 return $barang->id;
             })
@@ -110,6 +120,7 @@ class BarangController extends Controller
                 $query->where('kode_barang', 'like', "%{$searchTerm}%")
                       ->orWhere('nama_barang', 'like', "%{$searchTerm}%");
             })
+            ->aktif()
             ->select('id', 'kode_barang as code', 'nama_barang as text', 'harga_beli', 'harga_jual', 'harga_jual_umum')
             ->limit(50)
             ->get();
@@ -121,6 +132,7 @@ class BarangController extends Controller
     {
         $kode = $request->kode;
         $barang = Barang::where('kode_barang', $kode)
+            ->aktif()
             ->select('id', 'kode_barang as code', 'nama_barang as text', 'harga_beli', 'harga_jual', 'harga_jual_umum')
             ->first();
         
@@ -174,6 +186,7 @@ class BarangController extends Controller
             $barang->idsatuan = $satuanId;
             $barang->kelompok_unit = 'toko'; // Default
             $barang->type = $request->type ?? '';
+            $barang->status_produk = 'aktif';
             $barang->save();
 
             // Buat stok awal
@@ -221,6 +234,7 @@ class BarangController extends Controller
             'kategori'    => 'required|string',
             'satuan'      => 'required|string',
             'kelompok_unit' => 'nullable|in:toko,bengkel,air',
+            'status_produk' => 'nullable|in:aktif,nonaktif',
             'img'         => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
@@ -253,6 +267,7 @@ class BarangController extends Controller
             }
             $barang = new Barang();
             $barang->kode_barang = $request->kode_barang;
+            $barang->status_produk = 'aktif';
         }
 
         $barang->nama_barang = $request->nama_barang;
@@ -263,6 +278,7 @@ class BarangController extends Controller
         $barang->idkategori = $kategori->id;
         $barang->idsatuan = $satuan->id;
         $barang->kelompok_unit = $request->kelompok_unit ?? 'toko';
+        $barang->status_produk = $request->input('status_produk', $barang->status_produk ?: 'aktif');
 
         // Handle upload image
         if ($request->hasFile('img')) {
@@ -317,6 +333,7 @@ class BarangController extends Controller
                     'nama_barang' => $barang->nama_barang,
                     'type' => $barang->type,
                     'kelompok_unit' => $barang->kelompok_unit,
+                    'status_produk' => $barang->status_produk ?: 'aktif',
                     'kategori' => $barang->kategoriRelation ? $barang->kategoriRelation->name : '',
                     'satuan' => $barang->satuanRelation ? $barang->satuanRelation->name : '',
                     'harga_beli' => $barang->harga_beli,
@@ -331,6 +348,24 @@ class BarangController extends Controller
                 'message' => 'Data tidak ditemukan'
             ], 404);
         }
+    }
+
+    public function updateStatus(Request $request)
+    {
+        $request->validate([
+            'id' => 'required',
+            'status_produk' => 'required|in:aktif,nonaktif',
+        ]);
+
+        $barang = Barang::findOrFail($request->id);
+        $barang->status_produk = $request->status_produk;
+        $barang->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status produk berhasil diperbarui.',
+            'status_produk' => $barang->status_produk,
+        ]);
     }
     
 }

@@ -40,6 +40,16 @@
                                             </select>
                                         </div>
                                     </div>
+                                    <div class="col">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">Status</span>
+                                            <select class="form-select form-select-sm" id="fstatusproduk">
+                                                <option value="aktif">Aktif</option>
+                                                <option value="all">Semua</option>
+                                                <option value="nonaktif">Nonaktif</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="card-tools">
@@ -62,6 +72,7 @@
                                         <th>Harga Jual</th>
                                         <th>Harga Umum</th>
                                         <th>Kelompok</th>
+                                        <th>Status</th>
                                         <th>Foto</th>
                                         <th>Aksi</th>
                                     </tr>
@@ -112,6 +123,13 @@
                                     <option value="toko">Toko</option>
                                     <option value="bengkel">Bengkel</option>
                                     <option value="air">Air</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Status Produk</label>
+                                <select class="form-select form-select-sm" name="status_produk">
+                                    <option value="aktif">Aktif</option>
+                                    <option value="nonaktif">Nonaktif</option>
                                 </select>
                             </div>
                             <div class="col-md-6 mb-2">
@@ -189,6 +207,7 @@
                         data: function(d) {
                             d.kategori = $('#fkategori').val();
                             d.kelompok_unit = $('#fkelompok').val();
+                            d.status_produk = $('#fstatusproduk').val();
                         },
                         type: "GET"
                     },
@@ -211,6 +230,25 @@
                                     'air': '<span class="badge bg-info">Air</span>'
                                 };
                                 return labels[data] || data;
+                            }
+                        },
+                        {
+                            data: "status_produk",
+                            render: function(data, type, row) {
+                                const isAktif = (data || 'aktif') === 'aktif';
+                                const nextStatus = isAktif ? 'nonaktif' : 'aktif';
+                                const badge = isAktif
+                                    ? '<span class="badge bg-success">Aktif</span>'
+                                    : '<span class="badge bg-secondary">Nonaktif</span>';
+
+                                return `
+                                    <div class="d-flex align-items-center justify-content-center gap-2">
+                                        ${badge}
+                                        <button class="btn btn-xs btn-outline-${isAktif ? 'secondary' : 'success'} toggle-status-btn"
+                                            data-id="${row.id}" data-status="${nextStatus}">
+                                            ${isAktif ? 'Nonaktifkan' : 'Aktifkan'}
+                                        </button>
+                                    </div>`;
                             }
                         },
                         { 
@@ -249,8 +287,9 @@
                         { targets: 6, className: "text-right" },   // Harga Beli
                         { targets: 7, className: "text-right" },   // Harga Jual
                         { targets: 8, className: "text-center" },  // Kelompok
-                        { targets: 9, className: "text-center" },  // Foto
-                        { targets: 10, className: "text-center" }  // Aksi
+                        { targets: 9, className: "text-center" },  // Status
+                        { targets: 10, className: "text-center" }, // Foto
+                        { targets: 11, className: "text-center" }  // Aksi
                     ]
                 });
 
@@ -317,20 +356,7 @@
                 // Edit button - PERBAIKAN INI
                 $(document).on('click', '.editbtn', function() {
                     const id = $(this).data('id');
-                    const row = $(this).closest('tr');
-                    
-                    // Ambil data dari row yang diklik
-                    const kodeBarang = table.cell(row, 1).data();
-                    const namaBarang = table.cell(row, 2).data();
-                    const type = table.cell(row, 3).data();
-                    const kategori = table.cell(row, 4).data();
-                    const satuan = table.cell(row, 5).data();
-                    
-                    // Ambil harga beli dan harga jual (hilangkan format currency)
-                    const hargaBeliCell = table.cell(row, 6).data();
-                    const hargaJualCell = table.cell(row, 7).data();
-                    const hargaJualUmumCell = table.cell(row, 7).data();
-                    
+
                     // Function untuk konversi format Indonesia ke angka
                     function parseIndonesianCurrency(currencyString) {
                         if (!currencyString) return 0;
@@ -356,51 +382,64 @@
                         return isNaN(result) ? 0 : result;
                     }
                     
-                    // Parse harga
-                    const hargaBeli = parseIndonesianCurrency(hargaBeliCell);
-                    const hargaJual = parseIndonesianCurrency(hargaJualCell);
-                    const hargaJualUmum = parseIndonesianCurrency(hargaJualUmumCell);
-                    
-                    console.log('hargaBeliCell:', hargaBeliCell, 'parsed:', hargaBeli);
-                    console.log('hargaJualCell:', hargaJualCell, 'parsed:', hargaJual);
-                    
-                    // Ambil kelompok unit dari badge
-                    const kelompokUnitBadge = table.cell(row, 8).data();
-                    let kelompokUnit = 'toko'; // default
-                    if (kelompokUnitBadge.includes('Toko')) kelompokUnit = 'toko';
-                    else if (kelompokUnitBadge.includes('Bengkel')) kelompokUnit = 'bengkel';
-                    else if (kelompokUnitBadge.includes('Air')) kelompokUnit = 'air';
-                    
-                    // Ambil gambar (jika ada)
-                    const imgCell = table.cell(row, 9).data();
-                    let imgSrc = '';
-                    if (imgCell.includes('src="')) {
-                        const match = imgCell.match(/src="([^"]+)"/);
-                        if (match) imgSrc = match[1];
-                    }
-                    
-                    // Isi form
-                    $('#idbarang').val(id);
-                    $('#kode_barang').val(kodeBarang).prop('readonly', false);
-                    $('input[name="nama_barang"]').val(namaBarang);
-                    $('input[name="type"]').val(type || '');
-                    $('select[name="kelompok_unit"]').val(kelompokUnit);
-                    $('select[name="kategori"]').val(kategori);
-                    $('select[name="satuan"]').val(satuan);
-                    $('input[name="harga_beli"]').val(hargaBeli);
-                    $('input[name="harga_jual"]').val(hargaJual);
-                    $('input[name="harga_jual_umum"]').val(hargaJualUmum);
-                    
-                    // Tampilkan gambar preview jika ada
-                    if (imgSrc) {
-                        $('#previewImg').show().attr('src', imgSrc);
-                    } else {
-                        $('#previewImg').hide().attr('src', '');
-                    }
-                    
-                    $('#hapusGambar').prop('checked', false);
-                    $('#modalTitle').text('Edit Barang');
-                    $('#modalBarang').modal('show');
+                    $.get("{{ route('barang.detail') }}", { id: id }, function(response) {
+                        if (!response.success) {
+                            Swal.fire('Error!', 'Data tidak ditemukan', 'error');
+                            return;
+                        }
+
+                        const data = response.data;
+
+                        $('#idbarang').val(data.id);
+                        $('#kode_barang').val(data.kode_barang).prop('readonly', false);
+                        $('input[name="nama_barang"]').val(data.nama_barang);
+                        $('input[name="type"]').val(data.type || '');
+                        $('select[name="kelompok_unit"]').val(data.kelompok_unit || 'toko');
+                        $('select[name="status_produk"]').val(data.status_produk || 'aktif');
+                        $('select[name="kategori"]').val(data.kategori);
+                        $('select[name="satuan"]').val(data.satuan);
+                        $('input[name="harga_beli"]').val(parseIndonesianCurrency(data.harga_beli));
+                        $('input[name="harga_jual"]').val(parseIndonesianCurrency(data.harga_jual));
+                        $('input[name="harga_jual_umum"]').val(parseIndonesianCurrency(data.harga_jual_umum));
+
+                        if (data.img) {
+                            $('#previewImg').show().attr('src', '/storage/produk/' + data.img);
+                        } else {
+                            $('#previewImg').hide().attr('src', '');
+                        }
+
+                        $('#hapusGambar').prop('checked', false);
+                        $('#modalTitle').text('Edit Barang');
+                        $('#modalBarang').modal('show');
+                    });
+                });
+
+                $(document).on('click', '.toggle-status-btn', function() {
+                    const id = $(this).data('id');
+                    const status = $(this).data('status');
+                    const label = status === 'nonaktif' ? 'menonaktifkan' : 'mengaktifkan';
+
+                    Swal.fire({
+                        title: 'Ubah Status Produk?',
+                        text: `Produk akan ${label}.`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, lanjutkan',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (!result.isConfirmed) return;
+
+                        $.post("{{ route('barang.status') }}", {
+                            id: id,
+                            status_produk: status,
+                            _token: "{{ csrf_token() }}"
+                        }).done(function(response) {
+                            table.ajax.reload(null, false);
+                            Swal.fire('Berhasil', response.message, 'success');
+                        }).fail(function(xhr) {
+                            Swal.fire('Error!', xhr.responseJSON?.message || 'Gagal mengubah status produk', 'error');
+                        });
+                    });
                 });
 
                 // Delete button
@@ -451,10 +490,11 @@
                     $('select[name="kategori"]').val('');
                     $('select[name="satuan"]').val('');
                     $('select[name="kelompok_unit"]').val('toko');
+                    $('select[name="status_produk"]').val('aktif');
                 });
 
                 // Filter change
-                $('#fkategori, #fkelompok').on('change', function() {
+                $('#fkategori, #fkelompok, #fstatusproduk').on('change', function() {
                     table.ajax.reload();
                 });
             });

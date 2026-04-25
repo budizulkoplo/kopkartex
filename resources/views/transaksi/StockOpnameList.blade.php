@@ -301,8 +301,8 @@
                         <p>Proses ini akan:</p>
                         <ul class="text-start">
                             <li>Menutup periode opname bulan ${bulan}</li>
-                            <li>Memperbarui stok sistem berdasarkan hasil draft opname</li>
-                            <li>Menyimpan data ke tabel modal awal</li>
+                            <li>Mengunci hasil opname yang sudah berjalan realtime di stok sistem</li>
+                            <li>Memastikan snapshot modal awal periode tetap tersimpan</li>
                             <li><strong>Data tidak dapat diubah setelah ini!</strong></li>
                         </ul>
                         <p class="text-danger"><strong>Pastikan semua data sudah benar!</strong></p>

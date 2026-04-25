@@ -54,10 +54,16 @@
                                     Total Barang: <strong id="total-barang">0</strong> item
                                 </div>
                                 <div>
-                                    <strong>Total Stok:</strong> <span id="total-stok">0</span>
+                                    <strong>Total Stok Awal:</strong> <span id="total-stok-awal">0</span>
                                 </div>
                                 <div>
-                                    <strong>Total Modal:</strong> <span id="total-modal">Rp 0</span>
+                                    <strong>Total Modal Awal:</strong> <span id="total-modal-awal">Rp 0</span>
+                                </div>
+                                <div>
+                                    <strong>Total Stok Realtime:</strong> <span id="total-stok-realtime">0</span>
+                                </div>
+                                <div>
+                                    <strong>Total Modal Realtime:</strong> <span id="total-modal-realtime">Rp 0</span>
                                 </div>
                             </div>
                         </div>
@@ -74,16 +80,24 @@
                                     <th>Satuan</th>
                                     <th class="text-end">Harga Modal</th>
                                     <th>Unit</th>
-                                    <th class="text-end">Stok</th>
-                                    <th class="text-end">Nilai Total</th>
+                                    <th class="text-end">Stok Awal</th>
+                                    <th class="text-end">Nilai Awal</th>
+                                    <th class="text-end">Stok Realtime</th>
+                                    <th class="text-end">Nilai Realtime</th>
+                                    <th class="text-end">Selisih Qty</th>
+                                    <th class="text-end">Selisih Nominal</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
                             <tfoot class="table-primary fw-bold">
                                 <tr>
                                     <td colspan="7" class="text-end">TOTAL:</td>
-                                    <td id="footer-stok" class="text-end">0</td>
-                                    <td id="footer-modal" class="text-end">Rp 0</td>
+                                    <td id="footer-stok-awal" class="text-end">0</td>
+                                    <td id="footer-modal-awal" class="text-end">Rp 0</td>
+                                    <td id="footer-stok-realtime" class="text-end">0</td>
+                                    <td id="footer-modal-realtime" class="text-end">Rp 0</td>
+                                    <td id="footer-selisih-stok" class="text-end">0</td>
+                                    <td id="footer-selisih-modal" class="text-end">Rp 0</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -119,10 +133,16 @@
                     success: function(response) {
                         if (response.totals) {
                             $('#total-barang').text(response.data.length);
-                            $('#total-stok').text(formatNumber(response.totals.total_stok));
-                            $('#total-modal').text('Rp ' + formatNumber(response.totals.total_modal, 2));
-                            $('#footer-stok').text(formatNumber(response.totals.total_stok));
-                            $('#footer-modal').text('Rp ' + formatNumber(response.totals.total_modal, 2));
+                            $('#total-stok-awal').text(formatNumber(response.totals.total_stok_awal));
+                            $('#total-modal-awal').text('Rp ' + formatNumber(response.totals.total_modal_awal, 2));
+                            $('#total-stok-realtime').text(formatNumber(response.totals.total_stok_realtime));
+                            $('#total-modal-realtime').text('Rp ' + formatNumber(response.totals.total_modal_realtime, 2));
+                            $('#footer-stok-awal').text(formatNumber(response.totals.total_stok_awal));
+                            $('#footer-modal-awal').text('Rp ' + formatNumber(response.totals.total_modal_awal, 2));
+                            $('#footer-stok-realtime').text(formatNumber(response.totals.total_stok_realtime));
+                            $('#footer-modal-realtime').text('Rp ' + formatNumber(response.totals.total_modal_realtime, 2));
+                            $('#footer-selisih-stok').text(formatNumber(response.totals.total_selisih_stok, 3));
+                            $('#footer-selisih-modal').text('Rp ' + formatNumber(response.totals.total_selisih_nominal, 2));
                         }
                         
                         // Update periode display
@@ -243,8 +263,12 @@
                                     <th class="text-center">Satuan</th>
                                     <th class="text-center">Harga Modal</th>
                                     <th class="text-center">Unit</th>
-                                    <th class="text-center">Stok</th>
-                                    <th class="text-center">Nilai Total</th>
+                                    <th class="text-center">Stok Awal</th>
+                                    <th class="text-center">Nilai Awal</th>
+                                    <th class="text-center">Stok Realtime</th>
+                                    <th class="text-center">Nilai Realtime</th>
+                                    <th class="text-center">Selisih Qty</th>
+                                    <th class="text-center">Selisih Nominal</th>
                                 </tr>
                             </thead>
                             <tbody>`;
@@ -259,8 +283,12 @@
                             <td class="text-center">${row.satuan || '-'}</td>
                             <td class="text-right">${formatNumber(row.harga_modal, 2)}</td>
                             <td class="text-left">${row.unit || '-'}</td>
-                            <td class="text-right">${formatNumber(row.stok, 0)}</td>
-                            <td class="text-right">${formatNumber(row.nilai_total_barang, 2)}</td>
+                            <td class="text-right">${formatNumber(row.stok_awal, 3)}</td>
+                            <td class="text-right">${formatNumber(row.nilai_modal_awal, 2)}</td>
+                            <td class="text-right">${formatNumber(row.stok_realtime, 3)}</td>
+                            <td class="text-right">${formatNumber(row.nilai_realtime, 2)}</td>
+                            <td class="text-right">${formatNumber(row.selisih_stok, 3)}</td>
+                            <td class="text-right">${formatNumber(row.selisih_nominal, 2)}</td>
                         </tr>`;
                     
                     if ((index + 1) % 40 === 0 && index < data.length - 1) {
@@ -273,14 +301,18 @@
                             <tfoot>
                                 <tr class="grand-total-row">
                                     <td colspan="7" class="text-right bold">TOTAL</td>
-                                    <td class="text-right bold">${formatNumber(totals.total_stok, 0)}</td>
-                                    <td class="text-right bold">${formatNumber(totals.total_modal, 2)}</td>
+                                    <td class="text-right bold">${formatNumber(totals.total_stok_awal, 3)}</td>
+                                    <td class="text-right bold">${formatNumber(totals.total_modal_awal, 2)}</td>
+                                    <td class="text-right bold">${formatNumber(totals.total_stok_realtime, 3)}</td>
+                                    <td class="text-right bold">${formatNumber(totals.total_modal_realtime, 2)}</td>
+                                    <td class="text-right bold">${formatNumber(totals.total_selisih_stok, 3)}</td>
+                                    <td class="text-right bold">${formatNumber(totals.total_selisih_nominal, 2)}</td>
                                 </tr>
                             </tfoot>
                         </table>
                         
                         <div class="footer">
-                            <p>Total Modal: Rp ${formatNumber(totals.total_modal, 2)} | Total Stok: ${formatNumber(totals.total_stok, 0)}</p>
+                            <p>Total Modal Awal: Rp ${formatNumber(totals.total_modal_awal, 2)} | Total Modal Realtime: Rp ${formatNumber(totals.total_modal_realtime, 2)}</p>
                             <p>Dicetak dari Sistem pada ${new Date().toLocaleTimeString('id-ID')}</p>
                         </div>
                     </body>
@@ -325,10 +357,16 @@
                         // Update totals
                         if (response.totals) {
                             $('#total-barang').text(response.data.length);
-                            $('#total-stok').text(formatNumber(response.totals.total_stok));
-                            $('#total-modal').text('Rp ' + formatNumber(response.totals.total_modal, 2));
-                            $('#footer-stok').text(formatNumber(response.totals.total_stok));
-                            $('#footer-modal').text('Rp ' + formatNumber(response.totals.total_modal, 2));
+                            $('#total-stok-awal').text(formatNumber(response.totals.total_stok_awal));
+                            $('#total-modal-awal').text('Rp ' + formatNumber(response.totals.total_modal_awal, 2));
+                            $('#total-stok-realtime').text(formatNumber(response.totals.total_stok_realtime));
+                            $('#total-modal-realtime').text('Rp ' + formatNumber(response.totals.total_modal_realtime, 2));
+                            $('#footer-stok-awal').text(formatNumber(response.totals.total_stok_awal));
+                            $('#footer-modal-awal').text('Rp ' + formatNumber(response.totals.total_modal_awal, 2));
+                            $('#footer-stok-realtime').text(formatNumber(response.totals.total_stok_realtime));
+                            $('#footer-modal-realtime').text('Rp ' + formatNumber(response.totals.total_modal_realtime, 2));
+                            $('#footer-selisih-stok').text(formatNumber(response.totals.total_selisih_stok, 3));
+                            $('#footer-selisih-modal').text('Rp ' + formatNumber(response.totals.total_selisih_nominal, 2));
                         }
                         return response.data;
                     }
@@ -375,14 +413,42 @@
                         }
                     },
                     { 
-                        data: "stok",
+                        data: "stok_awal",
                         className: "text-end",
                         render: function(data) {
-                            return formatNumber(data, 0);
+                            return formatNumber(data, 3);
                         }
                     },
                     { 
-                        data: "nilai_total_barang",
+                        data: "nilai_modal_awal",
+                        className: "text-end",
+                        render: function(data) {
+                            return formatNumber(data, 2);
+                        }
+                    },
+                    {
+                        data: "stok_realtime",
+                        className: "text-end",
+                        render: function(data) {
+                            return formatNumber(data, 3);
+                        }
+                    },
+                    {
+                        data: "nilai_realtime",
+                        className: "text-end",
+                        render: function(data) {
+                            return formatNumber(data, 2);
+                        }
+                    },
+                    {
+                        data: "selisih_stok",
+                        className: "text-end",
+                        render: function(data) {
+                            return formatNumber(data, 3);
+                        }
+                    },
+                    {
+                        data: "selisih_nominal",
                         className: "text-end",
                         render: function(data) {
                             return formatNumber(data, 2);

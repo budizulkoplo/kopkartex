@@ -618,11 +618,20 @@ class LaporanController extends Controller
             $row = ['tanggal' => $date->format('Y-m-d')];
 
             foreach ($units as $unit_id => $unit_name) {
-                $total = DB::table('penjualan')
-                    ->whereDate('tanggal', $date->format('Y-m-d'))
-                    ->where('unit_id', $unit_id)
-                    ->whereNull('deleted_at')
-                    ->sum('grandtotal');
+                $jenisUnit = DB::table('unit')->where('id', $unit_id)->value('jenis');
+
+                if ($jenisUnit === 'bengkel') {
+                    $total = DB::table('transaksi_bengkels')
+                        ->whereDate('tanggal', $date->format('Y-m-d'))
+                        ->whereNull('deleted_at')
+                        ->sum('grandtotal');
+                } else {
+                    $total = DB::table('penjualan')
+                        ->whereDate('tanggal', $date->format('Y-m-d'))
+                        ->where('unit_id', $unit_id)
+                        ->whereNull('deleted_at')
+                        ->sum('grandtotal');
+                }
 
                 $row[$unit_name] = (float)$total;
             }
@@ -2052,6 +2061,11 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
         $query = DB::table('modal_awal as ma')
             ->leftJoin('unit as u', 'u.id', '=', 'ma.unit_id')
             ->leftJoin('barang as b', 'b.id', '=', 'ma.barang_id')
+            ->leftJoin('stok_unit as su', function ($join) {
+                $join->on('su.barang_id', '=', 'ma.barang_id')
+                    ->on('su.unit_id', '=', 'ma.unit_id')
+                    ->whereNull('su.deleted_at');
+            })
             ->leftJoin('satuan as s', 'b.idsatuan', '=', 's.id') // Join ke tabel satuan
             ->select(
                 'ma.id',
@@ -2061,8 +2075,12 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
                 'ma.harga_modal',
                 'ma.unit_id',
                 'u.nama_unit as unit',
-                'ma.stok',
-                'ma.nilai_total_barang',
+                'ma.stok as stok_awal',
+                'ma.nilai_total_barang as nilai_modal_awal',
+                DB::raw('COALESCE(su.stok, ma.stok) as stok_realtime'),
+                DB::raw('(COALESCE(su.stok, ma.stok) * ma.harga_modal) as nilai_realtime'),
+                DB::raw('(COALESCE(su.stok, ma.stok) - ma.stok) as selisih_stok'),
+                DB::raw('((COALESCE(su.stok, ma.stok) - ma.stok) * ma.harga_modal) as selisih_nominal'),
                 'ma.created_at',
                 'ma.updated_at',
                 's.name as satuan' // Ambil name dari tabel satuan
@@ -2076,14 +2094,22 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
         $data = $query->orderBy('ma.kode_barang', 'asc')->get();
 
         // Hitung total untuk footer
-        $totalModal = $data->sum('nilai_total_barang');
-        $totalStok = $data->sum('stok');
+        $totalModalAwal = $data->sum('nilai_modal_awal');
+        $totalStokAwal = $data->sum('stok_awal');
+        $totalModalRealtime = $data->sum('nilai_realtime');
+        $totalStokRealtime = $data->sum('stok_realtime');
+        $totalSelisihNominal = $data->sum('selisih_nominal');
+        $totalSelisihStok = $data->sum('selisih_stok');
 
         return response()->json([
             'data' => $data,
             'totals' => [
-                'total_stok' => $totalStok,
-                'total_modal' => $totalModal
+                'total_stok_awal' => $totalStokAwal,
+                'total_modal_awal' => $totalModalAwal,
+                'total_stok_realtime' => $totalStokRealtime,
+                'total_modal_realtime' => $totalModalRealtime,
+                'total_selisih_stok' => $totalSelisihStok,
+                'total_selisih_nominal' => $totalSelisihNominal,
             ]
         ]);
     }
@@ -2099,6 +2125,11 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
         $query = DB::table('modal_awal as ma')
             ->leftJoin('unit as u', 'u.id', '=', 'ma.unit_id')
             ->leftJoin('barang as b', 'b.id', '=', 'ma.barang_id')
+            ->leftJoin('stok_unit as su', function ($join) {
+                $join->on('su.barang_id', '=', 'ma.barang_id')
+                    ->on('su.unit_id', '=', 'ma.unit_id')
+                    ->whereNull('su.deleted_at');
+            })
             ->leftJoin('satuan as s', 'b.idsatuan', '=', 's.id') // Join ke tabel satuan
             ->select(
                 'ma.periode',
@@ -2106,8 +2137,12 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
                 'ma.nama_barang',
                 'ma.harga_modal',
                 'u.nama_unit as unit',
-                'ma.stok',
-                'ma.nilai_total_barang',
+                'ma.stok as stok_awal',
+                'ma.nilai_total_barang as nilai_modal_awal',
+                DB::raw('COALESCE(su.stok, ma.stok) as stok_realtime'),
+                DB::raw('(COALESCE(su.stok, ma.stok) * ma.harga_modal) as nilai_realtime'),
+                DB::raw('(COALESCE(su.stok, ma.stok) - ma.stok) as selisih_stok'),
+                DB::raw('((COALESCE(su.stok, ma.stok) - ma.stok) * ma.harga_modal) as selisih_nominal'),
                 's.name as satuan' // Ambil name dari tabel satuan
             )
             ->where('ma.periode', $bulan);
@@ -2119,8 +2154,12 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
         $data = $query->orderBy('ma.kode_barang', 'asc')->get();
 
         // Hitung total
-        $totalStok = $data->sum('stok');
-        $totalModal = $data->sum('nilai_total_barang');
+        $totalStokAwal = $data->sum('stok_awal');
+        $totalModalAwal = $data->sum('nilai_modal_awal');
+        $totalStokRealtime = $data->sum('stok_realtime');
+        $totalModalRealtime = $data->sum('nilai_realtime');
+        $totalSelisihStok = $data->sum('selisih_stok');
+        $totalSelisihNominal = $data->sum('selisih_nominal');
 
         // Generate Excel menggunakan array
         $filename = "modal_awal_{$bulan}_" . date('YmdHis') . ".xls";
@@ -2154,8 +2193,12 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
         echo '<th>Satuan</th>';
         echo '<th>Harga Modal</th>';
         echo '<th>Unit</th>';
-        echo '<th>Stok</th>';
-        echo '<th>Nilai Total</th>';
+        echo '<th>Stok Awal</th>';
+        echo '<th>Nilai Awal</th>';
+        echo '<th>Stok Realtime</th>';
+        echo '<th>Nilai Realtime</th>';
+        echo '<th>Selisih Stok</th>';
+        echo '<th>Selisih Nominal</th>';
         echo '</tr>';
         
         // Data
@@ -2169,16 +2212,24 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
             echo '<td class="text-center">' . ($row->satuan ?? '-') . '</td>';
             echo '<td class="text-right">' . number_format($row->harga_modal, 2, ',', '.') . '</td>';
             echo '<td>' . ($row->unit ?? '-') . '</td>';
-            echo '<td class="text-right">' . number_format($row->stok, 3, ',', '.') . '</td>';
-            echo '<td class="text-right">' . number_format($row->nilai_total_barang, 2, ',', '.') . '</td>';
+            echo '<td class="text-right">' . number_format($row->stok_awal, 3, ',', '.') . '</td>';
+            echo '<td class="text-right">' . number_format($row->nilai_modal_awal, 2, ',', '.') . '</td>';
+            echo '<td class="text-right">' . number_format($row->stok_realtime, 3, ',', '.') . '</td>';
+            echo '<td class="text-right">' . number_format($row->nilai_realtime, 2, ',', '.') . '</td>';
+            echo '<td class="text-right">' . number_format($row->selisih_stok, 3, ',', '.') . '</td>';
+            echo '<td class="text-right">' . number_format($row->selisih_nominal, 2, ',', '.') . '</td>';
             echo '</tr>';
         }
         
         // Total
         echo '<tr class="total-row">';
         echo '<td colspan="7" class="text-right">TOTAL</td>';
-        echo '<td class="text-right">' . number_format($totalStok, 3, ',', '.') . '</td>';
-        echo '<td class="text-right">' . number_format($totalModal, 2, ',', '.') . '</td>';
+        echo '<td class="text-right">' . number_format($totalStokAwal, 3, ',', '.') . '</td>';
+        echo '<td class="text-right">' . number_format($totalModalAwal, 2, ',', '.') . '</td>';
+        echo '<td class="text-right">' . number_format($totalStokRealtime, 3, ',', '.') . '</td>';
+        echo '<td class="text-right">' . number_format($totalModalRealtime, 2, ',', '.') . '</td>';
+        echo '<td class="text-right">' . number_format($totalSelisihStok, 3, ',', '.') . '</td>';
+        echo '<td class="text-right">' . number_format($totalSelisihNominal, 2, ',', '.') . '</td>';
         echo '</tr>';
         
         echo '</table>';

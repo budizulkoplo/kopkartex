@@ -41,7 +41,7 @@
                             <div class="alert alert-warning alert-dismissible fade show mb-3">
                                 <i class="bi bi-exclamation-triangle me-2"></i>
                                 <strong>Perhatian!</strong> Barang ini sudah memiliki data stock opname untuk bulan ini. 
-                                Input baru akan menggantikan draft yang sudah ada. Stok sistem baru diperbarui saat proses selesai opname.
+                                Input baru akan menggantikan draft yang sudah ada. Snapshot modal awal tetap mengacu ke stok saat start opname.
                                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
                         @endif
@@ -228,9 +228,14 @@
             }
 
             $(document).ready(function () {
-                const today = new Date();
-                const formatted = today.toLocaleDateString('en-CA'); // Format YYYY-MM-DD
-                $('#opname-date').text(today.toLocaleDateString('id-ID'));
+                const opnameDate = new Date(@json(
+                    optional($existingData?->tgl_opname)->format('Y-m-d')
+                    ?? (\Carbon\Carbon::createFromFormat('Y-m', $bulan)->isCurrentMonth()
+                        ? now()->format('Y-m-d')
+                        : \Carbon\Carbon::createFromFormat('Y-m', $bulan)->startOfMonth()->format('Y-m-d'))
+                ));
+                const formatted = opnameDate.toLocaleDateString('en-CA');
+                $('#opname-date').text(opnameDate.toLocaleDateString('id-ID'));
                 $('#tgl_opname_input').val(formatted);
 
                 // Hitung total awal
@@ -277,7 +282,7 @@
                         html: `<strong>Stok Sistem:</strong> ${stokSistem}<br>
                                <strong>Stok Fisik:</strong> ${totalFisik}<br>
                                <strong>Selisih:</strong> ${totalFisik - stokSistem}<br>
-                               <small>Stok sistem belum berubah sampai proses selesai opname.</small>`,
+                               <small>Stok realtime akan diperbarui sekarang, tetapi modal awal tetap memakai snapshot saat start opname.</small>`,
                         icon: "warning",
                         showCancelButton: true,
                         confirmButtonColor: "#3085d6",

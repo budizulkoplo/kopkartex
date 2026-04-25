@@ -170,6 +170,10 @@ class PenjualanController extends Controller
             ->join('kategori', 'kategori.id', '=', 'barang.idkategori')
             ->where('stok_unit.unit_id', Auth::user()->unit_kerja)
             ->where('stok_unit.stok', '>', 0)
+            ->where(function ($query) {
+                $query->whereNull('barang.status_produk')
+                    ->orWhere('barang.status_produk', 'aktif');
+            })
             ->whereRaw(
                 "CONCAT(barang.kode_barang, ' ', barang.nama_barang) LIKE ?",
                 ["%{$request->q}%"]
@@ -195,6 +199,10 @@ class PenjualanController extends Controller
         ->join('kategori','kategori.id','barang.idkategori')
         ->where('stok_unit.unit_id',Auth::user()->unit_kerja)
         ->where('stok_unit.stok', '>', 0)
+        ->where(function ($query) {
+            $query->whereNull('barang.status_produk')
+                ->orWhere('barang.status_produk', 'aktif');
+        })
         ->whereRaw("CONCAT(barang.kode_barang, barang.nama_barang) LIKE ?", ["%{$request->q}%"])
         ->select(
             'barang.id',
@@ -215,6 +223,10 @@ class PenjualanController extends Controller
         ->join('kategori','kategori.id','barang.idkategori')
         ->where("barang.kode_barang", "=",$request->kode)
         ->where("stok_unit.unit_id", "=",Auth::user()->unit_kerja)
+        ->where(function ($query) {
+            $query->whereNull('barang.status_produk')
+                ->orWhere('barang.status_produk', 'aktif');
+        })
         ->select(
             'barang.id',
             'barang.kode_barang as code',
@@ -239,6 +251,10 @@ class PenjualanController extends Controller
         ->join('kategori','kategori.id','barang.idkategori')
         ->where("barang.kode_barang", "=",$request->kode)
         ->where("stok_unit.unit_id", "=",Auth::user()->unit_kerja)
+        ->where(function ($query) {
+            $query->whereNull('barang.status_produk')
+                ->orWhere('barang.status_produk', 'aktif');
+        })
         ->select(
             'barang.id',
             'barang.kode_barang as code',

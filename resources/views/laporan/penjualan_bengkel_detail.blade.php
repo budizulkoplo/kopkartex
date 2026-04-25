@@ -72,6 +72,10 @@
         <script>
             let table;
 
+            function useFullInvoiceTotal() {
+                return $('#jenis_item').val() === 'all';
+            }
+
             function reloadTable() {
                 table.ajax.reload();
             }
@@ -315,9 +319,11 @@
                 for (let invoice in invoiceGroups) {
                     let group = invoiceGroups[invoice];
                     let groupRows = group.rows;
-                    let totalSetelahDiskon = group.grandtotalNota > 0
-                        ? group.grandtotalNota
-                        : Math.max(group.subtotal - group.diskon, 0);
+                    let totalSetelahDiskon = useFullInvoiceTotal()
+                        ? (group.grandtotalNota > 0
+                            ? group.grandtotalNota
+                            : Math.max(group.subtotal - group.diskon, 0))
+                        : group.subtotal;
                     grandTotal += totalSetelahDiskon;
                     
                     // Render setiap baris dalam invoice
@@ -460,9 +466,11 @@
                     // Hitung total invoice setelah diskon
                     for (let invoice in invoiceGroups) {
                         let group = invoiceGroups[invoice];
-                        group.totalSetelahDiskon = group.grandtotalNota > 0
-                            ? group.grandtotalNota
-                            : Math.max(group.subtotal - group.diskon, 0);
+                        group.totalSetelahDiskon = useFullInvoiceTotal()
+                            ? (group.grandtotalNota > 0
+                                ? group.grandtotalNota
+                                : Math.max(group.subtotal - group.diskon, 0))
+                            : group.subtotal;
                         grandTotal += group.totalSetelahDiskon;
                     }
 
@@ -510,8 +518,8 @@
                         
                         $(rows).eq(rowIndex + group.count - 1).after(
                             `<tr class="fw-bold bg-warning invoice-total-row">
-                                <td colspan="8" class="text-end">Total Invoice: ${invoice} (Setelah Diskon)</td>
-                                <td colspan="2" class="text-end">Diskon: ${formatNumber(group.diskon)}</td>
+                                <td colspan="8" class="text-end">Total Invoice: ${invoice}${useFullInvoiceTotal() ? ' (Setelah Diskon)' : ' (Sesuai Filter)'}</td>
+                                <td colspan="2" class="text-end">${useFullInvoiceTotal() ? 'Diskon: ' + formatNumber(group.diskon) : 'Filter: ' + $('#jenis_item option:selected').text()}</td>
                                 <td class="text-end">${formatNumber(group.totalSetelahDiskon)}</td>
                             </tr>`
                         );

@@ -51,9 +51,9 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [AdminDashboardController::class, 'dashboard'])->middleware(['menu.access', 'global.app:admin|superadmin|keuangan|bendahara'])->name('dashboard');
-    Route::get('/admin/pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIni'])->middleware(['menu.access', 'global.app:admin|superadmin|keuangan|bendahara'])->name('dashboard.pesananHariIni');
-    Route::get('/admin/data-pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIniData'])->middleware(['menu.access', 'global.app:admin|superadmin|keuangan|bendahara'])->name('dashboard.pesananHariIniData');
+    Route::get('/dashboard', [AdminDashboardController::class, 'dashboard'])->middleware(['global.app'])->name('dashboard');
+    Route::get('/admin/pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIni'])->middleware(['global.app'])->name('dashboard.pesananHariIni');
+    Route::get('/admin/data-pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIniData'])->middleware(['global.app'])->name('dashboard.pesananHariIniData');
 
 });
 
@@ -273,6 +273,8 @@ Route::prefix('barang')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/', [BarangController::class, 'index'])->name('barang.list');
     Route::get('/getdata', [BarangController::class, 'getdata'])->name('barang.getdata');
     Route::post('/store', [BarangController::class, 'Store'])->name('barang.store');
+    Route::post('/status', [BarangController::class, 'updateStatus'])->name('barang.status');
+    Route::get('/detail', [BarangController::class, 'getDetail'])->name('barang.detail');
     Route::get('/getcode', [BarangController::class, 'getCode'])->name('barang.getcode');
     Route::get('/cekcode', [BarangController::class, 'CekCode'])->name('barang.cekcode');
     Route::delete('/hapus', [BarangController::class, 'Hapus'])->name('barang.hapus');
@@ -285,6 +287,7 @@ Route::prefix('barangbengkel')->name('barangbengkel.')->middleware($menuAccessMi
     Route::get('/getcode', [BarangBengkelController::class, 'getCode'])->name('getcode');
     Route::get('/cekcode', [BarangBengkelController::class, 'CekCode'])->name('cekcode');
     Route::post('/store', [BarangBengkelController::class, 'Store'])->name('store');
+    Route::post('/status', [BarangBengkelController::class, 'updateStatus'])->name('status');
     Route::delete('/hapus', [BarangBengkelController::class, 'Hapus'])->name('hapus');
     Route::post('/quickadd', [BarangBengkelController::class, 'quickAdd'])->name('quickadd');
     Route::post('/updatestok', [BarangBengkelController::class, 'updateStok'])->name('updatestok');

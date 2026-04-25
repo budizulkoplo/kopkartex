@@ -108,6 +108,10 @@ class TransaksiBengkelController extends Controller
             ->where('stok_unit.unit_id', Auth::user()->unit_kerja)
             ->where('barang.kelompok_unit', 'bengkel')
             ->where('stok_unit.stok', '>', 0)
+            ->where(function ($query) {
+                $query->whereNull('barang.status_produk')
+                    ->orWhere('barang.status_produk', 'aktif');
+            })
             ->whereRaw("CONCAT(barang.kode_barang, ' ', barang.nama_barang) LIKE ?", ["%{$keyword}%"])
             ->select(
                 'barang.kode_barang',
@@ -129,6 +133,10 @@ class TransaksiBengkelController extends Controller
         ->join('kategori','kategori.id','=','barang.idkategori')
         ->where("barang.kode_barang", "=",$request->kode)
         ->where("stok_unit.unit_id", "=",Auth::user()->unit_kerja)
+        ->where(function ($query) {
+            $query->whereNull('barang.status_produk')
+                ->orWhere('barang.status_produk', 'aktif');
+        })
         ->select(
             'barang.kode_barang',
             'barang.id',
