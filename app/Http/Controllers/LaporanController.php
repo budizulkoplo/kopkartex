@@ -1526,7 +1526,7 @@ public function pinbrg(Request $request)
 private function getDataPinbrg(Request $request)
 {
     $period = $request->input('period', date('Y-m'));
-    $search = trim((string) ($request->input('search.value') ?? $request->input('search') ?? $request->input('search_term') ?? ''));
+    $search = $this->resolvePinbrgSearch($request);
     
     $query = $this->buildPinbrgQuery($period, $search);
     
@@ -1580,61 +1580,97 @@ public function generatePinbrg(Request $request)
         ]);
         
         $period = $request->input('period');
-        $tahun = substr($period, 0, 4);
-        $bulan = substr($period, 5, 2);
+        $startDate = $period . '-01';
+        $endDate = date('Y-m-t', strtotime($startDate));
         
         Pinbrg::where('period', $period)->delete();
-        
-        $sql = "
-            SELECT
-                ? AS period,
-                u.unit_usaha AS unit_usaha,
-                u.id AS lokasi,
-                usr.nomor_anggota AS NO_AGT,
-                p.nomor_invoice AS NOPIN,
-                CONCAT(LEFT(u.nama_unit, 3), RIGHT(p.nomor_invoice, 5)) AS NO_PIN,
-                DATE(p.tanggal) AS TG_PIN,
-                p.grandtotal AS TOTAL_HARGA,
-                SUM(pc.total_cicilan) AS JUM_PIN,
-                SUM(CASE WHEN pc.status_bayar = '0' THEN pc.total_cicilan ELSE 0 END) AS SISA_PIN,
-                MAX(pc.cicilan) AS ANGS_X,
-                SUM(CASE WHEN pc.cicilan = 1 THEN pc.total_cicilan ELSE 0 END) AS ANGSUR1,
-                SUM(CASE WHEN pc.cicilan = 2 THEN pc.total_cicilan ELSE 0 END) AS ANGSUR2,
-                CASE 
-                    WHEN pc.kategori = 0 THEN '1' 
-                    WHEN pc.kategori = 1 THEN '2' 
-                END AS JENIS,
-                MIN(CASE WHEN pc.status_bayar = '0' THEN pc.cicilan END) AS ANGS_KE,
-                u.id AS UNIT,
-                '1' AS STATUS,
-                usr.nik AS NO_BADGE,
-                CASE 
-                    WHEN pc.kategori = 0 THEN 'NB' 
-                    WHEN pc.kategori = 1 THEN 'BP' 
-                END AS KEL,
-                '2' AS jenis_penjualan
-            FROM
-                penjualan p
-                LEFT JOIN users usr ON usr.id = p.anggota_id
-                LEFT JOIN unit u ON u.id = p.unit_id
-                LEFT JOIN penjualan_cicilan pc ON pc.penjualan_id = p.id
-            WHERE
-                p.metode_bayar = 'cicilan'
-                AND p.STATUS = 'hutang'
-            GROUP BY
-                p.id, u.id, u.unit_usaha, u.nama_unit, usr.nomor_anggota, usr.nik, 
-                p.nomor_invoice, p.tanggal, p.grandtotal, pc.kategori
-        ";
-        
-        Log::info('SQL Query:', ['sql' => $sql, 'period' => $period]);
-        
-        $results = DB::select($sql, [$period]);
-        
-        Log::info('Query Results:', [
-            'count' => count($results),
-            'first_row' => count($results) > 0 ? (array)$results[0] : null
-        ]);
-        
+
+        $resultsToko = DB::table('penjualan as p')
+            ->leftJoin('users as usr', 'usr.id', '=', 'p.anggota_id')
+            ->leftJoin('unit as u', 'u.id', '=', 'p.unit_id')
+            ->leftJoin('penjualan_cicilan as pc', 'pc.penjualan_id', '=', 'p.id')
+            ->select(
+                DB::raw("'" . $period . "' as period"),
+                'u.unit_usaha as unit_usaha',
+                'u.id as lokasi',
+                'usr.nomor_anggota as NO_AGT',
+                'p.nomor_invoice as NOPIN',
+                DB::raw("CONCAT(LEFT(COALESCE(u.nama_unit, 'TOKO'), 3), RIGHT(p.nomor_invoice, 5)) as NO_PIN"),
+                DB::raw('DATE(p.tanggal) as TG_PIN'),
+                'p.grandtotal as TOTAL_HARGA',
+                DB::raw('COALESCE(SUM(pc.total_cicilan), 0) as JUM_PIN'),
+                DB::raw("COALESCE(SUM(CASE WHEN pc.status_bayar = '0' THEN pc.total_cicilan ELSE 0 END), 0) as SISA_PIN"),
+                DB::raw('COALESCE(MAX(pc.cicilan), 0) as ANGS_X'),
+                DB::raw('COALESCE(SUM(CASE WHEN pc.cicilan = 1 THEN pc.total_cicilan ELSE 0 END), 0) as ANGSUR1'),
+                DB::raw('COALESCE(SUM(CASE WHEN pc.cicilan = 2 THEN pc.total_cicilan ELSE 0 END), 0) as ANGSUR2'),
+                DB::raw("CASE WHEN pc.kategori = 0 THEN '1' WHEN pc.kategori = 1 THEN '2' ELSE '1' END as JENIS"),
+                DB::raw("COALESCE(MIN(CASE WHEN pc.status_bayar = '0' THEN pc.cicilan END), 0) as ANGS_KE"),
+                'u.id as UNIT',
+                DB::raw("'1' as STATUS"),
+                'usr.nik as NO_BADGE',
+                DB::raw("CASE WHEN pc.kategori = 0 THEN 'NB' WHEN pc.kategori = 1 THEN 'BP' ELSE 'NB' END as KEL"),
+                DB::raw("'2' as jenis_penjualan")
+            )
+            ->where('p.metode_bayar', 'cicilan')
+            ->where('p.status', 'hutang')
+            ->whereBetween(DB::raw('DATE(p.tanggal)'), [$startDate, $endDate])
+            ->whereNull('p.deleted_at')
+            ->groupBy(
+                'p.id',
+                'u.id',
+                'u.unit_usaha',
+                'u.nama_unit',
+                'usr.nomor_anggota',
+                'usr.nik',
+                'p.nomor_invoice',
+                'p.tanggal',
+                'p.grandtotal',
+                'pc.kategori'
+            )
+            ->get();
+
+        $resultsBengkel = DB::table('transaksi_bengkels as tb')
+            ->leftJoin('users as usr', 'usr.id', '=', 'tb.anggota_id')
+            ->leftJoin('transaksi_bengkel_cicilan as tbc', 'tbc.transaksi_bengkel_id', '=', 'tb.id')
+            ->select(
+                DB::raw("'" . $period . "' as period"),
+                DB::raw("'2' as unit_usaha"),
+                DB::raw('5 as lokasi'),
+                'usr.nomor_anggota as NO_AGT',
+                'tb.nomor_invoice as NOPIN',
+                DB::raw("CONCAT('BKL', RIGHT(tb.nomor_invoice, 5)) as NO_PIN"),
+                DB::raw('DATE(tb.tanggal) as TG_PIN'),
+                'tb.grandtotal as TOTAL_HARGA',
+                DB::raw('COALESCE(SUM(tbc.total_cicilan), 0) as JUM_PIN'),
+                DB::raw("COALESCE(SUM(CASE WHEN tbc.status = 'hutang' THEN tbc.total_cicilan ELSE 0 END), 0) as SISA_PIN"),
+                DB::raw('COALESCE(MAX(tbc.cicilan), 0) as ANGS_X'),
+                DB::raw('COALESCE(SUM(CASE WHEN tbc.cicilan = 1 THEN tbc.total_cicilan ELSE 0 END), 0) as ANGSUR1'),
+                DB::raw('COALESCE(SUM(CASE WHEN tbc.cicilan = 2 THEN tbc.total_cicilan ELSE 0 END), 0) as ANGSUR2'),
+                DB::raw("CASE WHEN tbc.kategori = 0 THEN '1' WHEN tbc.kategori = 1 THEN '2' ELSE '1' END as JENIS"),
+                DB::raw("COALESCE(MIN(CASE WHEN tbc.status = 'hutang' THEN tbc.cicilan END), 0) as ANGS_KE"),
+                DB::raw('5 as UNIT'),
+                DB::raw("'1' as STATUS"),
+                'usr.nik as NO_BADGE',
+                DB::raw("CASE WHEN tbc.kategori = 0 THEN 'NB' WHEN tbc.kategori = 1 THEN 'BP' ELSE 'NB' END as KEL"),
+                DB::raw("'2' as jenis_penjualan")
+            )
+            ->where('tb.metode_bayar', 'cicilan')
+            ->where('tb.status', 'hutang')
+            ->whereBetween(DB::raw('DATE(tb.tanggal)'), [$startDate, $endDate])
+            ->whereNull('tb.deleted_at')
+            ->groupBy(
+                'tb.id',
+                'usr.nomor_anggota',
+                'usr.nik',
+                'tb.nomor_invoice',
+                'tb.tanggal',
+                'tb.grandtotal',
+                'tbc.kategori'
+            )
+            ->get();
+
+        $results = $resultsToko->concat($resultsBengkel)->values();
+
         $inserted = 0;
         foreach ($results as $row) {
             $data = [
@@ -1673,8 +1709,8 @@ public function generatePinbrg(Request $request)
             'message' => "Data pinbrg periode {$period} berhasil digenerate. Total: {$inserted} data",
             'total' => $inserted,
             'debug' => [
-                'query_result_count' => count($results),
-                'sample' => count($results) > 0 ? (array)$results[0] : null
+                'query_result_count' => $results->count(),
+                'sample' => $results->isNotEmpty() ? (array) $results->first() : null
             ]
         ]);
         
@@ -1843,6 +1879,26 @@ private function buildPinbrgQuery(string $period, string $search = '')
                     ->orWhere('lokasi', 'like', "%{$search}%");
             });
         });
+}
+
+private function resolvePinbrgSearch(Request $request): string
+{
+    $searchValue = $request->input('search.value');
+
+    if (is_string($searchValue)) {
+        return trim($searchValue);
+    }
+
+    $search = $request->input('search');
+    if (is_array($search)) {
+        return trim((string) ($search['value'] ?? ''));
+    }
+
+    if (is_string($search)) {
+        return trim($search);
+    }
+
+    return trim((string) $request->input('search_term', ''));
 }
 
 private function transformPinbrgRow($row): array
