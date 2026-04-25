@@ -230,14 +230,15 @@ class TransaksiBengkelController extends Controller
                 foreach ($request->jasa_id as $i => $idJasa) {
 
                     $harga = $request->jasa_harga[$i] ?? 0;
+                    $qty = $request->jasa_qty[$i] ?? 1;
 
                     TransaksiBengkelDetail::create([
                         'transaksi_bengkel_id' => $transaksi->id,
                         'jenis'  => 'jasa',
                         'jasa_id'=> $idJasa,
                         'harga'  => $harga,
-                        'qty'    => 1,
-                        'total'  => $harga,
+                        'qty'    => $qty,
+                        'total'  => $qty * $harga,
                     ]);
                 }
             }
@@ -615,8 +616,8 @@ public function revise($id): View|RedirectResponse
                         'jenis' => 'jasa',
                         'jasa_id' => $item['id'],
                         'harga' => $item['harga'],
-                        'qty' => 1,
-                        'total' => $item['harga'],
+                        'qty' => $item['qty'] ?? 1,
+                        'total' => ($item['qty'] ?? 1) * $item['harga'],
                     ]);
                 } else {
                     // Simpan barang dan kurangi stok

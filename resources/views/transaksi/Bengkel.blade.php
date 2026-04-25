@@ -131,7 +131,9 @@
                                                 <tr>
                                                     <th>#</th>
                                                     <th>Nama Jasa</th>
+                                                    <th>Qty</th>
                                                     <th>Harga</th>
+                                                    <th>Total</th>
                                                     <th></th>
                                                 </tr>
                                             </thead>
@@ -441,8 +443,11 @@
                 
                 // Hitung total jasa - membaca dari input yang bisa diedit
                 $('#tabelJasa tbody tr').each(function() {
+                    let qty = parseFloat($(this).find('.jasaqty').val()) || 0;
                     let harga = parseFloat($(this).find('.harga-jasa').val()) || 0;
-                    subtotal += harga;
+                    let total = qty * harga;
+                    $(this).find('.totaljasa').text(formatRupiahWithDecimal(total));
+                    subtotal += total;
                 });
                 
                 // Hitung total barang
@@ -534,8 +539,12 @@
                             <input type="hidden" name="jasa_id[]" class="idjasa" value="${datarow ? datarow.id : ''}">
                         </td>
                         <td>
+                            <input type="number" name="jasa_qty[]" class="form-control form-control-sm jasaqty" min="0.001" step="0.001" onfocus="this.select()" onkeyup="kalkulasi()" value="${datarow ? (datarow.qty || 1) : 1}">
+                        </td>
+                        <td>
                             <input type="number" name="jasa_harga[]" class="form-control form-control-sm harga-jasa" onkeyup="kalkulasi()" value="${datarow ? datarow.harga : 0}">
                         </td>
+                        <td class="totaljasa"></td>
                         <td>
                             <span class="badge btn bg-danger dellist" onclick="removeJasaRow($(this).closest('tr'))">
                                 <i class="bi bi-trash3-fill"></i>
@@ -618,6 +627,9 @@
                     // Isi harga otomatis dari data yang dipilih
                     row.find('.harga-jasa').val(data.harga);
                     row.find('.idjasa').val(data.id);
+                    if (!row.find('.jasaqty').val()) {
+                        row.find('.jasaqty').val(1);
+                    }
                     
                     if (data.id && !existingJasa[data.id]) {
                         existingJasa[data.id] = row;
@@ -638,6 +650,7 @@
                     
                     // Kosongkan harga saat jasa di-clear
                     row.find('.harga-jasa').val(0);
+                    row.find('.jasaqty').val(1);
                     row.find('.idjasa').val('');
                     kalkulasi();
                 });
@@ -963,6 +976,7 @@
                 // Payment method change
                 $('#metodebayar').on('change', function() {
                     if($(this).val() == 'cicilan'){
+                        $('#jmlcicilan').val(1);
                         $('.fieldcicilan').show();
                         $('.clmetode').hide().find('input, select').prop('required', false).val('');
                         $('#flexCheckDefault')

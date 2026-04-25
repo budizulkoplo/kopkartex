@@ -173,7 +173,9 @@
                                                     <tr>
                                                         <th>#</th>
                                                         <th>Nama Jasa</th>
+                                                        <th>Qty</th>
                                                         <th>Harga</th>
+                                                        <th>Total</th>
                                                         <th></th>
                                                     </tr>
                                                 </thead>
@@ -192,7 +194,13 @@
                                                             <input type="hidden" name="jasa_id[]" class="idjasa" value="{{ $detail->jasa_id }}">
                                                         </td>
                                                         <td>
+                                                            <input type="number" name="jasa_qty[]" class="form-control form-control-sm jasaqty" value="{{ $detail->qty }}" min="0.001" step="0.001" onfocus="this.select()" onkeyup="kalkulasi()">
+                                                        </td>
+                                                        <td>
                                                             <input type="number" name="jasa_harga[]" class="form-control form-control-sm harga-jasa" value="{{ $detail->harga }}" readonly>
+                                                        </td>
+                                                        <td class="totaljasa">
+                                                            {{ number_format($detail->total, 0, ',', '.') }}
                                                         </td>
                                                         <td>
                                                             <span class="badge btn bg-danger dellist" onclick="removeJasaRow($(this).closest('tr'))">
@@ -444,8 +452,11 @@
                 
                 // Hitung total jasa
                 $('#tabelJasa tbody tr').each(function() {
+                    let qty = parseFloat($(this).find('.jasaqty').val()) || 0;
                     let harga = parseFloat($(this).find('.harga-jasa').val()) || 0;
-                    subtotal += harga;
+                    let total = qty * harga;
+                    $(this).find('.totaljasa').text(formatRupiahWithDecimal(total));
+                    subtotal += total;
                 });
                 
                 // Hitung total barang
@@ -463,6 +474,21 @@
                 $('#subtotal').val(subtotal);
                 $('#grandtotal').val(globtot);
                 $('.topgrandtotal').text(formatRupiahWithDecimal(globtot));
+            }
+
+            function ubahMetodeBayar() {
+                const metode = $('#metodebayar').val();
+
+                if (metode === 'cicilan') {
+                    $('#jmlcicilan').val(1);
+                    $('#cicilanSection').show();
+                    $('#tunaiSection').hide();
+                } else {
+                    $('#cicilanSection').hide();
+                    $('#tunaiSection').show();
+                }
+
+                kalkulasi();
             }
 
             function clearBarcodeSearch() {
@@ -496,8 +522,12 @@
                             <input type="hidden" name="jasa_id[]" class="idjasa" value="${datarow ? datarow.id : ''}">
                         </td>
                         <td>
+                            <input type="number" name="jasa_qty[]" class="form-control form-control-sm jasaqty" value="${datarow ? (datarow.qty || 1) : 1}" min="0.001" step="0.001" onfocus="this.select()" onkeyup="kalkulasi()">
+                        </td>
+                        <td>
                             <input type="number" name="jasa_harga[]" class="form-control form-control-sm harga-jasa" value="${datarow ? datarow.harga : 0}" readonly>
                         </td>
+                        <td class="totaljasa"></td>
                         <td>
                             <span class="badge btn bg-danger dellist" onclick="removeJasaRow($(this).closest('tr'))">
                                 <i class="bi bi-trash3-fill"></i>
@@ -575,6 +605,9 @@
                     
                     row.find('.harga-jasa').val(data.harga);
                     row.find('.idjasa').val(data.id);
+                    if (!row.find('.jasaqty').val()) {
+                        row.find('.jasaqty').val(1);
+                    }
                     
                     if (data.id && !existingJasa[data.id]) {
                         existingJasa[data.id] = row;
@@ -590,6 +623,7 @@
                     }
                     
                     row.find('.harga-jasa').val(0);
+                    row.find('.jasaqty').val(1);
                     row.find('.idjasa').val('');
                     kalkulasi();
                 });
@@ -1150,6 +1184,7 @@
                         items.push({
                             jenis: 'jasa',
                             id: $(this).find('.idjasa').val(),
+                            qty: parseFloat($(this).find('.jasaqty').val()) || 1,
                             harga: parseFloat($(this).find('.harga-jasa').val()) || 0
                         });
                     });
