@@ -2117,12 +2117,12 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
         $query = DB::table('modal_awal as ma')
             ->leftJoin('unit as u', 'u.id', '=', 'ma.unit_id')
             ->leftJoin('barang as b', 'b.id', '=', 'ma.barang_id')
-            ->leftJoin('stok_unit as su', function ($join) {
-                $join->on('su.barang_id', '=', 'ma.barang_id')
+            ->leftJoin('stock_opname as su', function ($join) {
+                $join->on('su.id_barang', '=', 'ma.barang_id')
                     ->on('su.unit_id', '=', 'ma.unit_id')
                     ->whereNull('su.deleted_at');
             })
-            ->leftJoin('satuan as s', 'b.idsatuan', '=', 's.id') // Join ke tabel satuan
+            ->leftJoin('satuan as s', 'b.idsatuan', '=', 's.id') 
             ->select(
                 'ma.id',
                 'ma.periode',
@@ -2133,13 +2133,13 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
                 'u.nama_unit as unit',
                 'ma.stok as stok_awal',
                 'ma.nilai_total_barang as nilai_modal_awal',
-                DB::raw('COALESCE(su.stok, ma.stok) as stok_realtime'),
-                DB::raw('(COALESCE(su.stok, ma.stok) * ma.harga_modal) as nilai_realtime'),
-                DB::raw('(COALESCE(su.stok, ma.stok) - ma.stok) as selisih_stok'),
-                DB::raw('((COALESCE(su.stok, ma.stok) - ma.stok) * ma.harga_modal) as selisih_nominal'),
+                DB::raw('COALESCE(su.stock_fisik, ma.stok) as stok_realtime'),
+                DB::raw('(COALESCE(su.stock_fisik, ma.stok) * ma.harga_modal) as nilai_realtime'),
+                DB::raw('(COALESCE(su.stock_fisik, ma.stok) - ma.stok) as selisih_stok'),
+                DB::raw('((COALESCE(su.stock_fisik, ma.stok) - ma.stok) * ma.harga_modal) as selisih_nominal'),
                 'ma.created_at',
                 'ma.updated_at',
-                's.name as satuan' // Ambil name dari tabel satuan
+                's.name as satuan' 
             )
             ->where('ma.periode', $bulan);
 
@@ -2169,7 +2169,6 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
             ]
         ]);
     }
-
     /**
      * Export Excel Laporan Modal Awal
      */
