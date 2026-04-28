@@ -55,7 +55,7 @@
                         <tbody></tbody>
                         <tfoot>
                             <tr class="table-primary fw-bold">
-                                <td colspan="5" class="text-end">TOTAL:</td>
+                                <td colspan="5" class="text-end">TOTAL PAGE:</td>
                                 <td id="total-awal" class="text-end">0</td>
                                 <td id="total-sistem" class="text-end">0</td>
                                 <td id="total-fisik" class="text-end">0</td>
@@ -64,9 +64,33 @@
                             </tr>
                         </tfoot>
                     </table>
-                    <div class="d-flex justify-content-end gap-4 small text-muted mt-2">
-                        <div>Total Item: <strong id="total-item">0</strong></div>
-                        <div>Total Per Page: <strong id="total-per-page">0</strong></div>
+                    <div class="border rounded bg-light p-3 mt-2">
+                        <div class="row g-3 align-items-center small">
+                            <div class="col-md-2">
+                                <div class="text-muted">Total Item</div>
+                                <div class="fw-bold fs-6" id="total-item">0</div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="text-muted">Total Per Page</div>
+                                <div class="fw-bold fs-6" id="total-per-page">0</div>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <div class="text-muted">Total Stok Awal</div>
+                                <div class="fw-bold fs-6" id="summary-total-awal">0</div>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <div class="text-muted">Total Stok Sistem</div>
+                                <div class="fw-bold fs-6" id="summary-total-sistem">0</div>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <div class="text-muted">Total Stok Opname</div>
+                                <div class="fw-bold fs-6" id="summary-total-opname">0</div>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <div class="text-muted">Total Selisih</div>
+                                <div class="fw-bold fs-6" id="summary-total-selisih">0</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -539,6 +563,10 @@
                     let totalSistem = 0;
                     let totalFisik = 0;
                     let totalSelisih = 0;
+                    let summaryAwal = 0;
+                    let summarySistem = 0;
+                    let summaryFisik = 0;
+                    let summarySelisih = 0;
                     
                     api.rows({ page: 'current' }).data().each(function(row) {
                         const stockAwal = parseFloat(row.stock_awal ?? row.stock_sistem) || 0;
@@ -551,6 +579,18 @@
                         totalFisik += stockFisik;
                         totalSelisih += selisih;
                     });
+
+                    api.rows({ search: 'applied' }).data().each(function(row) {
+                        const stockAwal = parseFloat(row.stock_awal ?? row.stock_sistem) || 0;
+                        const stockSistem = parseFloat(row.stock_sistem) || 0;
+                        const stockFisik = row.status === "pending" ? 0 : parseFloat(row.stock_fisik) || 0;
+                        const selisih = row.status === "pending" ? 0 : stockFisik - stockSistem;
+
+                        summaryAwal += stockAwal;
+                        summarySistem += stockSistem;
+                        summaryFisik += stockFisik;
+                        summarySelisih += selisih;
+                    });
                     
                     // Update total di footer
                     $('#total-awal').text(totalAwal.toLocaleString('id-ID'));
@@ -561,6 +601,12 @@
                     </span>`);
                     $('#total-item').text(api.rows({ search: 'applied' }).count().toLocaleString('id-ID'));
                     $('#total-per-page').text(api.rows({ page: 'current' }).count().toLocaleString('id-ID'));
+                    $('#summary-total-awal').text(summaryAwal.toLocaleString('id-ID'));
+                    $('#summary-total-sistem').text(summarySistem.toLocaleString('id-ID'));
+                    $('#summary-total-opname').text(summaryFisik.toLocaleString('id-ID'));
+                    $('#summary-total-selisih').html(`<span class="${summarySelisih > 0 ? 'text-success' : summarySelisih < 0 ? 'text-danger' : 'text-muted'}">
+                        ${summarySelisih > 0 ? '+' : ''}${summarySelisih.toLocaleString('id-ID')}
+                    </span>`);
                 },
                 dom:
                     "<'row mb-2'<'col-md-6 d-flex align-items-center'B><'col-md-6 d-flex justify-content-end'f>>" +
