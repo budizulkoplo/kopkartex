@@ -54,16 +54,16 @@
                                     Total Barang: <strong id="total-barang">0</strong> item
                                 </div>
                                 <div>
-                                    <strong>Total Stok Awal:</strong> <span id="total-stok-awal">0</span>
+                                    <strong>Total Stok Awal System:</strong> <span id="total-stok-awal">0</span>
                                 </div>
                                 <div>
-                                    <strong>Total Modal Awal:</strong> <span id="total-modal-awal">Rp 0</span>
+                                    <strong>Total Modal Awal System:</strong> <span id="total-modal-awal">Rp 0</span>
                                 </div>
                                 <div>
-                                    <strong>Total Stok Realtime:</strong> <span id="total-stok-realtime">0</span>
+                                    <strong>Total Stok Opname:</strong> <span id="total-stok-realtime">0</span>
                                 </div>
                                 <div>
-                                    <strong>Total Modal Realtime:</strong> <span id="total-modal-realtime">Rp 0</span>
+                                    <strong>Total Modal Opname:</strong> <span id="total-modal-realtime">Rp 0</span>
                                 </div>
                             </div>
                         </div>
@@ -78,12 +78,12 @@
                                     <th>Kode Barang</th>
                                     <th>Nama Barang</th>
                                     <th>Satuan</th>
-                                    <th class="text-end">Harga Modal</th>
+                                    <th class="text-end">Harga Produk</th>
                                     <th>Unit</th>
                                     <th class="text-end">Stok Awal</th>
                                     <th class="text-end">Nilai Awal</th>
-                                    <th class="text-end">Stok Realtime</th>
-                                    <th class="text-end">Nilai Realtime</th>
+                                    <th class="text-end">Stok Opname</th>
+                                    <th class="text-end">Nilai Opname</th>
                                     <th class="text-end">Selisih Qty</th>
                                     <th class="text-end">Selisih Nominal</th>
                                 </tr>
@@ -261,12 +261,12 @@
                                     <th class="text-center">Kode Barang</th>
                                     <th class="text-center">Nama Barang</th>
                                     <th class="text-center">Satuan</th>
-                                    <th class="text-center">Harga Modal</th>
+                                    <th class="text-center">Harga Produk</th>
                                     <th class="text-center">Unit</th>
                                     <th class="text-center">Stok Awal</th>
                                     <th class="text-center">Nilai Awal</th>
-                                    <th class="text-center">Stok Realtime</th>
-                                    <th class="text-center">Nilai Realtime</th>
+                                    <th class="text-center">Stok Opname</th>
+                                    <th class="text-center">Nilai Opname</th>
                                     <th class="text-center">Selisih Qty</th>
                                     <th class="text-center">Selisih Nominal</th>
                                 </tr>

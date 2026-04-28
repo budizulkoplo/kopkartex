@@ -44,6 +44,7 @@
                                 <th>Unit</th>
                                 <th>Kode Barang</th>
                                 <th>Nama Barang</th>
+                                <th class="text-end">Stok Awal</th>
                                 <th class="text-end">Stok Sistem</th>
                                 <th class="text-end">Stok Fisik</th>
                                 <th class="text-end">Selisih</th>
@@ -55,6 +56,7 @@
                         <tfoot>
                             <tr class="table-primary fw-bold">
                                 <td colspan="5" class="text-end">TOTAL:</td>
+                                <td id="total-awal" class="text-end">0</td>
                                 <td id="total-sistem" class="text-end">0</td>
                                 <td id="total-fisik" class="text-end">0</td>
                                 <td id="total-selisih" class="text-end">0</td>
@@ -62,6 +64,10 @@
                             </tr>
                         </tfoot>
                     </table>
+                    <div class="d-flex justify-content-end gap-4 small text-muted mt-2">
+                        <div>Total Item: <strong id="total-item">0</strong></div>
+                        <div>Total Per Page: <strong id="total-per-page">0</strong></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -107,6 +113,7 @@
 
             function generatePrintContent(data) {
                 // Hitung total
+                let totalAwal = 0;
                 let totalSistem = 0;
                 let totalFisik = 0;
                 let totalSelisih = 0;
@@ -241,11 +248,12 @@
                             th:nth-child(3), td:nth-child(3) { width: 10%; }  /* Unit */
                             th:nth-child(4), td:nth-child(4) { width: 10%; }  /* Kode Barang */
                             th:nth-child(5), td:nth-child(5) { width: 20%; }  /* Nama Barang */
-                            th:nth-child(6), td:nth-child(6) { width: 8%; }   /* Stok Sistem */
-                            th:nth-child(7), td:nth-child(7) { width: 8%; }   /* Stok Fisik */
-                            th:nth-child(8), td:nth-child(8) { width: 8%; }   /* Selisih */
-                            th:nth-child(9), td:nth-child(9) { width: 15%; }  /* Keterangan */
-                            th:nth-child(10), td:nth-child(10) { width: 10%; } /* Status */
+                            th:nth-child(6), td:nth-child(6) { width: 7%; }   /* Stok Awal */
+                            th:nth-child(7), td:nth-child(7) { width: 7%; }   /* Stok Sistem */
+                            th:nth-child(8), td:nth-child(8) { width: 7%; }   /* Stok Fisik */
+                            th:nth-child(9), td:nth-child(9) { width: 7%; }   /* Selisih */
+                            th:nth-child(10), td:nth-child(10) { width: 14%; }  /* Keterangan */
+                            th:nth-child(11), td:nth-child(11) { width: 10%; } /* Status */
                             
                             .footer {
                                 margin-top: 15px;
@@ -304,6 +312,7 @@
                                     <th class="text-center">Unit</th>
                                     <th class="text-center">Kode Barang</th>
                                     <th class="text-center">Nama Barang</th>
+                                    <th class="text-center">Stok Awal</th>
                                     <th class="text-center">Stok Sistem</th>
                                     <th class="text-center">Stok Fisik</th>
                                     <th class="text-center">Selisih</th>
@@ -315,10 +324,12 @@
 
                 // Render data
                 data.forEach((row, index) => {
+                    const stockAwal = parseFloat(row.stock_awal ?? row.stock_sistem) || 0;
                     const stockSistem = parseFloat(row.stock_sistem) || 0;
                     const stockFisik = row.status === "pending" ? 0 : parseFloat(row.stock_fisik) || 0;
                     const selisih = row.status === "pending" ? 0 : stockFisik - stockSistem;
                     
+                    totalAwal += stockAwal;
                     totalSistem += stockSistem;
                     totalFisik += stockFisik;
                     totalSelisih += selisih;
@@ -352,6 +363,7 @@
                             <td class="text-center">${row.unit || '-'}</td>
                             <td class="text-center">${row.kode_barang || '-'}</td>
                             <td class="text-left">${row.nama_barang || '-'}</td>
+                            <td class="text-right">${stockAwal.toLocaleString('id-ID')}</td>
                             <td class="text-right">${stockSistem.toLocaleString('id-ID')}</td>
                             <td class="text-right">${row.status === "pending" ? "-" : stockFisik.toLocaleString('id-ID')}</td>
                             <td class="text-right ${selisihClass}">${selisihText}</td>
@@ -365,7 +377,7 @@
                     if ((index + 1) % 40 === 0 && index < data.length - 1) {
                         printHTML += `
                             <tr class="page-break">
-                                <td colspan="10"></td>
+                                <td colspan="11"></td>
                             </tr>`;
                     }
                 });
@@ -376,6 +388,7 @@
                             <tfoot>
                                 <tr class="grand-total-row grand-total">
                                     <td colspan="5" class="text-right bold">TOTAL:</td>
+                                    <td class="text-right bold">${totalAwal.toLocaleString('id-ID')}</td>
                                     <td class="text-right bold">${totalSistem.toLocaleString('id-ID')}</td>
                                     <td class="text-right bold">${totalFisik.toLocaleString('id-ID')}</td>
                                     <td class="text-right bold">${totalSelisih > 0 ? '+' : ''}${totalSelisih.toLocaleString('id-ID')}</td>
@@ -385,7 +398,7 @@
                         </table>
                         
                         <div class="footer">
-                            <p>Rekapitulasi: Stok Sistem: ${totalSistem.toLocaleString('id-ID')} | Stok Fisik: ${totalFisik.toLocaleString('id-ID')} | Selisih: ${totalSelisih > 0 ? '+' : ''}${totalSelisih.toLocaleString('id-ID')}</p>
+                            <p>Total Item: ${data.length} | Stok Awal: ${totalAwal.toLocaleString('id-ID')} | Stok Sistem: ${totalSistem.toLocaleString('id-ID')} | Stok Fisik: ${totalFisik.toLocaleString('id-ID')} | Selisih: ${totalSelisih > 0 ? '+' : ''}${totalSelisih.toLocaleString('id-ID')}</p>
                             <p>Dicetak dari Sistem pada ${new Date().toLocaleTimeString('id-ID')}</p>
                         </div>
                     </body>
@@ -456,6 +469,13 @@
                         data: "nama_barang",
                         className: "text-left"
                     },
+                    {
+                        data: "stock_awal",
+                        className: "text-end",
+                        render: function(data, type, row) {
+                            return parseFloat(data ?? row.stock_sistem ?? 0).toLocaleString('id-ID');
+                        }
+                    },
                     { 
                         data: "stock_sistem", 
                         className: "text-end",
@@ -515,26 +535,32 @@
                 drawCallback: function(settings) {
                     // Hitung total dari data yang ditampilkan di halaman
                     let api = this.api();
+                    let totalAwal = 0;
                     let totalSistem = 0;
                     let totalFisik = 0;
                     let totalSelisih = 0;
                     
                     api.rows({ page: 'current' }).data().each(function(row) {
+                        const stockAwal = parseFloat(row.stock_awal ?? row.stock_sistem) || 0;
                         const stockSistem = parseFloat(row.stock_sistem) || 0;
                         const stockFisik = row.status === "pending" ? 0 : parseFloat(row.stock_fisik) || 0;
                         const selisih = row.status === "pending" ? 0 : stockFisik - stockSistem;
                         
+                        totalAwal += stockAwal;
                         totalSistem += stockSistem;
                         totalFisik += stockFisik;
                         totalSelisih += selisih;
                     });
                     
                     // Update total di footer
+                    $('#total-awal').text(totalAwal.toLocaleString('id-ID'));
                     $('#total-sistem').text(totalSistem.toLocaleString('id-ID'));
                     $('#total-fisik').text(totalFisik.toLocaleString('id-ID'));
                     $('#total-selisih').html(`<span class="${totalSelisih > 0 ? 'text-success fw-bold' : totalSelisih < 0 ? 'text-danger fw-bold' : 'text-muted'}">
                         ${totalSelisih > 0 ? '+' : ''}${totalSelisih.toLocaleString('id-ID')}
                     </span>`);
+                    $('#total-item').text(api.rows({ search: 'applied' }).count().toLocaleString('id-ID'));
+                    $('#total-per-page').text(api.rows({ page: 'current' }).count().toLocaleString('id-ID'));
                 },
                 dom:
                     "<'row mb-2'<'col-md-6 d-flex align-items-center'B><'col-md-6 d-flex justify-content-end'f>>" +

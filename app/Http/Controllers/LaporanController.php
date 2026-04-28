@@ -722,6 +722,7 @@ class LaporanController extends Controller
                 'u.nama_unit as unit',
                 'so.kode_barang',
                 'b.nama_barang',
+                'so.stock_sistem as stock_awal',
                 'so.stock_sistem',
                 'so.stock_fisik',
                 'so.keterangan',
@@ -2114,12 +2115,26 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
         $bulan = $request->get('bulan', date('Y-m'));
         $unit_id = $request->get('unit', 'all');
 
+        $latestOpnameSub = DB::table('stock_opname')
+            ->select(
+                'id_barang',
+                'id_unit',
+                DB::raw("DATE_FORMAT(tgl_opname, '%Y-%m') as periode"),
+                DB::raw('MAX(id) as latest_id')
+            )
+            ->whereNull('deleted_at')
+            ->groupBy('id_barang', 'id_unit', DB::raw("DATE_FORMAT(tgl_opname, '%Y-%m')"));
+
         $query = DB::table('modal_awal as ma')
             ->leftJoin('unit as u', 'u.id', '=', 'ma.unit_id')
             ->leftJoin('barang as b', 'b.id', '=', 'ma.barang_id')
+            ->leftJoinSub($latestOpnameSub, 'latest_so', function ($join) {
+                $join->on('latest_so.id_barang', '=', 'ma.barang_id')
+                    ->on('latest_so.id_unit', '=', 'ma.unit_id')
+                    ->on('latest_so.periode', '=', 'ma.periode');
+            })
             ->leftJoin('stock_opname as su', function ($join) {
-                $join->on('su.id_barang', '=', 'ma.barang_id')
-                    ->on('su.unit_id', '=', 'ma.unit_id')
+                $join->on('su.id', '=', 'latest_so.latest_id')
                     ->whereNull('su.deleted_at');
             })
             ->leftJoin('satuan as s', 'b.idsatuan', '=', 's.id') 
@@ -2176,13 +2191,27 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
     {
         $bulan = $request->get('bulan', date('Y-m'));
         $unit_id = $request->get('unit', 'all');
+
+        $latestOpnameSub = DB::table('stock_opname')
+            ->select(
+                'id_barang',
+                'id_unit',
+                DB::raw("DATE_FORMAT(tgl_opname, '%Y-%m') as periode"),
+                DB::raw('MAX(id) as latest_id')
+            )
+            ->whereNull('deleted_at')
+            ->groupBy('id_barang', 'id_unit', DB::raw("DATE_FORMAT(tgl_opname, '%Y-%m')"));
         
         $query = DB::table('modal_awal as ma')
             ->leftJoin('unit as u', 'u.id', '=', 'ma.unit_id')
             ->leftJoin('barang as b', 'b.id', '=', 'ma.barang_id')
-            ->leftJoin('stok_unit as su', function ($join) {
-                $join->on('su.barang_id', '=', 'ma.barang_id')
-                    ->on('su.unit_id', '=', 'ma.unit_id')
+            ->leftJoinSub($latestOpnameSub, 'latest_so', function ($join) {
+                $join->on('latest_so.id_barang', '=', 'ma.barang_id')
+                    ->on('latest_so.id_unit', '=', 'ma.unit_id')
+                    ->on('latest_so.periode', '=', 'ma.periode');
+            })
+            ->leftJoin('stock_opname as su', function ($join) {
+                $join->on('su.id', '=', 'latest_so.latest_id')
                     ->whereNull('su.deleted_at');
             })
             ->leftJoin('satuan as s', 'b.idsatuan', '=', 's.id') // Join ke tabel satuan
@@ -2194,10 +2223,10 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
                 'u.nama_unit as unit',
                 'ma.stok as stok_awal',
                 'ma.nilai_total_barang as nilai_modal_awal',
-                DB::raw('COALESCE(su.stok, ma.stok) as stok_realtime'),
-                DB::raw('(COALESCE(su.stok, ma.stok) * ma.harga_modal) as nilai_realtime'),
-                DB::raw('(COALESCE(su.stok, ma.stok) - ma.stok) as selisih_stok'),
-                DB::raw('((COALESCE(su.stok, ma.stok) - ma.stok) * ma.harga_modal) as selisih_nominal'),
+                DB::raw('COALESCE(su.stock_fisik, ma.stok) as stok_realtime'),
+                DB::raw('(COALESCE(su.stock_fisik, ma.stok) * ma.harga_modal) as nilai_realtime'),
+                DB::raw('(COALESCE(su.stock_fisik, ma.stok) - ma.stok) as selisih_stok'),
+                DB::raw('((COALESCE(su.stock_fisik, ma.stok) - ma.stok) * ma.harga_modal) as selisih_nominal'),
                 's.name as satuan' // Ambil name dari tabel satuan
             )
             ->where('ma.periode', $bulan);
