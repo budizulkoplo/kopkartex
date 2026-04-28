@@ -13,7 +13,7 @@
             box-sizing:border-box;
         }
 
-        .sheet { width: 9.5cm; padding: 5px; }
+        .sheet { width: 9.3cm; padding: 5px; }
         .center { text-align: center; }
         .right { text-align: right; }
         .left { text-align: left; }
@@ -26,7 +26,7 @@
         table { width: 100%; border-collapse: collapse; }
         td { vertical-align: top; }
 
-        @media print { body { width: 9.5cm; } 
+        @media print { body { width: 9.3cm; } 
             * {
                 font-size: 9pt !important;
             }
@@ -83,7 +83,7 @@ if($isCicilan){
 <br>
 
 <div class="center">
-    <b><?= $isCicilan ? 'NOTA PENJUALAN KREDIT' : 'NOTA PENJUALAN' ?></b>
+    <b><?= $isCicilan ? 'NOTA PENJUALAN KREDIT' : 'NOTA PENJUALAN CASH' ?></b>
 </div>
 
 <div class="line"></div>

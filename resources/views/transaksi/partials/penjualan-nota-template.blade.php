@@ -36,12 +36,12 @@
             margin: 0;
             font-family: "Courier New", monospace;
             font-size: 11px;
-            width: 9.5cm;
+            width: 9.3cm;
             box-sizing: border-box;
         }
 
         .sheet {
-            width: 9.5cm;
+            width: 9.3cm;
             padding: 5px;
             box-sizing: border-box;
         }
@@ -87,14 +87,14 @@
 
         @media print {
             body {
-                width: 9.5cm;
+                width: 9.3cm;
                 margin: 0;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
 
             .sheet {
-                width: 9.5cm;
+                width: 9.3cm;
                 margin: 0;
                 padding: 5px;
             }
@@ -117,7 +117,7 @@
         <br>
 
         <div class="center">
-            <b>{{ $isCicilan ? 'NOTA PENJUALAN KREDIT' : 'NOTA PENJUALAN' }}</b>
+            <b>{{ $isCicilan ? 'NOTA PENJUALAN KREDIT' : 'NOTA PENJUALAN CASH' }}</b>
         </div>
 
         <div class="line"></div>
