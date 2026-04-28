@@ -897,7 +897,8 @@ class LaporanController extends Controller
                 'b.nama_barang',
                 'd.qty',
                 'd.harga',
-                DB::raw('(d.qty * d.harga) as total')
+                DB::raw('COALESCE(d.diskon, 0) as diskon_item'),
+                DB::raw('GREATEST((d.qty * d.harga) - COALESCE(d.diskon, 0), 0) as total')
             )
             ->whereBetween(DB::raw('DATE(p.tanggal)'), [$start_date, $end_date])
             ->whereNull('p.deleted_at')
@@ -2019,7 +2020,8 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
                 'b.nama_barang',
                 'tbd.qty',
                 'tbd.harga',
-                DB::raw('(tbd.qty * tbd.harga) as total')
+                DB::raw('COALESCE(tbd.diskon, 0) as diskon_item'),
+                DB::raw('COALESCE(tbd.total, GREATEST((tbd.qty * tbd.harga) - COALESCE(tbd.diskon, 0), 0)) as total')
             )
             ->whereBetween(DB::raw('DATE(tb.tanggal)'), [$start_date, $end_date])
             ->whereNull('tb.deleted_at')
@@ -2044,7 +2046,8 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
                 'jb.nama_jasa as nama_barang',
                 'tbd.qty',
                 'tbd.harga',
-                DB::raw('(tbd.qty * tbd.harga) as total')
+                DB::raw('COALESCE(tbd.diskon, 0) as diskon_item'),
+                DB::raw('COALESCE(tbd.total, GREATEST((tbd.qty * tbd.harga) - COALESCE(tbd.diskon, 0), 0)) as total')
             )
             ->whereBetween(DB::raw('DATE(tb.tanggal)'), [$start_date, $end_date])
             ->whereNull('tb.deleted_at')

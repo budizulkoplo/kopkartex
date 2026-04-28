@@ -7,10 +7,15 @@
 
     $totalBp = 0;
     $totalNonBp = 0;
+    $totalDiskonItem = 0;
+
+    foreach ($dtl as $item) {
+        $totalDiskonItem += (float) ($item->diskon ?? 0);
+    }
 
     if ($isCicilan) {
         foreach ($dtl as $item) {
-            $totalItem = ((float) $item->harga) * ((float) $item->qty);
+            $totalItem = max((((float) $item->harga) * ((float) $item->qty)) - ((float) ($item->diskon ?? 0)), 0);
             $kategoriCicilan = (int) ($item->kategori_cicilan ?? 1);
 
             if ($kategoriCicilan === 0) {
@@ -142,13 +147,24 @@
         <div class="line"></div>
 
         @foreach($dtl as $item)
+            @php
+                $itemGross = ((float) $item->harga) * ((float) $item->qty);
+                $itemDiskon = (float) ($item->diskon ?? 0);
+                $itemTotal = max($itemGross - $itemDiskon, 0);
+            @endphp
             <table class="item-table">
                 <tr>
                     <td class="col-nama">{{ strtoupper($item->nama_barang ?? '-') }}</td>
                     <td class="col-qty">{{ number_format((float) $item->qty, 3, ',', '.') }}</td>
                     <td class="col-harga">{{ number_format((float) $item->harga, 0, ',', '.') }}</td>
-                    <td class="col-total">{{ number_format(((float) $item->harga) * ((float) $item->qty), 0, ',', '.') }}</td>
+                    <td class="col-total">{{ number_format($itemTotal, 0, ',', '.') }}</td>
                 </tr>
+                @if($itemDiskon > 0)
+                    <tr>
+                        <td colspan="3" class="muted">Diskon item</td>
+                        <td class="col-total muted">-{{ number_format($itemDiskon, 0, ',', '.') }}</td>
+                    </tr>
+                @endif
             </table>
         @endforeach
 
@@ -159,17 +175,15 @@
                 <td class="right">Sub Total :</td>
                 <td class="right">{{ number_format((float) $hdr->subtotal, 0, ',', '.') }}</td>
             </tr>
+            @if($totalDiskonItem > 0)
+                <tr>
+                    <td class="right">Total Diskon Item :</td>
+                    <td class="right">Rp. {{ number_format($totalDiskonItem, 0, ',', '.') }}</td>
+                </tr>
+            @endif
             <tr>
-                <td class="right">Diskon :</td>
-                <td class="right">
-                    @php
-                        $diskonValue = (float) ($hdr->diskon ?? 0);
-                        $diskonLabel = $diskonValue > 0 && $diskonValue <= 100
-                            ? number_format($diskonValue, 0, ',', '.') . '%'
-                            : 'Rp. ' . number_format($diskonValue, 0, ',', '.');
-                    @endphp
-                    {{ $diskonLabel }}
-                </td>
+                <td class="right">Diskon Nota :</td>
+                <td class="right">Rp. {{ number_format((float) ($hdr->diskon ?? 0), 0, ',', '.') }}</td>
             </tr>
             <tr>
                 <td class="right"><b>Grand Total :</b></td>

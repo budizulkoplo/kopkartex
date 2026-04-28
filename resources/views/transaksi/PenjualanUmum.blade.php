@@ -76,6 +76,7 @@
                                             <th>Kode</th>
                                             <th>Nama Barang</th>
                                             <th>@Harga</th>
+                                            <th>Diskon Item</th>
                                             <th>Stok</th>
                                             <th>Qty</th>
                                             <th>Total</th>
@@ -304,24 +305,32 @@
                     var row = $(this);
                     var barangqty = parseFloat(row.find('.barangqty').val()) || 0;
                     var hargajual = parseFloat(row.find('.hargajual').val()) || 0;
+                    var diskonItem = parseFloat(row.find('.diskonitem').val()) || 0;
                     var idbarang = row.find('.idbarang').val();
                     var stok = parseFloat(row.find('.stok').val()) || 0;
-                    
+                    var brutoItem = barangqty * hargajual;
+
+                    if (diskonItem > brutoItem) {
+                        diskonItem = brutoItem;
+                        row.find('.diskonitem').val(diskonItem);
+                    }
+
                     // Update total per item
-                    var totalItem = barangqty * hargajual;
+                    var totalItem = Math.max(brutoItem - diskonItem, 0);
                     row.find('.totalitm').html(formatRupiahWithDecimal(totalItem));
-                    
+
                     barangtmp.push({
                         'barangqty': barangqty,
                         'stok': stok,
                         'idbarang': parseInt(idbarang),
-                        'hargajual': hargajual
+                        'hargajual': hargajual,
+                        'diskonItem': diskonItem
                     });
                 });
-                
+
                 // Hitung subtotal
                 $.each(barangtmp, function(index, item) {
-                    subtotal += (item.hargajual * item.barangqty);
+                    subtotal += Math.max((item.hargajual * item.barangqty) - item.diskonItem, 0);
                 });
                 
                 // Cek stok jika ada perubahan qty
@@ -484,6 +493,9 @@
                         </td>
                         <td class="hargajualtext">${hargaJualUmum ? formatRupiahWithDecimal(hargaJualUmum) : ''}</td>
                         <td>
+                            <input type="number" class="form-control form-control-sm diskonitem" name="diskon_item[]" value="0" min="0" step="0.01" onfocus="this.select()" onkeyup="kalkulasi(this)" onchange="kalkulasi(this)">
+                        </td>
+                        <td>
                             <span class="stoktext">${parseFloat(datarow.stok || 0).toFixed(3).replace(/\.?0+$/, '')}</span>
                             <input type="hidden" class="stok" name="stok[]" value="${datarow.stok}">
                         </td>
@@ -605,6 +617,7 @@
                     row.find('.kodebarangtext').text(data.code);
                     row.find('.hargajual').val(data.harga_jual);
                     row.find('.hargajualtext').text(formatRupiahWithDecimal(data.harga_jual));
+                    row.find('.diskonitem').val(0);
                     row.find('.hargabeli').val(data.harga_beli || 0);
                     row.find('.stoktext').text(parseFloat(data.stok || 0).toFixed(3).replace(/\.?0+$/, ''));
                     row.find('.stok').val(data.stok);
@@ -640,6 +653,7 @@
                     row.find('.kodebarangtext').text('');
                     row.find('.hargajual').val('');
                     row.find('.hargajualtext').text('');
+                    row.find('.diskonitem').val(0);
                     row.find('.stoktext').text('');
                     row.find('.stok').val('');
                     row.find('.barangqty').val('');

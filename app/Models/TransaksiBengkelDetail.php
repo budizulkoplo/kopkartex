@@ -18,11 +18,13 @@ class TransaksiBengkelDetail extends Model
         'barang_id',
         'qty',
         'harga',
+        'diskon',
         'total'
     ];
 
     protected $casts = [
         'harga' => 'decimal:2',
+        'diskon' => 'decimal:2',
         'total' => 'decimal:2',
         'qty' => 'decimal:3'
     ];

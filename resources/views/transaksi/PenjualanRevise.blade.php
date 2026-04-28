@@ -105,6 +105,7 @@
                                                         <th>Stok</th>
                                                         <th>Qty</th>
                                                         <th>Harga</th>
+                                                        <th>Diskon Item</th>
                                                         <th>Total</th>
                                                         <th></th>
                                                     </tr>
@@ -138,7 +139,10 @@
                                                             <input type="hidden" name="harga_jual[]" class="hargajual" value="{{ $detail->harga }}">
                                                         </td>
                                                         <td class="hargajualtext">{{ number_format($detail->harga, 0, ',', '.') }}</td>
-                                                        <td class="totalitm">{{ number_format($detail->qty * $detail->harga, 2, ',', '.') }}</td>
+                                                        <td>
+                                                            <input type="number" name="diskon_item[]" class="form-control form-control-sm diskonitem" value="{{ $detail->diskon ?? 0 }}" min="0" step="0.01" onfocus="this.select()" onkeyup="kalkulasi()" onchange="kalkulasi()">
+                                                        </td>
+                                                        <td class="totalitm">{{ number_format(($detail->qty * $detail->harga) - ($detail->diskon ?? 0), 2, ',', '.') }}</td>
                                                         <td>
                                                             <span class="badge btn bg-danger dellist" onclick="removeBarangRow($(this).closest('tr'))">
                                                                 <i class="bi bi-trash3-fill"></i>
@@ -169,8 +173,8 @@
                                 </div>
                                 <div class="input-group input-group-sm mb-2">
                                     <span class="input-group-text label-fixed-width">Diskon</span>
-                                    <input type="number" class="form-control" value="{{ $penjualan->diskon }}" name="diskon" id="diskon" min="0" max="100" step="0.01" onkeyup="kalkulasi()" onchange="kalkulasi()">
-                                    <span class="input-group-text">%</span>
+                                    <span class="input-group-text">Rp.</span>
+                                    <input type="number" class="form-control" value="{{ $penjualan->diskon }}" name="diskon" id="diskon" min="0" step="0.01" onkeyup="kalkulasi()" onchange="kalkulasi()">
                                 </div>
                                 <div class="input-group input-group-sm mb-2">
                                     <span class="input-group-text label-fixed-width">Grand Total</span>
@@ -423,13 +427,24 @@
                 $('#tabelBarang tbody tr').each(function() {
                     let qty = parseFloat($(this).find('.barangqty').val()) || 0;
                     let harga = parseFloat($(this).find('.hargajual').val()) || 0;
-                    let total = qty * harga;
+                    let diskonItem = parseFloat($(this).find('.diskonitem').val()) || 0;
+                    let bruto = qty * harga;
+                    if (diskonItem > bruto) {
+                        diskonItem = bruto;
+                        $(this).find('.diskonitem').val(diskonItem);
+                    }
+                    let total = Math.max(bruto - diskonItem, 0);
                     $(this).find('.totalitm').text(formatRupiahWithDecimal(total));
                     subtotal += total;
                 });
                 
                 let diskon = parseFloat($('#diskon').val()) || 0;
-                globtot = subtotal * (1 - (diskon / 100));
+                if (diskon > subtotal) {
+                    diskon = subtotal;
+                    $('#diskon').val(diskon);
+                }
+                $('#diskon').attr('max', subtotal);
+                globtot = subtotal - diskon;
                 
                 $('#subtotal').val(subtotal);
                 $('#grandtotal').val(globtot);
@@ -522,6 +537,9 @@
                             <input type="hidden" name="harga_jual[]" class="hargajual" value="${datarow ? datarow.harga_jual : 0}">
                         </td>
                         <td class="hargajualtext">${datarow ? formatRupiahWithDecimal(datarow.harga_jual) : ''}</td>
+                        <td>
+                            <input type="number" name="diskon_item[]" class="form-control form-control-sm diskonitem" value="0" min="0" step="0.01" onfocus="this.select()" onkeyup="kalkulasi()" onchange="kalkulasi()">
+                        </td>
                         <td class="totalitm"></td>
                         <td>
                             <span class="badge btn bg-danger dellist" onclick="removeBarangRow($(this).closest('tr'))">
@@ -680,6 +698,7 @@
                     row.find('.kodebarang').text(data.code);
                     row.find('.hargajual').val(data.harga_jual);
                     row.find('.hargajualtext').text(formatRupiahWithDecimal(data.harga_jual));
+                    row.find('.diskonitem').val(0);
                     row.find('.stoktext').text(data.stok);
                     row.find('.stok').val(data.stok);
                     row.find('.barangqty').val(1).attr("max", data.stok);
@@ -721,6 +740,7 @@
                     row.find('.kodebarang').text('');
                     row.find('.hargajual').val(0);
                     row.find('.hargajualtext').text('');
+                    row.find('.diskonitem').val(0);
                     row.find('.stoktext').text('0');
                     row.find('.stok').val(0);
                     row.find('.barangqty').val(0);
@@ -978,6 +998,7 @@
                             id: $(this).find('.idbarang').val(),
                             qty: parseFloat($(this).find('.barangqty').val()) || 0,
                             harga: parseFloat($(this).find('.hargajual').val()) || 0,
+                            diskon: parseFloat($(this).find('.diskonitem').val()) || 0,
                             kategori_cicilan: parseInt($(this).find('.namabarang option:selected').data('cicilan')) || 1
                         });
                     });

@@ -101,6 +101,7 @@
                                                     <th>Stok</th>
                                                     <th>Qty</th>
                                                     <th>Harga</th>
+                                                    <th>Diskon Item</th>
                                                     <th>Total</th>
                                                     <th></th>
                                                 </tr>
@@ -454,7 +455,13 @@
                 $('#tabelBarang tbody tr').each(function() {
                     let qty = parseFloat($(this).find('.barangqty').val()) || 0;
                     let harga = parseFloat($(this).find('.hargajual').val()) || 0;
-                    let total = qty * harga;
+                    let diskonItem = parseFloat($(this).find('.diskonitem').val()) || 0;
+                    let bruto = qty * harga;
+                    if (diskonItem > bruto) {
+                        diskonItem = bruto;
+                        $(this).find('.diskonitem').val(diskonItem);
+                    }
+                    let total = Math.max(bruto - diskonItem, 0);
                     $(this).find('.totalitm').text(formatRupiahWithDecimal(total));
                     subtotal += total;
                 });
@@ -718,6 +725,9 @@
                             <input type="hidden" name="harga_jual[]" class="hargajual" value="${datarow ? datarow.harga_jual : 0}">
                         </td>
                         <td class="hargajualtext">${datarow ? formatRupiahWithDecimal(datarow.harga_jual) : ''}</td>
+                        <td>
+                            <input type="number" name="diskon_item[]" class="form-control form-control-sm diskonitem" value="0" min="0" step="0.01" onfocus="this.select()" onkeyup="kalkulasi()" onchange="kalkulasi()">
+                        </td>
                         <td class="totalitm"></td>
                         <td>
                             <span class="badge btn bg-danger dellist" onclick="removeBarangRow($(this).closest('tr'))">
@@ -852,6 +862,7 @@
                     row.find('.kodebarang').text(data.code);
                     row.find('.hargajual').val(data.harga_jual);
                     row.find('.hargajualtext').text(formatRupiahWithDecimal(data.harga_jual));
+                    row.find('.diskonitem').val(0);
                     row.find('.stoktext').text(data.stok);
                     row.find('.stok').val(data.stok);
                     row.find('.barangqty').val(1).attr("max", data.stok);
@@ -884,6 +895,7 @@
                     row.find('.kodebarang').text('');
                     row.find('.hargajual').val(0);
                     row.find('.hargajualtext').text('');
+                    row.find('.diskonitem').val(0);
                     row.find('.stoktext').text('0');
                     row.find('.stok').val(0);
                     row.find('.barangqty').val(0);

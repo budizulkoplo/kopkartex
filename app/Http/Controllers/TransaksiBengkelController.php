@@ -181,12 +181,14 @@ class TransaksiBengkelController extends Controller
         try {
 
             $date = Carbon::parse($request->tanggal)->setTimeFrom(Carbon::now());
+            $computedSubtotal = $this->calculateRequestSubtotal($request);
+            $computedGrandTotal = $this->calculateNominalGrandTotal($computedSubtotal, $request->diskon ?? 0);
 
             $transaksi = new TransaksiBengkel();
             $transaksi->nomor_invoice = $this->genCode();
             $transaksi->tanggal = $date->toDateTimeString();
-            $transaksi->grandtotal = $request->grandtotal;
-            $transaksi->subtotal = $request->subtotal;
+            $transaksi->grandtotal = $computedGrandTotal;
+            $transaksi->subtotal = $computedSubtotal;
             $transaksi->metode_bayar = $request->metodebayar;
             $transaksi->customer = $request->customer;
             $transaksi->anggota_id = $request->idcustomer;
@@ -238,6 +240,7 @@ class TransaksiBengkelController extends Controller
                         'jasa_id'=> $idJasa,
                         'harga'  => $harga,
                         'qty'    => $qty,
+                        'diskon' => 0,
                         'total'  => $qty * $harga,
                     ]);
                 }
@@ -250,6 +253,7 @@ class TransaksiBengkelController extends Controller
 
                     $qty   = $request->qty[$i];
                     $harga = $request->harga_jual[$i];
+                    $diskonItem = $this->normalizeItemDiscount($request->diskon_item[$i] ?? 0, $qty * $harga);
 
                     $stok = StokUnit::where('unit_id', Auth::user()->unit_kerja)
                         ->where('barang_id', $idBarang)
@@ -267,7 +271,8 @@ class TransaksiBengkelController extends Controller
                         'barang_id' => $idBarang,
                         'qty'       => $qty,
                         'harga'     => $harga,
-                        'total'     => $qty * $harga,
+                        'diskon'    => $diskonItem,
+                        'total'     => $this->calculateLineTotal($qty, $harga, $diskonItem),
                     ]);
 
                     $stok->decrement('stok', $qty);
@@ -567,11 +572,18 @@ public function revise($id): View|RedirectResponse
             // =============================
             // UPDATE HEADER
             // =============================
+            $items = json_decode($request->items, true);
+            if (!is_array($items)) {
+                throw new Exception('Format items tidak valid');
+            }
+
             $date = Carbon::parse($request->tanggal)->setTimeFrom(Carbon::now());
+            $computedSubtotal = $this->calculateItemsSubtotal($items);
+            $computedGrandTotal = $this->calculateNominalGrandTotal($computedSubtotal, $request->diskon ?? 0);
 
             $transaksi->tanggal = $date->toDateTimeString();
-            $transaksi->grandtotal = $request->grandtotal;
-            $transaksi->subtotal = $request->subtotal;
+            $transaksi->grandtotal = $computedGrandTotal;
+            $transaksi->subtotal = $computedSubtotal;
             $transaksi->metode_bayar = $request->metodebayar;
             $transaksi->customer = $request->customer;
             $transaksi->anggota_id = $request->idcustomer;
@@ -602,12 +614,6 @@ public function revise($id): View|RedirectResponse
             // =============================
             // PROSES ITEMS BARU (decode JSON)
             // =============================
-            $items = json_decode($request->items, true);
-            
-            if (!is_array($items)) {
-                throw new Exception('Format items tidak valid');
-            }
-
             foreach ($items as $item) {
                 if ($item['jenis'] == 'jasa') {
                     // Simpan jasa
@@ -617,6 +623,7 @@ public function revise($id): View|RedirectResponse
                         'jasa_id' => $item['id'],
                         'harga' => $item['harga'],
                         'qty' => $item['qty'] ?? 1,
+                        'diskon' => 0,
                         'total' => ($item['qty'] ?? 1) * $item['harga'],
                     ]);
                 } else {
@@ -639,7 +646,8 @@ public function revise($id): View|RedirectResponse
                         'barang_id' => $item['id'],
                         'qty' => $item['qty'],
                         'harga' => $item['harga'],
-                        'total' => $item['qty'] * $item['harga'],
+                        'diskon' => $this->normalizeItemDiscount($item['diskon'] ?? 0, $item['qty'] * $item['harga']),
+                        'total' => $this->calculateLineTotal($item['qty'], $item['harga'], $item['diskon'] ?? 0),
                     ]);
 
                     // Kurangi stok
@@ -714,7 +722,9 @@ public function revise($id): View|RedirectResponse
         $totalBengkel = TransaksiBengkelCicilan::where([
             'anggota_id' => $request->idcustomer,
             'status' => 'hutang'
-        ])->sum('total_cicilan');
+        ])
+            ->where('transaksi_bengkel_id', '!=', $transaksi->id)
+            ->sum('total_cicilan');
 
         $totalCicilanLain = $totalToko + $totalBengkel;
 
@@ -739,8 +749,9 @@ public function revise($id): View|RedirectResponse
 
         $totalCicilanBaru = $cicilanPertamaKategori1 + $totalCicilan0;
 
-        if (($totalCicilanLain + $totalCicilanBaru) > $batas) {
-            throw new Exception('Melebihi batas limit hutang. Sisa limit: Rp ' . number_format($batas - $totalCicilanLain, 0, ',', '.'));
+        if ($batas !== null && ($totalCicilanLain + $totalCicilanBaru) > $batas) {
+            $sisaLimit = max($batas - $totalCicilanLain, 0);
+            throw new Exception('Melebihi batas limit hutang. Sisa limit: Rp ' . number_format($sisaLimit, 0, ',', '.'));
         }
 
         // Generate cicilan baru
@@ -852,5 +863,59 @@ public function revise($id): View|RedirectResponse
         return response()->json($this->genCode());
     }
 
-}
+    private function normalizeItemDiscount($discount, $grossTotal): float
+    {
+        $discount = max((float) ($discount ?? 0), 0);
+        $grossTotal = max((float) ($grossTotal ?? 0), 0);
 
+        return min($discount, $grossTotal);
+    }
+
+    private function calculateLineTotal($qty, $price, $discount = 0): float
+    {
+        $grossTotal = max((float) $qty, 0) * max((float) $price, 0);
+
+        return max($grossTotal - $this->normalizeItemDiscount($discount, $grossTotal), 0);
+    }
+
+    private function calculateRequestSubtotal(Request $request): float
+    {
+        $subtotal = 0;
+
+        foreach (($request->jasa_qty ?? []) as $index => $qty) {
+            $subtotal += max((float) $qty, 0) * max((float) ($request->jasa_harga[$index] ?? 0), 0);
+        }
+
+        foreach (($request->qty ?? []) as $index => $qty) {
+            $price = $request->harga_jual[$index] ?? 0;
+            $discount = $request->diskon_item[$index] ?? 0;
+            $subtotal += $this->calculateLineTotal($qty, $price, $discount);
+        }
+
+        return $subtotal;
+    }
+
+    private function calculateItemsSubtotal(array $items): float
+    {
+        $subtotal = 0;
+
+        foreach ($items as $item) {
+            if (($item['jenis'] ?? '') === 'jasa') {
+                $subtotal += max((float) ($item['qty'] ?? 1), 0) * max((float) ($item['harga'] ?? 0), 0);
+                continue;
+            }
+
+            $subtotal += $this->calculateLineTotal($item['qty'] ?? 0, $item['harga'] ?? 0, $item['diskon'] ?? 0);
+        }
+
+        return $subtotal;
+    }
+
+    private function calculateNominalGrandTotal(float $subtotal, $discount): float
+    {
+        $discount = min(max((float) ($discount ?? 0), 0), $subtotal);
+
+        return max($subtotal - $discount, 0);
+    }
+
+}

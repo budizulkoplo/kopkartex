@@ -54,6 +54,7 @@ class PenjualanController extends Controller
                 'barang.kode_barang',
                 'penjualan_detail.qty',
                 'penjualan_detail.harga',
+                DB::raw('COALESCE(penjualan_detail.diskon, 0) as diskon'),
                 'kategori.cicilan as kategori_cicilan'
             )
             ->where('penjualan_id',$hdr->id)
@@ -278,11 +279,13 @@ class PenjualanController extends Controller
         DB::beginTransaction();
         try {
             $date = Carbon::parse($request->tanggal)->setTimeFrom(Carbon::now());
+            $computedSubtotal = $this->calculateRequestSubtotal($request->qty ?? [], $request->harga_jual ?? [], $request->diskon_item ?? []);
+            $computedGrandTotal = $this->calculatePercentGrandTotal($computedSubtotal, $request->diskon ?? 0);
             $penjualan = new Penjualan;
             $penjualan->nomor_invoice = $this->genCode();
             $penjualan->tanggal = $date->toDateTimeString();
-            $penjualan->grandtotal = $request->grandtotal;
-            $penjualan->subtotal = $request->subtotal;
+            $penjualan->grandtotal = $computedGrandTotal;
+            $penjualan->subtotal = $computedSubtotal;
             $penjualan->metode_bayar = $request->metodebayar;
             $penjualan->unit_id = Auth::user()->unit_kerja;
             $penjualan->customer = $request->customer;
@@ -314,7 +317,8 @@ class PenjualanController extends Controller
                         ->first();
                     
                     if($barang) {
-                        $subtotal = $qtys[$i] * $hargas[$i];
+                        $diskonItem = $this->normalizeItemDiscount($request->diskon_item[$i] ?? 0, $qtys[$i] * $hargas[$i]);
+                        $subtotal = $this->calculateLineTotal($qtys[$i], $hargas[$i], $diskonItem);
                         if($barang->cicilan == 0) {
                             $totalCicilan0 += $subtotal;
                         } else {
@@ -369,6 +373,7 @@ class PenjualanController extends Controller
                 $dtl->barang_id = $item;
                 $dtl->qty = $request->qty[$no];
                 $dtl->harga = $request->harga_jual[$no];
+                $dtl->diskon = $this->normalizeItemDiscount($request->diskon_item[$no] ?? 0, $request->qty[$no] * $request->harga_jual[$no]);
                 $dtl->save();
 
                 StokUnit::where('unit_id',Auth::user()->unit_kerja)->where('barang_id',$item)->decrement('stok', $request->qty[$no]);
@@ -434,11 +439,13 @@ class PenjualanController extends Controller
         DB::beginTransaction();
         try {
             $date = Carbon::parse($request->tanggal)->setTimeFrom(Carbon::now());
+            $computedSubtotal = $this->calculateRequestSubtotal($request->qty ?? [], $request->harga_jual ?? [], $request->diskon_item ?? []);
+            $computedGrandTotal = $this->calculatePercentGrandTotal($computedSubtotal, $request->diskon ?? 0);
             $penjualan = new Penjualan;
             $penjualan->nomor_invoice = $this->genCodeUmum();
             $penjualan->tanggal = $date->toDateTimeString();
-            $penjualan->grandtotal = $request->grandtotal;
-            $penjualan->subtotal = $request->subtotal;
+            $penjualan->grandtotal = $computedGrandTotal;
+            $penjualan->subtotal = $computedSubtotal;
             $penjualan->metode_bayar = $request->metodebayar; // Ubah: menerima metode bayar dari request
             $penjualan->unit_id = Auth::user()->unit_kerja;
             $penjualan->customer = $request->customer;
@@ -490,7 +497,8 @@ class PenjualanController extends Controller
                         ->first();
                     
                     if($barang) {
-                        $subtotal = $qtys[$i] * $hargas[$i];
+                        $diskonItem = $this->normalizeItemDiscount($request->diskon_item[$i] ?? 0, $qtys[$i] * $hargas[$i]);
+                        $subtotal = $this->calculateLineTotal($qtys[$i], $hargas[$i], $diskonItem);
                         if($barang->cicilan == 0) {
                             $totalCicilan0 += $subtotal;
                         } else {
@@ -538,6 +546,7 @@ class PenjualanController extends Controller
                 $dtl->barang_id = $item;
                 $dtl->qty = $request->qty[$no];
                 $dtl->harga = $request->harga_jual[$no];
+                $dtl->diskon = $this->normalizeItemDiscount($request->diskon_item[$no] ?? 0, $request->qty[$no] * $request->harga_jual[$no]);
                 $dtl->save();
 
                 StokUnit::where('unit_id',Auth::user()->unit_kerja)->where('barang_id',$item)->decrement('stok', $request->qty[$no]);
@@ -734,10 +743,17 @@ class PenjualanController extends Controller
             PenjualanDetail::where('penjualan_id', $id)->delete();
             PenjualanCicil::where('penjualan_id', $id)->delete();
 
+            $items = json_decode($request->items, true);
+            if (!is_array($items) || count($items) === 0) {
+                throw new Exception('Format items tidak valid');
+            }
+
             $date = Carbon::parse($request->tanggal)->setTimeFrom(Carbon::now());
+            $computedSubtotal = $this->calculateItemsSubtotal($items);
+            $computedGrandTotal = $this->calculateNominalGrandTotal($computedSubtotal, $request->diskon ?? 0);
             $penjualan->tanggal = $date->toDateTimeString();
-            $penjualan->grandtotal = $request->grandtotal;
-            $penjualan->subtotal = $request->subtotal;
+            $penjualan->grandtotal = $computedGrandTotal;
+            $penjualan->subtotal = $computedSubtotal;
             $penjualan->metode_bayar = $request->metodebayar;
             $penjualan->customer = $request->customer;
             $penjualan->anggota_id = $request->idcustomer;
@@ -767,11 +783,6 @@ class PenjualanController extends Controller
 
             $penjualan->save();
 
-            $items = json_decode($request->items, true);
-            if (!is_array($items) || count($items) === 0) {
-                throw new Exception('Format items tidak valid');
-            }
-
             $totalCicilan0 = 0;
             $totalCicilan1 = 0;
 
@@ -795,9 +806,10 @@ class PenjualanController extends Controller
                     'barang_id' => $item['id'],
                     'qty' => $item['qty'],
                     'harga' => $item['harga'],
+                    'diskon' => $this->normalizeItemDiscount($item['diskon'] ?? 0, $item['qty'] * $item['harga']),
                 ]);
 
-                $subtotalItem = $item['qty'] * $item['harga'];
+                $subtotalItem = $this->calculateLineTotal($item['qty'], $item['harga'], $item['diskon'] ?? 0);
                 if (($item['kategori_cicilan'] ?? 1) == 0) {
                     $totalCicilan0 += $subtotalItem;
                 } else {
@@ -852,8 +864,9 @@ class PenjualanController extends Controller
 
         $batas = KonfigBunga::resolveDebtLimit($user);
 
-        if ($batas !== null && ($totalCicilanAktif + $cicilanPertama) > $batas) {
-            throw new Exception('Tidak dapat diproses, melebihi batas limit');
+        if ($penjualan->type_order !== 'purchase' && $batas !== null && ($totalCicilanAktif + $cicilanPertama) > $batas) {
+            $sisaLimit = max($batas - $totalCicilanAktif, 0);
+            throw new Exception('Tidak dapat diproses, melebihi batas limit. Sisa limit: Rp ' . number_format($sisaLimit, 0, ',', '.'));
         }
 
         if ($totalCicilan0 > 0) {
@@ -910,7 +923,8 @@ class PenjualanController extends Controller
                     'barang.kode_barang',
                     'barang.nama_barang',
                     'penjualan_detail.qty',
-                    'penjualan_detail.harga'
+                    'penjualan_detail.harga',
+                    DB::raw('COALESCE(penjualan_detail.diskon, 0) as diskon')
                 )
                 ->get();
             
@@ -969,7 +983,7 @@ class PenjualanController extends Controller
             
             // Recalculate grand total
             $newTotal = PenjualanDetail::where('penjualan_id', $penjualanId)
-                ->select(DB::raw('SUM(qty * harga) as total'))
+                ->select(DB::raw('SUM(GREATEST((qty * harga) - COALESCE(diskon, 0), 0)) as total'))
                 ->value('total');
             
             // Update penjualan
@@ -1001,7 +1015,57 @@ class PenjualanController extends Controller
         }
     }
 
+    private function normalizeItemDiscount($discount, $grossTotal): float
+    {
+        $discount = max((float) ($discount ?? 0), 0);
+        $grossTotal = max((float) ($grossTotal ?? 0), 0);
+
+        return min($discount, $grossTotal);
+    }
+
+    private function calculateLineTotal($qty, $price, $discount = 0): float
+    {
+        $grossTotal = max((float) $qty, 0) * max((float) $price, 0);
+
+        return max($grossTotal - $this->normalizeItemDiscount($discount, $grossTotal), 0);
+    }
+
+    private function calculateRequestSubtotal(array $qtys, array $prices, array $discounts): float
+    {
+        $subtotal = 0;
+
+        foreach ($qtys as $index => $qty) {
+            $price = $prices[$index] ?? 0;
+            $discount = $discounts[$index] ?? 0;
+            $subtotal += $this->calculateLineTotal($qty, $price, $discount);
+        }
+
+        return $subtotal;
+    }
+
+    private function calculateItemsSubtotal(array $items): float
+    {
+        $subtotal = 0;
+
+        foreach ($items as $item) {
+            $subtotal += $this->calculateLineTotal($item['qty'] ?? 0, $item['harga'] ?? 0, $item['diskon'] ?? 0);
+        }
+
+        return $subtotal;
+    }
+
+    private function calculatePercentGrandTotal(float $subtotal, $discountPercent): float
+    {
+        $discountPercent = min(max((float) ($discountPercent ?? 0), 0), 100);
+
+        return max($subtotal * (1 - ($discountPercent / 100)), 0);
+    }
+
+    private function calculateNominalGrandTotal(float $subtotal, $discount): float
+    {
+        $discount = min(max((float) ($discount ?? 0), 0), $subtotal);
+
+        return max($subtotal - $discount, 0);
+    }
+
 }
-
-
-

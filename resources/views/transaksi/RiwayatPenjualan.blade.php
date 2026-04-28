@@ -203,7 +203,7 @@
                                         <td>${item.nama_barang}</td>
                                         <td>${item.qty}</td>
                                         <td>${formatRupiah(item.harga)}</td>
-                                        <td>${formatRupiah(item.qty * item.harga)}</td>
+                                        <td>${formatRupiah(Math.max((item.qty * item.harga) - (parseFloat(item.diskon || 0)), 0))}</td>
                                         <td>
                                             <button type="button" class="btn btn-sm btn-danger btn-retur-item" 
                                                     data-id="${item.id}" 

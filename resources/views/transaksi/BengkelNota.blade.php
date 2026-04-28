@@ -42,12 +42,17 @@ $isCicilan = $hdr->metode_bayar == 'cicilan';
 
 $totalBP = 0;      // jasa + kategori 0
 $totalNonBP = 0;   // kategori 1
+$totalDiskonItem = 0;
 
 // Kelompokkan total
+foreach($dtl as $v){
+    $totalDiskonItem += (float) ($v->diskon ?? 0);
+}
+
 if($isCicilan){
     foreach($dtl as $v){
 
-        $totalItem = $v->harga * $v->qty;
+        $totalItem = $v->total ?? max(($v->harga * $v->qty) - ($v->diskon ?? 0), 0);
 
         if($v->jenis == 'jasa'){
             $totalBP += $totalItem;
@@ -130,8 +135,14 @@ if($v->jenis == 'jasa' && $v->jasa){
     <td width="45%"><?= strtoupper($nama) ?></td>
     <td width="10%" class="right"><?= $v->qty ?></td>
     <td width="20%" class="right"><?= number_format($v->harga,0,',','.') ?></td>
-    <td width="25%" class="right"><?= number_format($v->harga * $v->qty,0,',','.') ?></td>
+    <td width="25%" class="right"><?= number_format($v->total ?? max(($v->harga * $v->qty) - ($v->diskon ?? 0), 0),0,',','.') ?></td>
 </tr>
+<?php if(($v->diskon ?? 0) > 0): ?>
+<tr>
+    <td colspan="3" style="font-size:8pt;">Diskon item</td>
+    <td width="25%" class="right" style="font-size:8pt;">-<?= number_format($v->diskon,0,',','.') ?></td>
+</tr>
+<?php endif; ?>
 </table>
 
 <?php endforeach; ?>
@@ -143,8 +154,14 @@ if($v->jenis == 'jasa' && $v->jasa){
     <td class="right">Sub Total :</td>
     <td class="right"><?= number_format($hdr->subtotal,0,',','.') ?></td>
 </tr>
+<?php if($totalDiskonItem > 0): ?>
 <tr>
-    <td class="right">Diskon :</td>
+    <td class="right">Total Diskon Item :</td>
+    <td class="right">Rp. <?= number_format($totalDiskonItem,0,',','.') ?></td>
+</tr>
+<?php endif; ?>
+<tr>
+    <td class="right">Diskon Nota :</td>
     <td class="right">Rp. <?= number_format($hdr->diskon,0,',','.') ?></td>
 </tr>
 <tr>

@@ -17,11 +17,13 @@ class PenjualanDetail extends Model
         'barang_id',
         'qty',
         'harga',
+        'diskon',
     ];
 
     protected $casts = [
         'qty' => 'decimal:3',
         'harga' => 'decimal:2',
+        'diskon' => 'decimal:2',
     ];
 
     public function barang()
