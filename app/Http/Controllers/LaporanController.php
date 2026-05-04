@@ -2202,6 +2202,77 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
         return $totals;
     }
 
+    public function laporanHarianToko(Request $request)
+    {
+        $bulan = $this->normalizeMonth($request->get('bulan', date('Y-m')));
+        $rows = $this->buildLaporanHarianTokoRows($bulan);
+
+        return view('laporan.harian_toko', [
+            'bulan' => $bulan,
+            'totals' => $this->sumLaporanHarianTokoRows($rows),
+        ]);
+    }
+
+    public function laporanHarianTokoData(Request $request)
+    {
+        $bulan = $this->normalizeMonth($request->get('bulan', date('Y-m')));
+        $rows = $this->buildLaporanHarianTokoRows($bulan);
+
+        return response()->json([
+            'data' => $rows,
+            'totals' => $this->sumLaporanHarianTokoRows($rows),
+        ]);
+    }
+
+    private function buildLaporanHarianTokoRows(string $bulan): array
+    {
+        $start = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
+        $end = $start->copy()->endOfMonth();
+
+        $summary = DB::table('penjualan')
+            ->whereBetween(DB::raw('DATE(tanggal)'), [$start->toDateString(), $end->toDateString()])
+            ->whereNull('deleted_at')
+            ->groupBy(DB::raw('DATE(tanggal)'))
+            ->selectRaw('DATE(tanggal) as tanggal')
+            ->selectRaw("SUM(CASE WHEN metode_bayar = 'tunai' THEN COALESCE(grandtotal, 0) ELSE 0 END) as cash")
+            ->selectRaw("SUM(CASE WHEN metode_bayar <> 'tunai' THEN COALESCE(grandtotal, 0) ELSE 0 END) as kredit")
+            ->get()
+            ->keyBy('tanggal');
+
+        $rows = [];
+        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+            $tanggal = $date->toDateString();
+            $row = $summary->get($tanggal);
+
+            $cash = (float) ($row->cash ?? 0);
+            $kredit = (float) ($row->kredit ?? 0);
+
+            $rows[] = [
+                'tanggal' => $tanggal,
+                'tanggal_display' => $date->format('d/m/Y'),
+                'cash' => $cash,
+                'kredit' => $kredit,
+                'total_penjualan' => $cash + $kredit,
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function sumLaporanHarianTokoRows(array $rows): array
+    {
+        $columns = ['cash', 'kredit', 'total_penjualan'];
+        $totals = array_fill_keys($columns, 0);
+
+        foreach ($rows as $row) {
+            foreach ($columns as $column) {
+                $totals[$column] += (float) ($row[$column] ?? 0);
+            }
+        }
+
+        return $totals;
+    }
+
     /**
      * Laporan Modal Awal
      */

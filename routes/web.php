@@ -384,6 +384,8 @@ Route::prefix('laporan')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/penjualan-bengkel-detail/export', [LaporanController::class, 'penjualanBengkelDetailExport'])->name('penjualan-bengkel-detail.export');
     Route::get('/harian-bengkel', [LaporanController::class, 'laporanHarianBengkel'])->name('laporan.harian_bengkel');
     Route::get('/harian-bengkel/data', [LaporanController::class, 'laporanHarianBengkelData'])->name('laporan.harian_bengkel.data');
+    Route::get('/harian-toko', [LaporanController::class, 'laporanHarianToko'])->name('laporan.harian_toko');
+    Route::get('/harian-toko/data', [LaporanController::class, 'laporanHarianTokoData'])->name('laporan.harian_toko.data');
 
     // Modal Awal
     Route::get('/modal-awal', [LaporanController::class, 'modalAwal'])->name('laporan.modalawal');
