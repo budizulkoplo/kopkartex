@@ -124,7 +124,7 @@
                                 <th>#</th>
                                 <th>Kode Barang</th>
                                 <th>Nama Barang</th>
-                                <th>Stok Sistem</th>
+                                <th>Stok Awal</th>
                                 <th>Stok Fisik</th>
                                 <th>Status</th>
                                 <th>Aksi</th>
