@@ -2097,6 +2097,111 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
             ->make(true);
     }
 
+    public function laporanHarianBengkel(Request $request)
+    {
+        $bulan = $this->normalizeMonth($request->get('bulan', date('Y-m')));
+        $rows = $this->buildLaporanHarianBengkelRows($bulan);
+
+        return view('laporan.harian_bengkel', [
+            'bulan' => $bulan,
+            'totals' => $this->sumLaporanHarianBengkelRows($rows),
+        ]);
+    }
+
+    public function laporanHarianBengkelData(Request $request)
+    {
+        $bulan = $this->normalizeMonth($request->get('bulan', date('Y-m')));
+        $rows = $this->buildLaporanHarianBengkelRows($bulan);
+
+        return response()->json([
+            'data' => $rows,
+            'totals' => $this->sumLaporanHarianBengkelRows($rows),
+        ]);
+    }
+
+    private function normalizeMonth(?string $bulan): string
+    {
+        try {
+            return Carbon::createFromFormat('Y-m', (string) $bulan)->format('Y-m');
+        } catch (\Throwable $e) {
+            return date('Y-m');
+        }
+    }
+
+    private function buildLaporanHarianBengkelRows(string $bulan): array
+    {
+        $start = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
+        $end = $start->copy()->endOfMonth();
+
+        $hasDetailDiscount = \Illuminate\Support\Facades\Schema::hasColumn('transaksi_bengkel_details', 'diskon');
+        $amountExpression = $hasDetailDiscount
+            ? 'COALESCE(tbd.total, GREATEST((tbd.qty * tbd.harga) - COALESCE(tbd.diskon, 0), 0))'
+            : 'COALESCE(tbd.total, (tbd.qty * tbd.harga), 0)';
+
+        $summary = DB::table('transaksi_bengkels as tb')
+            ->join('transaksi_bengkel_details as tbd', 'tb.id', '=', 'tbd.transaksi_bengkel_id')
+            ->whereBetween(DB::raw('DATE(tb.tanggal)'), [$start->toDateString(), $end->toDateString()])
+            ->whereNull('tb.deleted_at')
+            ->whereNull('tbd.deleted_at')
+            ->groupBy(DB::raw('DATE(tb.tanggal)'))
+            ->selectRaw('DATE(tb.tanggal) as tanggal')
+            ->selectRaw("SUM(CASE WHEN tb.metode_bayar = 'tunai' AND tbd.jenis = 'barang' THEN {$amountExpression} ELSE 0 END) as cash_non_jasa")
+            ->selectRaw("SUM(CASE WHEN tb.metode_bayar <> 'tunai' AND tbd.jenis = 'barang' THEN {$amountExpression} ELSE 0 END) as kredit_non_jasa")
+            ->selectRaw("SUM(CASE WHEN tb.metode_bayar = 'tunai' AND tbd.jenis = 'jasa' THEN {$amountExpression} ELSE 0 END) as cash_jasa")
+            ->selectRaw("SUM(CASE WHEN tb.metode_bayar <> 'tunai' AND tbd.jenis = 'jasa' THEN {$amountExpression} ELSE 0 END) as kredit_jasa")
+            ->get()
+            ->keyBy('tanggal');
+
+        $rows = [];
+        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+            $tanggal = $date->toDateString();
+            $row = $summary->get($tanggal);
+
+            $cashNonJasa = (float) ($row->cash_non_jasa ?? 0);
+            $kreditNonJasa = (float) ($row->kredit_non_jasa ?? 0);
+            $cashJasa = (float) ($row->cash_jasa ?? 0);
+            $kreditJasa = (float) ($row->kredit_jasa ?? 0);
+            $totalNonJasa = $cashNonJasa + $kreditNonJasa;
+            $totalJasa = $cashJasa + $kreditJasa;
+
+            $rows[] = [
+                'tanggal' => $tanggal,
+                'tanggal_display' => $date->format('d/m/Y'),
+                'cash_non_jasa' => $cashNonJasa,
+                'kredit_non_jasa' => $kreditNonJasa,
+                'cash_jasa' => $cashJasa,
+                'kredit_jasa' => $kreditJasa,
+                'total_non_jasa' => $totalNonJasa,
+                'total_jasa' => $totalJasa,
+                'total_penjualan' => $totalNonJasa + $totalJasa,
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function sumLaporanHarianBengkelRows(array $rows): array
+    {
+        $columns = [
+            'cash_non_jasa',
+            'kredit_non_jasa',
+            'cash_jasa',
+            'kredit_jasa',
+            'total_non_jasa',
+            'total_jasa',
+            'total_penjualan',
+        ];
+
+        $totals = array_fill_keys($columns, 0);
+        foreach ($rows as $row) {
+            foreach ($columns as $column) {
+                $totals[$column] += (float) ($row[$column] ?? 0);
+            }
+        }
+
+        return $totals;
+    }
+
     /**
      * Laporan Modal Awal
      */
