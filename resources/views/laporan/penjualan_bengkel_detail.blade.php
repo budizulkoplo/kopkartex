@@ -174,20 +174,20 @@
                             
                             .header {
                                 text-align: center;
-                                margin-bottom: 20px;
-                                padding-bottom: 10px;
+                                margin-bottom: 10px;
+                                padding-bottom: 6px;
                                 border-bottom: 2px solid #ffc107;
                             }
                             
                             .header h1 {
-                                font-size: 18px;
-                                margin-bottom: 5px;
+                                font-size: 15px;
+                                margin-bottom: 4px;
                                 color: #000;
                             }
                             
-                            .header p {
-                                margin: 2px 0;
+                            .header-info {
                                 font-size: 9px;
+                                line-height: 1.35;
                             }
                             
                             .table-container {
@@ -281,10 +281,13 @@
                     <body>
                         <div class="header">
                             <h1>LAPORAN PENJUALAN BENGKEL DETAIL</h1>
-                            <p><strong>Unit: Bengkel</strong></p>
-                            <p>Periode: ${$('#start_date').val().split('-').reverse().join('/')} s/d ${$('#end_date').val().split('-').reverse().join('/')}</p>
-                            <p>Metode: ${$('#metode').find('option:selected').text()} | Jenis Item: ${$('#jenis_item').find('option:selected').text()}</p>
-                            <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            <div class="header-info">
+                                Unit: <strong>Bengkel</strong> |
+                                Periode: <strong>${$('#start_date').val().split('-').reverse().join('/')} s/d ${$('#end_date').val().split('-').reverse().join('/')}</strong> |
+                                Metode: <strong>${$('#metode').find('option:selected').text()}</strong> |
+                                Jenis Item: <strong>${$('#jenis_item').find('option:selected').text()}</strong> |
+                                Cetak: <strong>${new Date().toLocaleDateString('id-ID')}</strong>
+                            </div>
                         </div>
                         
                         <div class="table-container">
