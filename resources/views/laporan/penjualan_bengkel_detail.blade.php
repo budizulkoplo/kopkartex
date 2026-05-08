@@ -145,7 +145,7 @@
                             
                             body {
                                 font-family: 'Arial', sans-serif;
-                                font-size: 12px;
+                                font-size: 10px;
                                 line-height: 1.4;
                                 color: #000;
                                 padding: 20px;
@@ -153,8 +153,8 @@
                             }
                             
                             @page {
-                                size: A4 landscape;
-                                margin: 15mm;
+                                size: A4 portrait;
+                                margin: 10mm;
                             }
                             
                             @media print {
@@ -187,7 +187,7 @@
                             
                             .header p {
                                 margin: 2px 0;
-                                font-size: 11px;
+                                font-size: 9px;
                             }
                             
                             .table-container {
@@ -216,7 +216,7 @@
                             td {
                                 border: 1px solid #000 !important;
                                 padding: 4px 3px;
-                                font-size: 10px;
+                                font-size: 8.5px;
                                 text-align: left;
                             }
                             
@@ -260,6 +260,21 @@
                             
                             .page-break {
                                 page-break-before: always;
+                            }
+
+                            th:nth-child(1), td:nth-child(1) { width: 5%; }
+                            th:nth-child(2), td:nth-child(2) { width: 11%; }
+                            th:nth-child(3), td:nth-child(3) { width: 14%; }
+                            th:nth-child(4), td:nth-child(4) { width: 14%; }
+                            th:nth-child(5), td:nth-child(5) { width: 10%; }
+                            th:nth-child(6), td:nth-child(6) { width: 22%; }
+                            th:nth-child(7), td:nth-child(7) { width: 7%; }
+                            th:nth-child(8), td:nth-child(8) { width: 8%; }
+                            th:nth-child(9), td:nth-child(9) { width: 9%; }
+
+                            td:nth-child(6) {
+                                word-break: break-word;
+                                overflow-wrap: break-word;
                             }
                         </style>
                     </head>
