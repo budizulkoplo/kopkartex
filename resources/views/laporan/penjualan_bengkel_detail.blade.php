@@ -44,9 +44,6 @@
                                 <th>Tanggal</th>
                                 <th>Invoice</th>
                                 <th>Customer</th>
-                                <th>Unit</th>
-                                <th>Metode</th>
-                                <th>Tipe</th>
                                 <th>Kode</th>
                                 <th>Nama Item</th>
                                 <th class="text-end">Qty</th>
@@ -269,6 +266,7 @@
                     <body>
                         <div class="header">
                             <h1>LAPORAN PENJUALAN BENGKEL DETAIL</h1>
+                            <p><strong>Unit: Bengkel</strong></p>
                             <p>Periode: ${$('#start_date').val().split('-').reverse().join('/')} s/d ${$('#end_date').val().split('-').reverse().join('/')}</p>
                             <p>Metode: ${$('#metode').find('option:selected').text()} | Jenis Item: ${$('#jenis_item').find('option:selected').text()}</p>
                             <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
@@ -282,9 +280,6 @@
                                         <th>Tanggal</th>
                                         <th>Invoice</th>
                                         <th>Customer</th>
-                                        <th>Unit</th>
-                                        <th>Metode</th>
-                                        <th>Tipe</th>
                                         <th>Kode</th>
                                         <th>Nama Item</th>
                                         <th class="text-right">Qty</th>
@@ -341,9 +336,6 @@
                                 <td>${row.tanggal}</td>
                                 <td>${row.nomor_invoice}</td>
                                 <td>${row.customer || 'Umum'}</td>
-                                <td>${row.nama_unit}</td>
-                                <td>${row.metode_bayar}</td>
-                                <td>${row.tipe_item}</td>
                                 <td>${row.kode_barang || '-'}</td>
                                 <td>${row.nama_barang || '-'}</td>
                                 <td class="text-right">${formatQty(row.qty)}</td>
@@ -355,7 +347,7 @@
                     // Tambahkan subtotal untuk invoice ini (setelah diskon nota)
                     printHTML += `
                         <tr class="subtotal-row invoice-total">
-                            <td colspan="9" class="text-right bold">Total Invoice ${invoice} (Setelah Diskon)</td>
+                            <td colspan="6" class="text-right bold">Total Invoice ${invoice} (Setelah Diskon)</td>
                             <td colspan="2" class="text-right bold">Diskon: ${formatNumber(group.diskon)}</td>
                             <td class="text-right bold">${formatNumber(totalSetelahDiskon)}</td>
                         </tr>`;
@@ -366,7 +358,7 @@
                     if (invoiceIndex < Object.keys(invoiceGroups).length && rowNumber % 40 === 0) {
                         printHTML += `
                             <tr class="page-break">
-                                <td colspan="12"></td>
+                                <td colspan="9"></td>
                             </tr>`;
                     }
                 }
@@ -376,7 +368,7 @@
                             </tbody>
                             <tfoot>
                                 <tr class="grand-total-row grand-total">
-                                    <td colspan="9" class="text-right bold">GRAND TOTAL</td>
+                                    <td colspan="6" class="text-right bold">GRAND TOTAL</td>
                                     <td class="text-right bold">${data.length} item</td>
                                     <td class="text-right bold">${invoiceCount} invoice</td>
                                     <td class="text-right bold">${formatNumber(grandTotal)}</td>
@@ -428,9 +420,6 @@
                     { data: "tanggal" },
                     { data: "nomor_invoice" },
                     { data: "customer" },
-                    { data: "nama_unit" },
-                    { data: "metode_bayar" },
-                    { data: "tipe_item" },
                     { data: "kode_barang" },
                     { data: "nama_barang" },
                     {
@@ -492,16 +481,14 @@
                         let group = invoiceGroups[invoice];
                         
                         if (group.count > 1) {
-                            // Terapkan rowspan pada baris pertama kelompok (4 kolom: Tanggal, Invoice, Customer, Unit)
+                            // Terapkan rowspan pada baris pertama kelompok.
                             $(rows).eq(group.firstRowIndex).find('td:eq(0)').attr('rowspan', group.count).addClass('align-middle');
                             $(rows).eq(group.firstRowIndex).find('td:eq(1)').attr('rowspan', group.count).addClass('align-middle');
                             $(rows).eq(group.firstRowIndex).find('td:eq(2)').attr('rowspan', group.count).addClass('align-middle');
-                            $(rows).eq(group.firstRowIndex).find('td:eq(3)').attr('rowspan', group.count).addClass('align-middle');
                             
                             // Sembunyikan kolom pada baris berikutnya dalam kelompok yang sama
                             for (let i = group.firstRowIndex + 1; i < group.firstRowIndex + group.count; i++) {
-                                if ($(rows).eq(i).find('td').length > 4) {
-                                    $(rows).eq(i).find('td:eq(0)').remove();
+                                if ($(rows).eq(i).find('td').length > 3) {
                                     $(rows).eq(i).find('td:eq(0)').remove();
                                     $(rows).eq(i).find('td:eq(0)').remove();
                                     $(rows).eq(i).find('td:eq(0)').remove();
@@ -531,7 +518,7 @@
                         
                         $(rows).eq(rowIndex + group.count - 1).after(
                             `<tr class="fw-bold bg-warning invoice-total-row">
-                                <td colspan="8" class="text-end">Total Invoice: ${invoice}${useFullInvoiceTotal() ? ' (Setelah Diskon)' : ' (Sesuai Filter)'}</td>
+                                <td colspan="5" class="text-end">Total Invoice: ${invoice}${useFullInvoiceTotal() ? ' (Setelah Diskon)' : ' (Sesuai Filter)'}</td>
                                 <td colspan="2" class="text-end">${useFullInvoiceTotal() ? 'Diskon: ' + formatNumber(group.diskon) : 'Filter: ' + $('#jenis_item option:selected').text()}</td>
                                 <td class="text-end">${formatNumber(group.totalSetelahDiskon)}</td>
                             </tr>`
@@ -542,12 +529,12 @@
                     let responseTotals = settings.json && settings.json.totals ? settings.json.totals : {};
                     $(api.table().footer()).html(
                         `<tr class="fw-bold bg-warning text-dark">
-                            <td colspan="8" class="text-end">TOTAL PAGE${useFullInvoiceTotal() ? ' (Setelah Diskon Nota)' : ' (Sesuai Filter)'}</td>
+                            <td colspan="5" class="text-end">TOTAL PAGE${useFullInvoiceTotal() ? ' (Setelah Diskon Nota)' : ' (Sesuai Filter)'}</td>
                             <td colspan="2" class="text-end">${data.length} item</td>
                             <td class="text-end">${formatNumber(grandTotal)}</td>
                         </tr>
                         <tr class="fw-bold bg-success text-white">
-                            <td colspan="8" class="text-end">TOTAL SEMUA DATA${useFullInvoiceTotal() ? ' (Setelah Diskon Nota)' : ' (Sesuai Filter)'}</td>
+                            <td colspan="5" class="text-end">TOTAL SEMUA DATA${useFullInvoiceTotal() ? ' (Setelah Diskon Nota)' : ' (Sesuai Filter)'}</td>
                             <td colspan="2" class="text-end">${formatNumber(responseTotals.total_item || 0)} item / ${formatNumber(responseTotals.total_invoice || 0)} invoice</td>
                             <td class="text-end">${formatNumber(responseTotals.total || 0)}</td>
                         </tr>`
