@@ -32,6 +32,16 @@
                             </tr>
                         </thead>
                         <tbody></tbody>
+                        <tfoot>
+                            <tr class="table-primary fw-bold">
+                                <td colspan="6" class="text-end">TOTAL PAGE</td>
+                                <td id="page-total-qty" class="text-end">0</td>
+                            </tr>
+                            <tr class="table-success fw-bold">
+                                <td colspan="6" class="text-end">TOTAL SEMUA DATA</td>
+                                <td id="all-total-qty" class="text-end">0</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -48,6 +58,42 @@
 
             function reloadTable() {
                 table.ajax.reload();
+            }
+
+            function cleanNumber(value) {
+                if (value === null || value === undefined || value === '') return 0;
+                if (typeof value === 'number') return value;
+
+                let text = String(value).replace(/<[^>]*>/g, '').replace(/[^\d,.-]/g, '').trim();
+                if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(text)) {
+                    text = text.replace(/\./g, '').replace(',', '.');
+                } else if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(text)) {
+                    text = text.replace(/,/g, '');
+                } else {
+                    text = text.replace(',', '.');
+                }
+
+                return parseFloat(text) || 0;
+            }
+
+            function formatNumber(value, decimals = 3) {
+                return cleanNumber(value).toLocaleString('id-ID', {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                });
+            }
+
+            function calculateQty(api, selector) {
+                let qty = 0;
+                api.rows(selector).data().each(function(row) {
+                    qty += cleanNumber(row.qty);
+                });
+                return qty;
+            }
+
+            function renderTotals(api) {
+                $('#page-total-qty').text(formatNumber(calculateQty(api, { page: 'current' })));
+                $('#all-total-qty').text(formatNumber(calculateQty(api, { search: 'applied' })));
             }
 
             // init DataTable
@@ -91,8 +137,17 @@
                     { data: "no_retur" },
                     { data: "kode_barang" },
                     { data: "nama_barang" },
-                    { data: "qty", className: "text-end" }
+                    {
+                        data: "qty",
+                        className: "text-end",
+                        render: function(data) {
+                            return formatNumber(data);
+                        }
+                    }
                 ],
+                drawCallback: function() {
+                    renderTotals(this.api());
+                },
                 dom:
                 "<'row mb-2'<'col-md-6 d-flex align-items-center'B><'col-md-6 d-flex justify-content-end'f>>" +
                 "<'row mb-2'<'col-md-6'l><'col-md-6 text-end'i>>" +

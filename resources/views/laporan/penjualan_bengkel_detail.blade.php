@@ -526,11 +526,17 @@
                     }
 
                     // Render grand total di footer
+                    let responseTotals = settings.json && settings.json.totals ? settings.json.totals : {};
                     $(api.table().footer()).html(
                         `<tr class="fw-bold bg-warning text-dark">
-                            <td colspan="8" class="text-end">Grand Total (Setelah Diskon Nota)</td>
+                            <td colspan="8" class="text-end">TOTAL PAGE${useFullInvoiceTotal() ? ' (Setelah Diskon Nota)' : ' (Sesuai Filter)'}</td>
                             <td colspan="2" class="text-end">${data.length} item</td>
                             <td class="text-end">${formatNumber(grandTotal)}</td>
+                        </tr>
+                        <tr class="fw-bold bg-success text-white">
+                            <td colspan="8" class="text-end">TOTAL SEMUA DATA${useFullInvoiceTotal() ? ' (Setelah Diskon Nota)' : ' (Sesuai Filter)'}</td>
+                            <td colspan="2" class="text-end">${formatNumber(responseTotals.total_item || 0)} item / ${formatNumber(responseTotals.total_invoice || 0)} invoice</td>
+                            <td class="text-end">${formatNumber(responseTotals.total || 0)}</td>
                         </tr>`
                     );
                 },

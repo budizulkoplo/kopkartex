@@ -29,6 +29,20 @@
                             </tr>
                         </thead>
                         <tbody></tbody>
+                        <tfoot>
+                            <tr class="table-primary fw-bold">
+                                <td class="text-end">TOTAL PAGE</td>
+                                @foreach($units as $id => $nama)
+                                    <td id="page-total-{{ $id }}" class="text-end">Rp 0</td>
+                                @endforeach
+                            </tr>
+                            <tr class="table-success fw-bold">
+                                <td class="text-end">TOTAL SEMUA DATA</td>
+                                @foreach($units as $id => $nama)
+                                    <td id="all-total-{{ $id }}" class="text-end">Rp 0</td>
+                                @endforeach
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -49,6 +63,47 @@
             function formatRupiah(angka) {
                 if (angka == null) return '';
                 return 'Rp ' + parseFloat(angka).toLocaleString('id-ID');
+            }
+
+            const unitColumns = @json($units->map(fn ($nama, $id) => ['id' => $id, 'nama' => $nama])->values());
+
+            function cleanNumber(value) {
+                if (value === null || value === undefined || value === '') return 0;
+                if (typeof value === 'number') return value;
+
+                let text = String(value).replace(/<[^>]*>/g, '').replace(/[^\d,.-]/g, '').trim();
+                if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(text)) {
+                    text = text.replace(/\./g, '').replace(',', '.');
+                } else if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(text)) {
+                    text = text.replace(/,/g, '');
+                } else {
+                    text = text.replace(',', '.');
+                }
+
+                return parseFloat(text) || 0;
+            }
+
+            function calculateTotals(api, selector) {
+                const totals = {};
+                unitColumns.forEach(unit => totals[unit.id] = 0);
+
+                api.rows(selector).data().each(function(row) {
+                    unitColumns.forEach(function(unit) {
+                        totals[unit.id] += cleanNumber(row[unit.nama]);
+                    });
+                });
+
+                return totals;
+            }
+
+            function renderTotals(api) {
+                const pageTotals = calculateTotals(api, { page: 'current' });
+                const allTotals = calculateTotals(api, { search: 'applied' });
+
+                unitColumns.forEach(function(unit) {
+                    $('#page-total-' + unit.id).text(formatRupiah(pageTotals[unit.id]));
+                    $('#all-total-' + unit.id).text(formatRupiah(allTotals[unit.id]));
+                });
             }
 
             var table = $('#tbpenjualan').DataTable({
@@ -75,6 +130,9 @@
                         },
                     @endforeach
                 ],
+                drawCallback: function() {
+                    renderTotals(this.api());
+                },
                 dom:
                 "<'row mb-2'<'col-md-6 d-flex align-items-center'B><'col-md-6 d-flex justify-content-end'f>>" +
                 "<'row mb-2'<'col-md-6'l><'col-md-6 text-end'i>>" +

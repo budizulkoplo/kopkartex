@@ -534,6 +534,8 @@
                     let invoiceGroups = {};
                     let grandTotal = 0;
                     let invoiceCount = 0;
+                    let allTotal = 0;
+                    let allInvoices = {};
 
                     // Kelompokkan data berdasarkan invoice
                     data.each(function (row, i) {
@@ -553,6 +555,12 @@
                         
                         invoiceGroups[invoice].count++;
                         invoiceGroups[invoice].total += qty;
+                    });
+
+                    api.rows({ search: 'applied' }).data().each(function(row) {
+                        let qty = parseFloat(row.qty) || 0;
+                        allTotal += qty;
+                        allInvoices[row.nomor_invoice] = true;
                     });
 
                     // Terapkan rowspan untuk setiap kelompok invoice
@@ -612,9 +620,14 @@
                     // Render grand total di footer
                     $(api.table().footer()).html(
                         `<tr class="fw-bold bg-primary text-white">
-                            <td colspan="7" class="text-end">Grand Total ${invoiceCount} invoice</td>
+                            <td colspan="7" class="text-end">TOTAL PAGE (${invoiceCount} invoice)</td>
                             <td class="text-end">${grandTotal.toLocaleString('id-ID')}</td>
-                            
+                            <td></td>
+                        </tr>
+                        <tr class="fw-bold bg-success text-white">
+                            <td colspan="7" class="text-end">TOTAL SEMUA DATA (${Object.keys(allInvoices).length} invoice)</td>
+                            <td class="text-end">${allTotal.toLocaleString('id-ID')}</td>
+                            <td></td>
                         </tr>`
                     );
                 },

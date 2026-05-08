@@ -59,7 +59,9 @@ class LaporanController extends Controller
                 'p.nama_supplier',
                 'b.kode_barang',
                 'b.nama_barang',
-                'd.jumlah'
+                'd.jumlah',
+                'd.harga_beli',
+                DB::raw('COALESCE(d.subtotal, d.jumlah * d.harga_beli) as subtotal')
             )
             ->whereNull('p.deleted_at')
             ->whereBetween('p.tgl_penerimaan', [$start, $end])
@@ -2074,6 +2076,29 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
             })->values();
         }
 
+        $totals = [
+            'total_item' => $data->count(),
+            'total_invoice' => $data->pluck('nomor_invoice')->unique()->count(),
+            'total' => 0,
+        ];
+
+        if ($jenis_item === 'all') {
+            $totals['total'] = $data
+                ->groupBy('nomor_invoice')
+                ->sum(function ($rows) {
+                    $first = $rows->first();
+                    $grandtotalNota = (float) ($first->grandtotal_nota ?? 0);
+
+                    if ($grandtotalNota > 0) {
+                        return $grandtotalNota;
+                    }
+
+                    return max($rows->sum(fn ($row) => (float) ($row->total ?? 0)) - (float) ($first->diskon_nota ?? 0), 0);
+                });
+        } else {
+            $totals['total'] = $data->sum(fn ($row) => (float) ($row->total ?? 0));
+        }
+
         return DataTables::of($data)
             ->addIndexColumn()
             ->editColumn('tanggal', function($row) {
@@ -2094,6 +2119,7 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
             ->editColumn('customer', function($row) {
                 return $row->customer ?: 'Umum';
             })
+            ->with('totals', $totals)
             ->make(true);
     }
 

@@ -404,6 +404,8 @@
                     
                     let invoiceGroups = {};
                     let grandTotal = 0;
+                    let allGrandTotal = 0;
+                    let allInvoiceGroups = {};
 
                     // Kelompokkan data berdasarkan invoice
                     data.each(function (row, i) {
@@ -422,6 +424,15 @@
                         
                         invoiceGroups[invoice].count++;
                         invoiceGroups[invoice].total += total;
+                    });
+
+                    api.rows({ search: 'applied' }).data().each(function(row) {
+                        let total = parseFloat(row.total) || 0;
+                        allGrandTotal += total;
+
+                        if (!allInvoiceGroups[row.nomor_invoice]) {
+                            allInvoiceGroups[row.nomor_invoice] = true;
+                        }
                     });
 
                     // Terapkan rowspan untuk setiap kelompok invoice
@@ -480,9 +491,14 @@
                     // Render grand total di footer
                     $(api.table().footer()).html(
                         `<tr class="fw-bold bg-primary text-white">
-                            <td colspan="7" class="text-end">Grand Total</td>
+                            <td colspan="7" class="text-end">TOTAL PAGE</td>
                             <td colspan="2" class="text-end">${data.length} transaksi</td>
                             <td class="text-end">${grandTotal.toLocaleString('id-ID')}</td>
+                        </tr>
+                        <tr class="fw-bold bg-success text-white">
+                            <td colspan="7" class="text-end">TOTAL SEMUA DATA</td>
+                            <td colspan="2" class="text-end">${api.rows({ search: 'applied' }).count().toLocaleString('id-ID')} transaksi / ${Object.keys(allInvoiceGroups).length.toLocaleString('id-ID')} invoice</td>
+                            <td class="text-end">${allGrandTotal.toLocaleString('id-ID')}</td>
                         </tr>`
                     );
                 },

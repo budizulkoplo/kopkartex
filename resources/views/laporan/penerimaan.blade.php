@@ -27,10 +27,26 @@
                                 <th>Supplier</th>
                                 <th>Kode Barang</th>
                                 <th>Nama Barang</th>
-                                <th>Jumlah</th>
+                                <th class="text-end">Jumlah</th>
+                                <th class="text-end">Harga Beli</th>
+                                <th class="text-end">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
+                        <tfoot>
+                            <tr class="table-primary fw-bold">
+                                <td colspan="5" class="text-end">TOTAL PAGE</td>
+                                <td id="page-total-jumlah" class="text-end">0</td>
+                                <td></td>
+                                <td id="page-total-subtotal" class="text-end">Rp 0</td>
+                            </tr>
+                            <tr class="table-success fw-bold">
+                                <td colspan="5" class="text-end">TOTAL SEMUA DATA</td>
+                                <td id="all-total-jumlah" class="text-end">0</td>
+                                <td></td>
+                                <td id="all-total-subtotal" class="text-end">Rp 0</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -46,6 +62,55 @@
         <script>
             function reloadTable() {
                 table.ajax.reload();
+            }
+
+            function cleanNumber(value) {
+                if (value === null || value === undefined || value === '') return 0;
+                if (typeof value === 'number') return value;
+
+                let text = String(value).replace(/<[^>]*>/g, '').replace(/[^\d,.-]/g, '').trim();
+                if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(text)) {
+                    text = text.replace(/\./g, '').replace(',', '.');
+                } else if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(text)) {
+                    text = text.replace(/,/g, '');
+                } else {
+                    text = text.replace(',', '.');
+                }
+
+                return parseFloat(text) || 0;
+            }
+
+            function formatNumber(value, decimals = 0) {
+                return cleanNumber(value).toLocaleString('id-ID', {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                });
+            }
+
+            function formatRupiah(value) {
+                return 'Rp ' + formatNumber(value);
+            }
+
+            function calculateTotals(api, selector) {
+                let jumlah = 0;
+                let subtotal = 0;
+
+                api.rows(selector).data().each(function(row) {
+                    jumlah += cleanNumber(row.jumlah);
+                    subtotal += cleanNumber(row.subtotal);
+                });
+
+                return { jumlah, subtotal };
+            }
+
+            function renderTotals(api) {
+                const pageTotals = calculateTotals(api, { page: 'current' });
+                const allTotals = calculateTotals(api, { search: 'applied' });
+
+                $('#page-total-jumlah').text(formatNumber(pageTotals.jumlah, 3));
+                $('#page-total-subtotal').text(formatRupiah(pageTotals.subtotal));
+                $('#all-total-jumlah').text(formatNumber(allTotals.jumlah, 3));
+                $('#all-total-subtotal').text(formatRupiah(allTotals.subtotal));
             }
 
             var table = $('#tbpenerimaan').DataTable({
@@ -66,7 +131,27 @@
                     { data: "nama_supplier" },
                     { data: "kode_barang" },
                     { data: "nama_barang" },
-                    { data: "jumlah" },
+                    {
+                        data: "jumlah",
+                        className: "text-end",
+                        render: function(data) {
+                            return formatNumber(data, 3);
+                        }
+                    },
+                    {
+                        data: "harga_beli",
+                        className: "text-end",
+                        render: function(data) {
+                            return formatRupiah(data);
+                        }
+                    },
+                    {
+                        data: "subtotal",
+                        className: "text-end fw-semibold",
+                        render: function(data) {
+                            return formatRupiah(data);
+                        }
+                    },
                 ],
                 rowGroup: {
                     dataSrc: ["tgl_penerimaan", "nomor_invoice", "nama_supplier"]
@@ -100,6 +185,8 @@
                             v.row.find("td:eq(2)").attr("rowspan", v.count);
                         }
                     });
+
+                    renderTotals(api);
                 },
                 dom:
                 "<'row mb-2'<'col-md-6 d-flex align-items-center'B><'col-md-6 d-flex justify-content-end'f>>" +
