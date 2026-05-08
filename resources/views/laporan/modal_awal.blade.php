@@ -133,15 +133,15 @@
                     success: function(response) {
                         if (response.totals) {
                             $('#total-barang').text(response.data.length);
-                            $('#total-stok-awal').text(formatNumber(response.totals.total_stok_awal));
+                            $('#total-stok-awal').text(formatQty(response.totals.total_stok_awal));
                             $('#total-modal-awal').text('Rp ' + formatNumber(response.totals.total_modal_awal, 2));
-                            $('#total-stok-realtime').text(formatNumber(response.totals.total_stok_realtime));
+                            $('#total-stok-realtime').text(formatQty(response.totals.total_stok_realtime));
                             $('#total-modal-realtime').text('Rp ' + formatNumber(response.totals.total_modal_realtime, 2));
-                            $('#footer-stok-awal').text(formatNumber(response.totals.total_stok_awal));
+                            $('#footer-stok-awal').text(formatQty(response.totals.total_stok_awal));
                             $('#footer-modal-awal').text('Rp ' + formatNumber(response.totals.total_modal_awal, 2));
-                            $('#footer-stok-realtime').text(formatNumber(response.totals.total_stok_realtime));
+                            $('#footer-stok-realtime').text(formatQty(response.totals.total_stok_realtime));
                             $('#footer-modal-realtime').text('Rp ' + formatNumber(response.totals.total_modal_realtime, 2));
-                            $('#footer-selisih-stok').text(formatNumber(response.totals.total_selisih_stok, 3));
+                            $('#footer-selisih-stok').text(formatQty(response.totals.total_selisih_stok));
                             $('#footer-selisih-modal').text('Rp ' + formatNumber(response.totals.total_selisih_nominal, 2));
                         }
                         
@@ -157,9 +157,30 @@
 
             function formatNumber(value, decimals = 0) {
                 if (value === null || value === undefined) return '0';
-                return parseFloat(value).toLocaleString('id-ID', {
+                return cleanNumber(value).toLocaleString('id-ID', {
                     minimumFractionDigits: decimals,
                     maximumFractionDigits: decimals
+                });
+            }
+
+            function cleanNumber(value) {
+                if (value === null || value === undefined || value === '') return 0;
+                if (typeof value === 'number') return value;
+
+                let text = String(value).replace(/<[^>]*>/g, '').replace(/[^\d,.-]/g, '').trim();
+                if (text.includes(',') && text.includes('.')) {
+                    text = text.replace(/\./g, '').replace(',', '.');
+                } else if (text.includes(',')) {
+                    text = text.replace(',', '.');
+                }
+
+                return parseFloat(text) || 0;
+            }
+
+            function formatQty(value) {
+                return cleanNumber(value).toLocaleString('id-ID', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 3
                 });
             }
 
@@ -283,11 +304,11 @@
                             <td class="text-center">${row.satuan || '-'}</td>
                             <td class="text-right">${formatNumber(row.harga_modal, 2)}</td>
                             <td class="text-left">${row.unit || '-'}</td>
-                            <td class="text-right">${formatNumber(row.stok_awal, 3)}</td>
+                            <td class="text-right">${formatQty(row.stok_awal)}</td>
                             <td class="text-right">${formatNumber(row.nilai_modal_awal, 2)}</td>
-                            <td class="text-right">${formatNumber(row.stok_realtime, 3)}</td>
+                            <td class="text-right">${formatQty(row.stok_realtime)}</td>
                             <td class="text-right">${formatNumber(row.nilai_realtime, 2)}</td>
-                            <td class="text-right">${formatNumber(row.selisih_stok, 3)}</td>
+                            <td class="text-right">${formatQty(row.selisih_stok)}</td>
                             <td class="text-right">${formatNumber(row.selisih_nominal, 2)}</td>
                         </tr>`;
                     
@@ -301,11 +322,11 @@
                             <tfoot>
                                 <tr class="grand-total-row">
                                     <td colspan="7" class="text-right bold">TOTAL</td>
-                                    <td class="text-right bold">${formatNumber(totals.total_stok_awal, 3)}</td>
+                                    <td class="text-right bold">${formatQty(totals.total_stok_awal)}</td>
                                     <td class="text-right bold">${formatNumber(totals.total_modal_awal, 2)}</td>
-                                    <td class="text-right bold">${formatNumber(totals.total_stok_realtime, 3)}</td>
+                                    <td class="text-right bold">${formatQty(totals.total_stok_realtime)}</td>
                                     <td class="text-right bold">${formatNumber(totals.total_modal_realtime, 2)}</td>
-                                    <td class="text-right bold">${formatNumber(totals.total_selisih_stok, 3)}</td>
+                                    <td class="text-right bold">${formatQty(totals.total_selisih_stok)}</td>
                                     <td class="text-right bold">${formatNumber(totals.total_selisih_nominal, 2)}</td>
                                 </tr>
                             </tfoot>
@@ -357,15 +378,15 @@
                         // Update totals
                         if (response.totals) {
                             $('#total-barang').text(response.data.length);
-                            $('#total-stok-awal').text(formatNumber(response.totals.total_stok_awal));
+                            $('#total-stok-awal').text(formatQty(response.totals.total_stok_awal));
                             $('#total-modal-awal').text('Rp ' + formatNumber(response.totals.total_modal_awal, 2));
-                            $('#total-stok-realtime').text(formatNumber(response.totals.total_stok_realtime));
+                            $('#total-stok-realtime').text(formatQty(response.totals.total_stok_realtime));
                             $('#total-modal-realtime').text('Rp ' + formatNumber(response.totals.total_modal_realtime, 2));
-                            $('#footer-stok-awal').text(formatNumber(response.totals.total_stok_awal));
+                            $('#footer-stok-awal').text(formatQty(response.totals.total_stok_awal));
                             $('#footer-modal-awal').text('Rp ' + formatNumber(response.totals.total_modal_awal, 2));
-                            $('#footer-stok-realtime').text(formatNumber(response.totals.total_stok_realtime));
+                            $('#footer-stok-realtime').text(formatQty(response.totals.total_stok_realtime));
                             $('#footer-modal-realtime').text('Rp ' + formatNumber(response.totals.total_modal_realtime, 2));
-                            $('#footer-selisih-stok').text(formatNumber(response.totals.total_selisih_stok, 3));
+                            $('#footer-selisih-stok').text(formatQty(response.totals.total_selisih_stok));
                             $('#footer-selisih-modal').text('Rp ' + formatNumber(response.totals.total_selisih_nominal, 2));
                         }
                         return response.data;
@@ -416,7 +437,7 @@
                         data: "stok_awal",
                         className: "text-end",
                         render: function(data) {
-                            return formatNumber(data, 3);
+                            return formatQty(data);
                         }
                     },
                     { 
@@ -430,7 +451,7 @@
                         data: "stok_realtime",
                         className: "text-end",
                         render: function(data) {
-                            return formatNumber(data, 3);
+                            return formatQty(data);
                         }
                     },
                     {
@@ -444,7 +465,7 @@
                         data: "selisih_stok",
                         className: "text-end",
                         render: function(data) {
-                            return formatNumber(data, 3);
+                            return formatQty(data);
                         }
                     },
                     {

@@ -2105,7 +2105,7 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
                 return date('d/m/Y', strtotime($row->tanggal));
             })
             ->editColumn('qty', function($row) {
-                return number_format($row->qty, 3, ',', '.');
+                return rtrim(rtrim(number_format((float) $row->qty, 3, ',', '.'), '0'), ',');
             })
             ->editColumn('harga', function($row) {
                 return number_format($row->harga, 0, ',', '.');

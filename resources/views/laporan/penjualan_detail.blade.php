@@ -77,6 +77,31 @@
                 table.ajax.reload();
             }
 
+            function cleanNumber(value) {
+                if (value === null || value === undefined || value === '') return 0;
+                if (typeof value === 'number') return value;
+
+                let text = String(value).replace(/<[^>]*>/g, '').replace(/[^\d,.-]/g, '').trim();
+                if (text.includes(',') && text.includes('.')) {
+                    text = text.replace(/\./g, '').replace(',', '.');
+                } else if (text.includes(',')) {
+                    text = text.replace(',', '.');
+                }
+
+                return parseFloat(text) || 0;
+            }
+
+            function formatNumber(value) {
+                return cleanNumber(value).toLocaleString('id-ID');
+            }
+
+            function formatQty(value) {
+                return cleanNumber(value).toLocaleString('id-ID', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 3
+                });
+            }
+
             function printReport() {
                 // Ambil data dari DataTable
                 let data = table.rows().data().toArray();
@@ -278,7 +303,7 @@
                         invoiceCount++;
                     }
                     
-                    let total = parseFloat(row.total);
+                    let total = cleanNumber(row.total);
                     invoiceGroups[currentInvoice].total += total;
                     invoiceGroups[currentInvoice].rows.push(row);
                     grandTotal += total;
@@ -302,9 +327,9 @@
                                 <td>${row.metode_bayar}</td>
                                 <td>${row.kode_barang}</td>
                                 <td>${row.nama_barang}</td>
-                                <td class="text-right">${parseFloat(row.qty).toLocaleString('id-ID')}</td>
-                                <td class="text-right">${parseFloat(row.harga).toLocaleString('id-ID')}</td>
-                                <td class="text-right">${parseFloat(row.total).toLocaleString('id-ID')}</td>
+                                <td class="text-right">${formatQty(row.qty)}</td>
+                                <td class="text-right">${formatNumber(row.harga)}</td>
+                                <td class="text-right">${formatNumber(row.total)}</td>
                             </tr>`;
                     });
                     
@@ -387,9 +412,9 @@
                     { data: "metode_bayar" },
                     { data: "kode_barang" },
                     { data: "nama_barang" },
-                    { data: "qty", className: "text-end", render: function(data) { return parseFloat(data).toLocaleString('id-ID'); } },
-                    { data: "harga", className: "text-end", render: function(data) { return parseFloat(data).toLocaleString('id-ID'); } },
-                    { data: "total", className: "text-end", render: function(data) { return parseFloat(data).toLocaleString('id-ID'); } }
+                    { data: "qty", className: "text-end", render: function(data) { return formatQty(data); } },
+                    { data: "harga", className: "text-end", render: function(data) { return formatNumber(data); } },
+                    { data: "total", className: "text-end", render: function(data) { return formatNumber(data); } }
                 ],
                 drawCallback: function (settings) {
                     let api = this.api();
@@ -410,7 +435,7 @@
                     // Kelompokkan data berdasarkan invoice
                     data.each(function (row, i) {
                         let invoice = row.nomor_invoice;
-                        let total = parseFloat(row.total);
+                        let total = cleanNumber(row.total);
                         grandTotal += total;
 
                         if (!invoiceGroups[invoice]) {
@@ -427,7 +452,7 @@
                     });
 
                     api.rows({ search: 'applied' }).data().each(function(row) {
-                        let total = parseFloat(row.total) || 0;
+                        let total = cleanNumber(row.total);
                         allGrandTotal += total;
 
                         if (!allInvoiceGroups[row.nomor_invoice]) {

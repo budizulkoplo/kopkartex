@@ -117,6 +117,13 @@
                 return new Intl.NumberFormat('id-ID').format(cleanNumber(value));
             }
 
+            function formatQty(value) {
+                return new Intl.NumberFormat('id-ID', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 3
+                }).format(cleanNumber(value));
+            }
+
             function printReport() {
                 // Ambil data dari DataTable
                 let data = table.rows().data().toArray();
@@ -339,7 +346,7 @@
                                 <td>${row.tipe_item}</td>
                                 <td>${row.kode_barang || '-'}</td>
                                 <td>${row.nama_barang || '-'}</td>
-                                <td class="text-right">${row.qty}</td>
+                                <td class="text-right">${formatQty(row.qty)}</td>
                                 <td class="text-right">${row.harga}</td>
                                 <td class="text-right">${row.total}</td>
                             </tr>`;
@@ -426,7 +433,13 @@
                     { data: "tipe_item" },
                     { data: "kode_barang" },
                     { data: "nama_barang" },
-                    { data: "qty", className: "text-end" },
+                    {
+                        data: "qty",
+                        className: "text-end",
+                        render: function(data) {
+                            return formatQty(data);
+                        }
+                    },
                     { data: "harga", className: "text-end" },
                     { data: "total", className: "text-end" }
                 ],
