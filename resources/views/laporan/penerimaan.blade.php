@@ -69,11 +69,10 @@
                 if (typeof value === 'number') return value;
 
                 let text = String(value).replace(/<[^>]*>/g, '').replace(/[^\d,.-]/g, '').trim();
-                if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(text)) {
+
+                if (text.includes(',') && text.includes('.')) {
                     text = text.replace(/\./g, '').replace(',', '.');
-                } else if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(text)) {
-                    text = text.replace(/,/g, '');
-                } else {
+                } else if (text.includes(',')) {
                     text = text.replace(',', '.');
                 }
 
@@ -84,6 +83,13 @@
                 return cleanNumber(value).toLocaleString('id-ID', {
                     minimumFractionDigits: decimals,
                     maximumFractionDigits: decimals
+                });
+            }
+
+            function formatQty(value) {
+                return cleanNumber(value).toLocaleString('id-ID', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 3
                 });
             }
 
@@ -107,9 +113,9 @@
                 const pageTotals = calculateTotals(api, { page: 'current' });
                 const allTotals = calculateTotals(api, { search: 'applied' });
 
-                $('#page-total-jumlah').text(formatNumber(pageTotals.jumlah, 3));
+                $('#page-total-jumlah').text(formatQty(pageTotals.jumlah));
                 $('#page-total-subtotal').text(formatRupiah(pageTotals.subtotal));
-                $('#all-total-jumlah').text(formatNumber(allTotals.jumlah, 3));
+                $('#all-total-jumlah').text(formatQty(allTotals.jumlah));
                 $('#all-total-subtotal').text(formatRupiah(allTotals.subtotal));
             }
 
@@ -135,7 +141,7 @@
                         data: "jumlah",
                         className: "text-end",
                         render: function(data) {
-                            return formatNumber(data, 3);
+                            return formatQty(data);
                         }
                     },
                     {

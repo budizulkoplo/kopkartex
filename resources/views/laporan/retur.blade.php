@@ -65,21 +65,20 @@
                 if (typeof value === 'number') return value;
 
                 let text = String(value).replace(/<[^>]*>/g, '').replace(/[^\d,.-]/g, '').trim();
-                if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(text)) {
+
+                if (text.includes(',') && text.includes('.')) {
                     text = text.replace(/\./g, '').replace(',', '.');
-                } else if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(text)) {
-                    text = text.replace(/,/g, '');
-                } else {
+                } else if (text.includes(',')) {
                     text = text.replace(',', '.');
                 }
 
                 return parseFloat(text) || 0;
             }
 
-            function formatNumber(value, decimals = 3) {
+            function formatNumber(value) {
                 return cleanNumber(value).toLocaleString('id-ID', {
-                    minimumFractionDigits: decimals,
-                    maximumFractionDigits: decimals
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 3
                 });
             }
 
