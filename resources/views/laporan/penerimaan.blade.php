@@ -53,6 +53,8 @@
         </div>
     </div>
 
+    <div id="printArea" style="display: none;"></div>
+
     {{-- JS Custom --}}
     <x-slot name="jscustom">
 
@@ -60,6 +62,8 @@
         <script> window.JSZip = JSZip; </script>
 
         <script>
+            let table;
+
             function reloadTable() {
                 table.ajax.reload();
             }
@@ -97,6 +101,15 @@
                 return 'Rp ' + formatNumber(value);
             }
 
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
             function calculateTotals(api, selector) {
                 let jumlah = 0;
                 let subtotal = 0;
@@ -119,7 +132,205 @@
                 $('#all-total-subtotal').text(formatRupiah(allTotals.subtotal));
             }
 
-            var table = $('#tbpenerimaan').DataTable({
+            function printReport() {
+                const data = table.rows({ search: 'applied' }).data().toArray();
+
+                if (data.length === 0) {
+                    alert('Tidak ada data untuk dicetak!');
+                    return;
+                }
+
+                let invoiceGroups = {};
+                let invoiceOrder = [];
+                let grandJumlah = 0;
+                let grandSubtotal = 0;
+                let rowNumber = 1;
+
+                data.forEach(function(row) {
+                    const invoice = row.nomor_invoice || '-';
+
+                    if (!invoiceGroups[invoice]) {
+                        invoiceGroups[invoice] = { jumlah: 0, subtotal: 0, rows: [] };
+                        invoiceOrder.push(invoice);
+                    }
+
+                    const jumlah = cleanNumber(row.jumlah);
+                    const subtotal = cleanNumber(row.subtotal);
+
+                    invoiceGroups[invoice].jumlah += jumlah;
+                    invoiceGroups[invoice].subtotal += subtotal;
+                    invoiceGroups[invoice].rows.push(row);
+                    grandJumlah += jumlah;
+                    grandSubtotal += subtotal;
+                });
+
+                let printHTML = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Laporan Penerimaan Barang</title>
+                        <style>
+                            * { box-sizing: border-box; }
+                            body {
+                                margin: 0;
+                                padding: 8mm;
+                                background: #fff;
+                                color: #000;
+                                font-family: Arial, sans-serif;
+                                font-size: 8px;
+                                line-height: 1.18;
+                            }
+                            @page { size: A4 landscape; margin: 7mm; }
+                            @media print { body { padding: 0; } }
+                            .header {
+                                margin-bottom: 5px;
+                                padding-bottom: 4px;
+                                border-bottom: 1px solid #000;
+                                text-align: center;
+                            }
+                            .header h1 {
+                                margin: 0 0 2px;
+                                font-size: 13px;
+                                line-height: 1.1;
+                            }
+                            .header p {
+                                margin: 1px 0;
+                                font-size: 8px;
+                            }
+                            table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                table-layout: fixed;
+                            }
+                            th, td {
+                                border: 1px solid #000;
+                                padding: 2px 3px;
+                                vertical-align: top;
+                                overflow-wrap: anywhere;
+                            }
+                            th {
+                                background: #f1f1f1 !important;
+                                font-size: 8px;
+                                font-weight: 700;
+                                -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
+                            }
+                            td { font-size: 7.5px; }
+                            .text-center { text-align: center; }
+                            .text-right { text-align: right; }
+                            .bold { font-weight: 700; }
+                            .invoice-total td {
+                                background: #ededed !important;
+                                border-top: 1.5px solid #000;
+                                -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
+                            }
+                            .grand-total td {
+                                background: #dfefff !important;
+                                border-top: 2px double #000;
+                                font-weight: 700;
+                                -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
+                            }
+                            tbody.invoice-group {
+                                break-inside: avoid;
+                                page-break-inside: avoid;
+                            }
+                            .footer {
+                                margin-top: 4px;
+                                text-align: right;
+                                font-size: 7px;
+                            }
+                            th:nth-child(1), td:nth-child(1) { width: 4%; }
+                            th:nth-child(2), td:nth-child(2) { width: 9%; }
+                            th:nth-child(3), td:nth-child(3) { width: 12%; }
+                            th:nth-child(4), td:nth-child(4) { width: 14%; }
+                            th:nth-child(5), td:nth-child(5) { width: 11%; }
+                            th:nth-child(6), td:nth-child(6) { width: 24%; }
+                            th:nth-child(7), td:nth-child(7) { width: 7%; }
+                            th:nth-child(8), td:nth-child(8) { width: 9%; }
+                            th:nth-child(9), td:nth-child(9) { width: 10%; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <h1>LAPORAN PENERIMAAN BARANG</h1>
+                            <p>Periode: ${escapeHtml($('#bulan').val())}</p>
+                            <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="text-center">No</th>
+                                    <th>Tanggal</th>
+                                    <th>No Invoice</th>
+                                    <th>Supplier</th>
+                                    <th>Kode Barang</th>
+                                    <th>Nama Barang</th>
+                                    <th class="text-right">Jumlah</th>
+                                    <th class="text-right">Harga Beli</th>
+                                    <th class="text-right">Subtotal</th>
+                                </tr>
+                            </thead>`;
+
+                invoiceOrder.forEach(function(invoice) {
+                    const group = invoiceGroups[invoice];
+                    printHTML += '<tbody class="invoice-group">';
+
+                    group.rows.forEach(function(row) {
+                        printHTML += `
+                            <tr>
+                                <td class="text-center">${rowNumber++}</td>
+                                <td>${escapeHtml(row.tgl_penerimaan)}</td>
+                                <td>${escapeHtml(row.nomor_invoice)}</td>
+                                <td>${escapeHtml(row.nama_supplier)}</td>
+                                <td>${escapeHtml(row.kode_barang)}</td>
+                                <td>${escapeHtml(row.nama_barang)}</td>
+                                <td class="text-right">${formatQty(row.jumlah)}</td>
+                                <td class="text-right">${formatNumber(row.harga_beli)}</td>
+                                <td class="text-right">${formatNumber(row.subtotal)}</td>
+                            </tr>`;
+                    });
+
+                    printHTML += `
+                            <tr class="invoice-total">
+                                <td colspan="6" class="text-right bold">Total Invoice: ${escapeHtml(invoice)}</td>
+                                <td class="text-right bold">${formatQty(group.jumlah)}</td>
+                                <td></td>
+                                <td class="text-right bold">${formatNumber(group.subtotal)}</td>
+                            </tr>
+                        </tbody>`;
+                });
+
+                printHTML += `
+                            <tfoot>
+                                <tr class="grand-total">
+                                    <td colspan="6" class="text-right">TOTAL SEMUA DATA (${data.length.toLocaleString('id-ID')} baris / ${invoiceOrder.length.toLocaleString('id-ID')} invoice)</td>
+                                    <td class="text-right">${formatQty(grandJumlah)}</td>
+                                    <td></td>
+                                    <td class="text-right">${formatNumber(grandSubtotal)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <div class="footer">Dicetak pada ${new Date().toLocaleTimeString('id-ID')}</div>
+                    </body>
+                    </html>`;
+
+                const printWindow = window.open('', '_blank', 'width=1200,height=800');
+                printWindow.document.open();
+                printWindow.document.write(printHTML);
+                printWindow.document.close();
+
+                printWindow.onload = function() {
+                    setTimeout(function() {
+                        printWindow.focus();
+                        printWindow.print();
+                        printWindow.close();
+                    }, 250);
+                };
+            }
+
+            table = $('#tbpenerimaan').DataTable({
                 ordering: false,
                 processing: true,
                 pageLength: 50,
@@ -163,36 +374,78 @@
                     dataSrc: ["tgl_penerimaan", "nomor_invoice", "nama_supplier"]
                 },
                 drawCallback: function(settings) {
-                    // untuk buat rowspan
                     var api = this.api();
                     var rows = api.rows({ page: 'current' }).nodes();
-                    var last = {};
+                    var data = api.rows({ page: 'current' }).data();
+                    var invoiceGroups = {};
+                    var invoiceStarts = [];
+                    var pageInvoiceCount = 0;
+                    var allInvoiceGroups = {};
 
-                    api.column(0, { page: 'current' }).data().each(function(date, i) {
-                        var invoice = api.cell(i,1).data();
-                        var supplier = api.cell(i,2).data();
-                        var key = date+invoice+supplier;
+                    $(rows).filter('.invoice-total-row').remove();
+                    $(rows).find('td').removeAttr('rowspan').removeClass('align-middle');
 
-                        if (last[key]) {
-                            $(rows).eq(i).find("td:eq(0)").remove();
-                            $(rows).eq(i).find("td:eq(0)").remove();
-                            $(rows).eq(i).find("td:eq(0)").remove();
-                            last[key].count++;
-                        } else {
-                            last[key] = { row: $(rows).eq(i), count:1 };
+                    data.each(function(row, i) {
+                        var invoice = row.nomor_invoice || '-';
+                        var jumlah = cleanNumber(row.jumlah);
+                        var subtotal = cleanNumber(row.subtotal);
+
+                        if (!invoiceGroups[invoice]) {
+                            invoiceGroups[invoice] = {
+                                count: 0,
+                                jumlah: 0,
+                                subtotal: 0,
+                                firstRowIndex: i
+                            };
+                            invoiceStarts.push(i);
+                            pageInvoiceCount++;
                         }
+
+                        invoiceGroups[invoice].count++;
+                        invoiceGroups[invoice].jumlah += jumlah;
+                        invoiceGroups[invoice].subtotal += subtotal;
                     });
 
-                    // apply rowspan
-                    $.each(last, function(k,v){
-                        if(v.count > 1){
-                            v.row.find("td:eq(0)").attr("rowspan", v.count);
-                            v.row.find("td:eq(1)").attr("rowspan", v.count);
-                            v.row.find("td:eq(2)").attr("rowspan", v.count);
-                        }
+                    api.rows({ search: 'applied' }).data().each(function(row) {
+                        allInvoiceGroups[row.nomor_invoice || '-'] = true;
                     });
+
+                    for (var invoice in invoiceGroups) {
+                        var group = invoiceGroups[invoice];
+
+                        if (group.count > 1) {
+                            $(rows).eq(group.firstRowIndex).find('td:eq(0)').attr('rowspan', group.count).addClass('align-middle');
+                            $(rows).eq(group.firstRowIndex).find('td:eq(1)').attr('rowspan', group.count).addClass('align-middle');
+                            $(rows).eq(group.firstRowIndex).find('td:eq(2)').attr('rowspan', group.count).addClass('align-middle');
+
+                            for (var rowIndex = group.firstRowIndex + 1; rowIndex < group.firstRowIndex + group.count; rowIndex++) {
+                                if ($(rows).eq(rowIndex).find('td').length > 5) {
+                                    $(rows).eq(rowIndex).find('td:eq(0)').remove();
+                                    $(rows).eq(rowIndex).find('td:eq(0)').remove();
+                                    $(rows).eq(rowIndex).find('td:eq(0)').remove();
+                                }
+                            }
+                        }
+                    }
+
+                    for (var i = invoiceStarts.length - 1; i >= 0; i--) {
+                        var startIndex = invoiceStarts[i];
+                        var invoiceNumber = data[startIndex].nomor_invoice || '-';
+                        var invoiceGroup = invoiceGroups[invoiceNumber];
+
+                        $(rows).eq(startIndex + invoiceGroup.count - 1).after(
+                            `<tr class="fw-bold bg-light invoice-total-row">
+                                <td colspan="5" class="text-end">Total Invoice: ${escapeHtml(invoiceNumber)}</td>
+                                <td class="text-end">${formatQty(invoiceGroup.jumlah)}</td>
+                                <td></td>
+                                <td class="text-end">${formatRupiah(invoiceGroup.subtotal)}</td>
+                            </tr>`
+                        );
+                    }
 
                     renderTotals(api);
+                    $('#page-total-jumlah').text($('#page-total-jumlah').text() + ' / ' + pageInvoiceCount.toLocaleString('id-ID') + ' invoice');
+                    $('#all-total-jumlah').text($('#all-total-jumlah').text() + ' / ' + Object.keys(allInvoiceGroups).length.toLocaleString('id-ID') + ' invoice');
                 },
                 dom:
                 "<'row mb-2'<'col-md-6 d-flex align-items-center'B><'col-md-6 d-flex justify-content-end'f>>" +
@@ -209,14 +462,10 @@
                         }
                     },
                     {
-                        extend: 'print',
                         text: '<i class="bi bi-printer"></i> Print',
-                        className: 'btn btn-primary btn-sm',
-                        exportOptions: {
-                            columns: ':visible'
-                        },
-                        title: function () {
-                            return 'Laporan Penerimaan Barang - ' + $('#bulan').val();
+                        className: 'btn btn-warning btn-sm',
+                        action: function () {
+                            printReport();
                         }
                     }
                 ]
