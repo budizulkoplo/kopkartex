@@ -180,7 +180,7 @@
                                 font-size: 8px;
                                 line-height: 1.18;
                             }
-                            @page { size: A4 landscape; margin: 7mm; }
+                            @page { size: A4 portrait; margin: 7mm; }
                             @media print { body { padding: 0; } }
                             .header {
                                 margin-bottom: 5px;
@@ -243,13 +243,13 @@
                             }
                             th:nth-child(1), td:nth-child(1) { width: 4%; }
                             th:nth-child(2), td:nth-child(2) { width: 9%; }
-                            th:nth-child(3), td:nth-child(3) { width: 12%; }
-                            th:nth-child(4), td:nth-child(4) { width: 14%; }
-                            th:nth-child(5), td:nth-child(5) { width: 11%; }
-                            th:nth-child(6), td:nth-child(6) { width: 24%; }
+                            th:nth-child(3), td:nth-child(3) { width: 13%; }
+                            th:nth-child(4), td:nth-child(4) { width: 13%; }
+                            th:nth-child(5), td:nth-child(5) { width: 10%; }
+                            th:nth-child(6), td:nth-child(6) { width: 23%; }
                             th:nth-child(7), td:nth-child(7) { width: 7%; }
-                            th:nth-child(8), td:nth-child(8) { width: 9%; }
-                            th:nth-child(9), td:nth-child(9) { width: 10%; }
+                            th:nth-child(8), td:nth-child(8) { width: 10%; }
+                            th:nth-child(9), td:nth-child(9) { width: 11%; }
                         </style>
                     </head>
                     <body>
