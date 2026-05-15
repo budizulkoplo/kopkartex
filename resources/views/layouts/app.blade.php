@@ -13,7 +13,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head> <!--end::Head--> <!--begin::Body-->
 {{-- sidebar-mini  --}}
-<body class="layout-fixed sidebar-expand-lg bg-body-tertiary" id="bdy"> <!--begin::App Wrapper-->
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary {{ request()->routeIs('laporan.*', 'barang.list', 'barangbengkel.*', 'master.jasabengkel.*', 'penerimaan.riwayat', 'jual.riwayat', 'bengkel.riwayat') ? 'uniform-table-theme' : '' }}" id="bdy"> <!--begin::App Wrapper-->
     <div class="app-wrapper"> <!--begin::Header-->
         @include('layouts.navigation')
         <x-sidebar/>{{-- <x-sidebar :hasMenu="$menu"/> --}}

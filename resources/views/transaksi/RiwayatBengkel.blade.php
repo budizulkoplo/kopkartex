@@ -174,11 +174,13 @@
             $('#tbRiwayat').DataTable({
                 responsive: true,
                 pageLength: 50,
+                lengthMenu: [[25, 50, 100, -1], [25, 50, 100, 'Semua']],
                 ordering: false,
                 dom:
-                    "<'row mb-2'<'col-md-6'B><'col-md-6 text-end'f>>" +
+                    "<'row mb-2'<'col-md-6 d-flex align-items-center'B><'col-md-6 d-flex justify-content-end'f>>" +
+                    "<'row mb-2'<'col-md-6'l><'col-md-6 text-end'i>>" +
                     "<'row'<'col-12'tr>>" +
-                    "<'row mt-2'<'col-md-6'i><'col-md-6 text-end'p>>",
+                    "<'row mt-2'<'col-md-6'i><'col-md-6 d-flex justify-content-end'p>>",
                 buttons: [
                     {
                         extend: 'excelHtml5',

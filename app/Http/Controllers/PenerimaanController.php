@@ -275,6 +275,11 @@ class PenerimaanController extends Controller
     {
         $tanggalAwal = $request->tanggal_awal ?? date('Y-m-d');
         $tanggalAkhir = $request->tanggal_akhir ?? date('Y-m-d');
+        $perPage = (int) $request->input('per_page', 25);
+        $allowedPerPage = [10, 25, 50, 100];
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 25;
+        }
 
         $query = Penerimaan::with(['details.barang', 'user', 'supplier'])
             ->whereDate('tgl_penerimaan', '>=', $tanggalAwal)
@@ -285,7 +290,7 @@ class PenerimaanController extends Controller
             $query->where('nama_supplier', 'LIKE', "%{$request->supplier}%");
         }
 
-        $penerimaan = $query->paginate(25)->withQueryString();
+        $penerimaan = $query->paginate($perPage)->withQueryString();
         $penerimaan->getCollection()->transform(function ($item) {
             $item->grandtotal = $item->effective_grandtotal;
             return $item;
@@ -295,7 +300,8 @@ class PenerimaanController extends Controller
             'penerimaan' => $penerimaan,
             'tanggal_awal' => $tanggalAwal,
             'tanggal_akhir' => $tanggalAkhir,
-            'supplier' => $request->supplier ?? ''
+            'supplier' => $request->supplier ?? '',
+            'per_page' => $perPage,
         ]);
     }
 

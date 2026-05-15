@@ -59,8 +59,8 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <table id="tbbarang" class="table table-sm table-striped" style="width:100%; font-size: small;">
-                                <thead>
+                            <table id="tbbarang" class="table table-sm table-striped table-bordered" style="width:100%; font-size: small;">
+                                <thead class="table-light">
                                     <tr>
                                         <th>ID</th>
                                         <th>Kode</th>

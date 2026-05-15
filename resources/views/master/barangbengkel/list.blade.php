@@ -52,8 +52,8 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <table id="tbbarang" class="table table-sm table-striped" style="width:100%; font-size: small;">
-                                <thead class="table-warning">
+                            <table id="tbbarang" class="table table-sm table-striped table-bordered" style="width:100%; font-size: small;">
+                                <thead class="table-light">
                                     <tr>
                                         <th width="5%">#</th>
                                         <th width="15%">Kode</th>
@@ -241,10 +241,6 @@
 
     <x-slot name="csscustom">
         <style>
-            .table-warning th {
-                background-color: #ffc107;
-                color: #212529;
-            }
             .stok-positive {
                 color: #198754;
                 font-weight: bold;

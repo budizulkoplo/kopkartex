@@ -15,7 +15,7 @@
             <div class="card card-info card-outline">
                 <div class="card-body">
                     <table id="tbjasa" class="table table-bordered table-striped table-sm" style="width:100%;">
-                        <thead>
+                        <thead class="table-light">
                             <tr>
                                 <th>#</th>
                                 <th>Kode Jasa</th>

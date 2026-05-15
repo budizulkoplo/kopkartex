@@ -9,6 +9,7 @@
                 </div>
                 <div class="col-sm-6 text-end">
                     <form method="GET" action="{{ route('penerimaan.riwayat') }}" class="row g-2 align-items-center justify-content-end">
+                        <input type="hidden" name="per_page" value="{{ $per_page ?? 25 }}">
                         <div class="col-auto">
                             <input type="date" name="tanggal_awal" class="form-control form-control-sm" value="{{ $tanggal_awal }}">
                         </div>
@@ -50,6 +51,26 @@
                 </div>
                 <div class="card-body">
                     @if($penerimaan->count() > 0)
+                    <div class="row mb-2 align-items-center">
+                        <div class="col-md-6">
+                            <form method="GET" action="{{ route('penerimaan.riwayat') }}" class="server-table-length">
+                                <input type="hidden" name="tanggal_awal" value="{{ $tanggal_awal }}">
+                                <input type="hidden" name="tanggal_akhir" value="{{ $tanggal_akhir }}">
+                                <input type="hidden" name="supplier" value="{{ $supplier }}">
+                                <label class="d-flex align-items-center gap-2 mb-0">
+                                    <span>Tampilkan</span>
+                                    <select name="per_page" class="form-select form-select-sm" onchange="this.form.submit()">
+                                        @foreach([10, 25, 50, 100] as $size)
+                                            <option value="{{ $size }}" {{ (int)($per_page ?? 25) === $size ? 'selected' : '' }}>
+                                                {{ $size }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <span>data</span>
+                                </label>
+                            </form>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table id="tbriwayatpenerimaan" class="table table-striped table-bordered table-hover table-sm" style="width:100%; font-size: small;">
                             <thead class="table-light">
@@ -163,11 +184,11 @@
                     
                     {{-- Pagination --}}
                     @if($penerimaan->hasPages())
-                    <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div class="d-flex justify-content-between align-items-center mt-3 riwayat-pagination">
                         <div class="text-muted">
                             Menampilkan {{ $penerimaan->firstItem() }} - {{ $penerimaan->lastItem() }} dari {{ $penerimaan->total() }} data
                         </div>
-                        <div>
+                        <div class="ms-auto">
                             {{ $penerimaan->links('pagination::bootstrap-4') }}
                         </div>
                     </div>
@@ -315,7 +336,7 @@
                     </div>
 
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover" id="tblRevisi">
+                        <table class="table table-sm table-striped table-bordered table-hover" id="tblRevisi">
                             <thead class="table-light">
                                 <tr>
                                     <th width="5%">#</th>
@@ -417,8 +438,10 @@
                 @if($penerimaan->count() > 0)
                 const table = $('#tbriwayatpenerimaan').DataTable({
                     responsive: true,
-                    pageLength: 25,
-                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+                    paging: false,
+                    searching: false,
+                    info: false,
+                    lengthChange: false,
                     language: {
                         search: "Cari:",
                         lengthMenu: "Tampilkan _MENU_ data",
@@ -432,10 +455,7 @@
                             previous: "Sebelumnya"
                         }
                     },
-                    dom: 
-                        "<'row'<'col-md-6'l><'col-md-6'f>>" +
-                        "<'row'<'col-12'tr>>" +
-                        "<'row'<'col-md-5'i><'col-md-7'p>>",
+                    dom: "<'row'<'col-12'tr>>",
                     order: [[1, 'desc']],
                     columnDefs: [
                         { orderable: false, targets: [0, 8] } // Kolom # dan Aksi tidak bisa di-sort
