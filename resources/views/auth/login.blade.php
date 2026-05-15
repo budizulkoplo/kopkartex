@@ -483,7 +483,7 @@
               </div>
 
               <button type="submit" id="loginBtn" class="btn btn-primary login-button w-100">
-                Masuk Dashboard
+                LOGIN
               </button>
             </form>
 
