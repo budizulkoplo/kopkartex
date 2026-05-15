@@ -427,8 +427,8 @@
               </svg>
               Secure Access
             </span>
-            <h2 class="login-title">Selamat datang kembali</h2>
-            <p class="login-copy">Gunakan akun operator yang sudah terdaftar untuk masuk ke dashboard KOPKARTEX.</p>
+            <h2 class="login-title">Selamat datang</h2>
+            <p class="login-copy">Gunakan akun anda untuk login ke system.</p>
 
             @if (session('status'))
               <div class="alert alert-success auth-alert">
