@@ -342,6 +342,12 @@
 
         <div class="product-grid">
             @foreach($produkList as $p)
+                @php
+                    $stok = (float) $p->stok;
+                    $stokTampil = fmod($stok, 1.0) === 0.0
+                        ? number_format($stok, 0, ',', '.')
+                        : rtrim(rtrim(number_format($stok, 3, ',', '.'), '0'), ',');
+                @endphp
                 <article class="product-card" data-product-name="{{ \Illuminate\Support\Str::lower($p->nama_barang) }}">
                     <div class="product-media">
                         @if(isset($p->img) && $p->img)
@@ -353,7 +359,7 @@
                         @endif
 
                         <span class="stock-badge">
-                            Stok {{ $p->stok }}
+                            Stok {{ $stokTampil }}
                         </span>
                     </div>
 
