@@ -406,7 +406,7 @@
             </div>
 
             <div class="mt-6">
-              <p class="login-eyebrow text-white border-white border-opacity-25 bg-white bg-opacity-10">Admin Panel</p>
+              <p class="login-eyebrow text-white border-white border-opacity-25 bg-white bg-opacity-10"></p>
               <h1 class="brand-title">Kelola koperasi dengan lebih rapi.</h1>
               <p class="brand-subtitle">
                 Masuk untuk mengakses transaksi, simpan pinjam, persediaan, laporan, dan pengaturan layanan anggota.
@@ -426,7 +426,7 @@
               <img src="{{ asset('logo.png') }}" alt="Logo KOPKARTEX">
               <div>
                 <div class="fw-bold fs-3 lh-1">KOPKARTEX</div>
-                <div class="text-muted">Admin Panel</div>
+                <div class="text-muted">Koperasi Karyawan</div>
               </div>
             </div>
 
