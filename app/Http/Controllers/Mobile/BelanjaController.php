@@ -48,27 +48,26 @@ class BelanjaController extends BaseMobileController
         $query = DB::table('barang as b')
             ->join('stok_unit as su', 'su.barang_id', '=', 'b.id')
             ->where('su.unit_id', $unitId)
+            ->where('su.stok', '>', 0)
             ->whereNull('b.deleted_at')
             ->whereNull('su.deleted_at')
             ->select('b.id','b.kode_barang','b.nama_barang','b.idkategori','b.idsatuan','b.harga_jual','su.stok','b.img');
 
-        // Filter pencarian jika ada parameter q
-        if ($request->filled('q')) {
-            $q = $request->q;
-            $query->where(function($sub) use ($q) {
-                $sub->where('b.nama_barang', 'like', "%$q%")
-                    ->orWhere('b.kode_barang', 'like', "%$q%");
-            });
-        }
+        $search = trim((string) $request->query('q', ''));
+        $search = preg_replace('/\s+/', ' ', $search);
 
-        $produkList = $query->orderBy('b.nama_barang')->get();
+        $produkList = $query
+            ->orderByDesc('su.stok')
+            ->orderBy('b.nama_barang')
+            ->get();
 
         $toko = DB::table('unit')->where('id', $unitId)->first();
 
         $cart = session()->get('cart', []);
         $cartCount = collect($cart)->sum('qty');
+        $readyCount = $produkList->where('stok', '>', 0)->count();
 
-        return view('mobile.belanja.produk', compact('user', 'toko', 'produkList', 'cartCount'));
+        return view('mobile.belanja.produk', compact('user', 'toko', 'produkList', 'cartCount', 'readyCount', 'search'));
     }
 
     public function addToCart(Request $request)

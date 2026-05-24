@@ -19,6 +19,7 @@
         --brand: #0f6fcf;
         --brand-dark: #0b4f9a;
         --brand-soft: #eaf4ff;
+        --brand-pale: #f5f9ff;
         --ink: #102033;
         --muted: #63758d;
         --line: #d9e7f7;
@@ -33,9 +34,7 @@
         color: var(--ink);
         font-feature-settings: "cv03", "cv04", "cv11";
         background:
-          radial-gradient(circle at 8% 12%, rgba(15, 111, 207, .16), transparent 30%),
-          radial-gradient(circle at 88% 8%, rgba(56, 189, 248, .18), transparent 28%),
-          linear-gradient(145deg, #f7fbff 0%, #eef6ff 45%, #ffffff 100%);
+          linear-gradient(145deg, #f8fbff 0%, #eef6ff 54%, #ffffff 100%);
       }
 
       .login-shell {
@@ -51,10 +50,9 @@
         grid-template-columns: minmax(0, 1.05fr) minmax(390px, .95fr);
         overflow: hidden;
         border: 1px solid rgba(217, 231, 247, .9);
-        border-radius: 22px;
-        background: rgba(255, 255, 255, .82);
-        box-shadow: 0 24px 70px rgba(15, 64, 118, .16);
-        backdrop-filter: blur(16px);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, .94);
+        box-shadow: 0 22px 54px rgba(15, 64, 118, .12);
       }
 
       .brand-side {
@@ -63,7 +61,7 @@
         padding: 42px;
         color: #fff;
         background:
-          linear-gradient(145deg, rgba(11, 79, 154, .96), rgba(15, 111, 207, .94)),
+          linear-gradient(145deg, rgba(9, 67, 131, .97), rgba(15, 111, 207, .90)),
           url("{{ asset('tabler/static/photos/blue-sofa-with-pillows-in-a-designer-living-room-interior.jpg') }}");
         background-size: cover;
         background-position: center;
@@ -74,8 +72,7 @@
         position: absolute;
         inset: 0;
         background:
-          linear-gradient(180deg, rgba(4, 26, 52, .05), rgba(4, 26, 52, .22)),
-          repeating-linear-gradient(135deg, rgba(255, 255, 255, .08) 0 1px, transparent 1px 18px);
+          linear-gradient(180deg, rgba(4, 26, 52, .03), rgba(4, 26, 52, .28));
         pointer-events: none;
       }
 
@@ -94,25 +91,25 @@
       }
 
       .brand-mark img {
-        width: 64px;
-        height: 64px;
+        width: 58px;
+        height: 58px;
         object-fit: contain;
         padding: 8px;
-        border-radius: 18px;
+        border-radius: 16px;
         background: #fff;
         box-shadow: 0 14px 30px rgba(0, 0, 0, .18);
       }
 
       .brand-title {
         margin: 0;
-        font-size: clamp(2.1rem, 4vw, 3.65rem);
-        line-height: 1;
+        font-size: clamp(2rem, 3.5vw, 3.2rem);
+        line-height: 1.06;
         font-weight: 850;
         letter-spacing: 0;
       }
 
       .brand-subtitle {
-        max-width: 510px;
+        max-width: 500px;
         margin: 24px 0 0;
         color: rgba(255, 255, 255, .82);
         font-size: 1.05rem;
@@ -121,39 +118,34 @@
 
       .brand-highlight {
         margin-top: auto;
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding-top: 30px;
+        border-top: 1px solid rgba(255, 255, 255, .16);
       }
 
-      .highlight-item {
-        min-height: 118px;
-        padding: 18px;
-        border: 1px solid rgba(255, 255, 255, .22);
-        border-radius: 16px;
-        background: rgba(255, 255, 255, .12);
-      }
-
-      .highlight-value {
-        display: block;
-        font-size: 1.5rem;
+      .version-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 40px;
+        padding: 8px 14px;
+        border: 1px solid rgba(255, 255, 255, .28);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .13);
+        color: rgba(255, 255, 255, .92);
+        font-size: .84rem;
         font-weight: 850;
-        line-height: 1;
-      }
-
-      .highlight-label {
-        display: block;
-        margin-top: 10px;
-        color: rgba(255, 255, 255, .78);
-        font-size: .86rem;
-        line-height: 1.35;
+        letter-spacing: .02em;
       }
 
       .form-side {
         display: flex;
         align-items: center;
         padding: 44px;
-        background: linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(248, 251, 255, .98));
+        background: linear-gradient(180deg, #ffffff, var(--brand-pale));
       }
 
       .form-wrap {
@@ -177,7 +169,7 @@
         font-size: .78rem;
         font-weight: 750;
         text-transform: uppercase;
-        letter-spacing: .08em;
+        letter-spacing: .06em;
       }
 
       .login-title {
@@ -207,7 +199,7 @@
       .form-control {
         min-height: 52px;
         border-color: var(--line);
-        border-radius: 13px;
+        border-radius: 12px;
         color: var(--ink);
         background: #fff;
       }
@@ -267,9 +259,9 @@
       .login-button {
         min-height: 54px;
         border: 0;
-        border-radius: 14px;
+        border-radius: 12px;
         background: linear-gradient(135deg, var(--brand), var(--brand-dark));
-        box-shadow: 0 14px 28px rgba(15, 111, 207, .24);
+        box-shadow: 0 12px 24px rgba(15, 111, 207, .18);
         font-weight: 800;
       }
 
@@ -304,6 +296,12 @@
         gap: 16px;
         color: var(--muted);
         font-size: .84rem;
+      }
+
+      .mobile-version {
+        display: none;
+        margin-top: 18px;
+        justify-content: center;
       }
 
       .partner-footer img {
@@ -341,6 +339,13 @@
           background: #fff;
           border: 1px solid var(--line);
         }
+
+        .mobile-version {
+          display: inline-flex;
+          color: var(--brand-dark);
+          background: var(--brand-soft);
+          border-color: var(--line);
+        }
       }
 
       @media (max-width: 480px) {
@@ -357,7 +362,24 @@
         }
 
         .form-side {
-          padding: 28px 18px;
+          align-items: flex-start;
+          padding: max(26px, env(safe-area-inset-top)) 18px 24px;
+        }
+
+        .mobile-logo {
+          margin-bottom: 20px;
+        }
+
+        .login-title {
+          font-size: 1.8rem;
+        }
+
+        .login-copy {
+          margin-bottom: 22px;
+        }
+
+        .form-control {
+          min-height: 50px;
         }
 
         .support-row,
@@ -385,25 +407,15 @@
 
             <div class="mt-6">
               <p class="login-eyebrow text-white border-white border-opacity-25 bg-white bg-opacity-10">Admin Panel</p>
-              <h1 class="brand-title">Kelola operasional koperasi dengan lebih rapi.</h1>
+              <h1 class="brand-title">Kelola koperasi dengan lebih rapi.</h1>
               <p class="brand-subtitle">
                 Masuk untuk mengakses transaksi, simpan pinjam, persediaan, laporan, dan pengaturan layanan anggota.
               </p>
             </div>
 
             <div class="brand-highlight">
-              <div class="highlight-item">
-                <span class="highlight-value">24/7</span>
-                <span class="highlight-label">Akses data operasional</span>
-              </div>
-              <div class="highlight-item">
-                <span class="highlight-value">Real</span>
-                <span class="highlight-label">Monitoring transaksi</span>
-              </div>
-              <div class="highlight-item">
-                <span class="highlight-value">Aman</span>
-                <span class="highlight-label">Area khusus pengguna</span>
-              </div>
+              <span class="version-pill">Smart Koperasi v3.1</span>
+              <span class="opacity-75 small">KOPKARTEX &copy; {{ date('Y') }}</span>
             </div>
           </div>
         </aside>
@@ -428,7 +440,7 @@
               Secure Access
             </span>
             <h2 class="login-title">Selamat datang</h2>
-            <p class="login-copy">Gunakan akun anda untuk login ke system.</p>
+            <p class="login-copy">Gunakan akun anda untuk masuk ke sistem koperasi.</p>
 
             @if (session('status'))
               <div class="alert alert-success auth-alert">
@@ -495,12 +507,14 @@
             </div>
 
             <div class="partner-footer">
-              <div>
+              <!-- <div>
                 <div class="fw-bold text-dark">PartnerInCode Project</div>
                 <div>Modern cooperative system</div>
-              </div>
+              </div> -->
               <img src="{{ asset('piclogo.png') }}" alt="PartnerInCode">
             </div>
+
+            <span class="version-pill mobile-version">Smart Koperasi v3.1</span>
           </div>
         </div>
       </section>
