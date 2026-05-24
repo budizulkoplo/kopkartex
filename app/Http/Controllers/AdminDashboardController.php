@@ -12,6 +12,10 @@ class AdminDashboardController extends Controller
 {
     public function dashboard()
     {
+        if (Auth::user()?->ui === 'user') {
+            return redirect()->route('mobile.home');
+        }
+
         $context = $this->dashboardContext();
 
         $bulanan = $this->baseTransactionQuery($context)

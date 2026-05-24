@@ -51,9 +51,9 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [AdminDashboardController::class, 'dashboard'])->middleware(['global.app'])->name('dashboard');
-    Route::get('/admin/pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIni'])->middleware(['global.app'])->name('dashboard.pesananHariIni');
-    Route::get('/admin/data-pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIniData'])->middleware(['global.app'])->name('dashboard.pesananHariIniData');
+    Route::get('/dashboard', [AdminDashboardController::class, 'dashboard'])->middleware(['global.app:admin'])->name('dashboard');
+    Route::get('/admin/pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIni'])->middleware(['global.app:admin'])->name('dashboard.pesananHariIni');
+    Route::get('/admin/data-pesanan-hari-ini', [AdminDashboardController::class, 'pesananHariIniData'])->middleware(['global.app:admin'])->name('dashboard.pesananHariIniData');
 
 });
 

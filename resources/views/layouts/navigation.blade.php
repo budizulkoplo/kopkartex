@@ -142,7 +142,7 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end"> <!--begin::User Image-->
                     <li class="user-header text-bg-primary" style="min-height: 0;"> 
-                        <p class="profiles"> {{ Auth::user()->name }} <small>{{ Auth::user()->email }} - {{ strtoupper(auth()->user()->getRoleNames()[0]) }}</small></p>
+                        <p class="profiles"> {{ Auth::user()->name }} <small>{{ Auth::user()->email }} - {{ strtoupper(auth()->user()->getRoleNames()->first() ?? auth()->user()->ui ?? 'USER') }}</small></p>
                     </li>
                     <li class="user-footer"> 
                         <a href="{{ route('profile.edit') }}" class="btn btn-default btn-flat">{{ __('Edit') }}</a> 
