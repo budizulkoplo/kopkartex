@@ -95,6 +95,7 @@ class KartuStokBackfillService
                 'p.idpenerimaan',
                 'p.nomor_invoice',
                 'p.tgl_penerimaan',
+                'p.created_at',
                 'p.user_id',
                 'u.unit_kerja',
                 'd.id as detail_id',
@@ -106,7 +107,7 @@ class KartuStokBackfillService
             ->filter(fn ($row) => $row->barang_id && $row->unit_kerja)
             ->map(fn ($row) => [
                 'seq' => 10,
-                'tanggal' => $this->parseDate($row->tgl_penerimaan),
+                'tanggal' => $this->parseDate($row->tgl_penerimaan, $row->created_at),
                 'barang_id' => (int) $row->barang_id,
                 'unit_id' => (int) $row->unit_kerja,
                 'jenis_transaksi' => 'penerimaan',
@@ -370,8 +371,19 @@ class KartuStokBackfillService
             ]);
     }
 
-    private function parseDate($value): Carbon
+    private function parseDate($value, $fallbackTime = null): Carbon
     {
-        return $value ? Carbon::parse($value) : now();
+        if (!$value) {
+            return $fallbackTime ? Carbon::parse($fallbackTime) : now();
+        }
+
+        $date = Carbon::parse($value);
+
+        if ($fallbackTime && $date->format('H:i:s') === '00:00:00') {
+            $time = Carbon::parse($fallbackTime);
+            $date->setTime((int) $time->format('H'), (int) $time->format('i'), (int) $time->format('s'));
+        }
+
+        return $date;
     }
 }

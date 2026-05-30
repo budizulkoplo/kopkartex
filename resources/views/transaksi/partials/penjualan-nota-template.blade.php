@@ -8,6 +8,7 @@
     $totalBp = 0;
     $totalNonBp = 0;
     $totalDiskonItem = 0;
+    $formatQty = fn ($qty) => rtrim(rtrim(number_format((float) $qty, 3, ',', '.'), '0'), ',');
 
     foreach ($dtl as $item) {
         $totalDiskonItem += (float) ($item->diskon ?? 0);
@@ -155,7 +156,7 @@
             <table class="item-table">
                 <tr>
                     <td class="col-nama">{{ strtoupper($item->nama_barang ?? '-') }}</td>
-                    <td class="col-qty">{{ number_format((float) $item->qty, 3, ',', '.') }}</td>
+                    <td class="col-qty">{{ $formatQty($item->qty) }}</td>
                     <td class="col-harga">{{ number_format((float) $item->harga, 0, ',', '.') }}</td>
                     <td class="col-total">{{ number_format($itemTotal, 0, ',', '.') }}</td>
                 </tr>

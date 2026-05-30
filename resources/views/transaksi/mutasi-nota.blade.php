@@ -1,3 +1,6 @@
+@php
+    $formatQty = fn ($qty) => rtrim(rtrim(number_format((float) $qty, 3, ',', '.'), '0'), ',');
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -163,7 +166,7 @@
                         {{ strlen($item->nama_barang . ' (' . $item->type . ')') > 32 ? '...' : '' }}
                     </span>
                 </td>
-                <td class="txt-center">{{ number_format($item->qty, 3, ',', '.') }}</td>
+                <td class="txt-center">{{ $formatQty($item->qty) }}</td>
                
             </tr>
             @endforeach
@@ -182,7 +185,7 @@
             </tr>
             <tr>
                 <td colspan="2" class="txt-right"><b>Total Qty Mutasi:</b></td>
-                <td colspan="2" class="txt-center"><b>{{ $totalQty }}</b></td>
+                <td colspan="2" class="txt-center"><b>{{ $formatQty($totalQty) }}</b></td>
             </tr>
         </table>
 

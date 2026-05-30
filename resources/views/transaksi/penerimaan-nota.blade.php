@@ -1,3 +1,6 @@
+@php
+    $formatQty = fn ($qty) => rtrim(rtrim(number_format((float) $qty, 3, ',', '.'), '0'), ',');
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -161,7 +164,7 @@
                     {{ substr($item->kode_barang, 0, 8) }}<br>
                     <small>{{ substr($item->nama_barang, 0, 20) }}{{ strlen($item->nama_barang) > 20 ? '...' : '' }}</small>
                 </td>
-                <td class="txt-center">{{ number_format($item->jumlah, 0) }}</td>
+                <td class="txt-center">{{ $formatQty($item->jumlah) }}</td>
                 <td class="txt-right">{{ number_format($item->harga_beli, 0) }}</td>
 
             </tr>

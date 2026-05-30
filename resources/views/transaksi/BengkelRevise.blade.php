@@ -112,6 +112,11 @@
                                                 </thead>
                                                 <tbody>
                                                     @foreach($transaksi->details->where('jenis', 'barang') as $detail)
+                                                    @php
+                                                        $stokBarang = (float) ($detail->barang->stok?->stok ?? 0);
+                                                        $stokDisplay = rtrim(rtrim(number_format($stokBarang, 3, ',', '.'), '0'), ',');
+                                                        $qtyValue = rtrim(rtrim(number_format((float) $detail->qty, 3, '.', ''), '0'), '.');
+                                                    @endphp
                                                     <tr data-detail-id="{{ $detail->id }}" data-id="{{ $detail->barang_id }}" data-jenis="barang">
                                                         <td>{{ $loop->iteration }}</td>
                                                         <td class="kodebarang">{{ $detail->barang->kode_barang ?? '' }}</td>
@@ -129,12 +134,12 @@
                                                             <input type="hidden" name="idbarang[]" class="idbarang" value="{{ $detail->barang_id }}">
                                                         </td>
                                                         <td class="text-center">
-                                                            <span class="stoktext">{{ $detail->barang->stok?->stok ?? 0 }}</span>
+                                                            <span class="stoktext">{{ $stokDisplay }}</span>
                                                             <input type="hidden" class="stok" value="{{ $detail->barang->stok?->stok ?? 0 }}">
                                                         </td>
                                                         <td>
                                                             <input type="number" name="qty[]" class="form-control form-control-sm barangqty"
-                                                                   value="{{ $detail->qty }}" min="0.001" step="0.001" max="{{ $detail->barang->stok?->stok ?? 999 }}"
+                                                                   value="{{ $qtyValue }}" min="0.001" step="0.001" max="{{ $detail->barang->stok?->stok ?? 999 }}"
                                                                    onfocus="this.select()" onkeyup="kalkulasi()" required>
                                                             <input type="hidden" name="harga_jual[]" class="hargajual" value="{{ $detail->harga }}">
                                                         </td>
@@ -185,6 +190,9 @@
                                                 </thead>
                                                 <tbody>
                                                     @foreach($transaksi->details->where('jenis', 'jasa') as $detail)
+                                                    @php
+                                                        $jasaQtyValue = rtrim(rtrim(number_format((float) $detail->qty, 3, '.', ''), '0'), '.');
+                                                    @endphp
                                                     <tr data-detail-id="{{ $detail->id }}" data-jenis="jasa">
                                                         <td>{{ $loop->iteration }}</td>
                                                         <td class="cell-select-jasa">
@@ -198,7 +206,7 @@
                                                             <input type="hidden" name="jasa_id[]" class="idjasa" value="{{ $detail->jasa_id }}">
                                                         </td>
                                                         <td>
-                                                            <input type="number" name="jasa_qty[]" class="form-control form-control-sm jasaqty" value="{{ $detail->qty }}" min="0.001" step="0.001" onfocus="this.select()" onkeyup="kalkulasi()">
+                                                            <input type="number" name="jasa_qty[]" class="form-control form-control-sm jasaqty" value="{{ $jasaQtyValue }}" min="0.001" step="0.001" onfocus="this.select()" onkeyup="kalkulasi()">
                                                         </td>
                                                         <td>
                                                             <input type="number" name="jasa_harga[]" class="form-control form-control-sm harga-jasa" value="{{ $detail->harga }}" readonly>
@@ -443,6 +451,17 @@
                     style: 'currency',
                     currency: 'IDR'
                 }).format(angka);
+            }
+
+            function formatStok(angka) {
+                const nilai = Number(angka || 0);
+                if (Number.isInteger(nilai)) {
+                    return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(nilai);
+                }
+                return new Intl.NumberFormat('id-ID', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 3
+                }).format(nilai);
             }
 
             function numbering(tableId) {
@@ -696,7 +715,7 @@
                             <input type="hidden" name="idbarang[]" class="idbarang" value="${datarow ? datarow.id : ''}">
                         </td>
                         <td class="text-center">
-                            <span class="stoktext">${datarow ? datarow.stok : 0}</span>
+                            <span class="stoktext">${datarow ? formatStok(datarow.stok) : 0}</span>
                             <input type="hidden" class="stok" value="${datarow ? datarow.stok : 0}">
                         </td>
                         <td>
@@ -765,7 +784,7 @@
                     const label = data.code ? `${data.code} - ${data.text}` : (data.text || data.id);
                     const stok = data.stok ?? 0;
 
-                    return `${label} (Stok: ${stok})`;
+                    return `${label} (Stok: ${formatStok(stok)})`;
                 }
 
                 context.find('.namabarang').select2({
@@ -801,8 +820,8 @@
                         data = normalizeBarangData(data);
                         
                         let stokInfo = data.stok > 0 ? 
-                            `<span class="text-success">Stok: ${data.stok}</span>` : 
-                            `<span class="text-danger">Stok: ${data.stok}</span>`;
+                            `<span class="text-success">Stok: ${formatStok(data.stok)}</span>` : 
+                            `<span class="text-danger">Stok: ${formatStok(data.stok)}</span>`;
                         
                         let cicilanInfo = data.kategori_cicilan == 0 ? 
                             `<span class="badge bg-warning">Cicilan 1x</span>` : 
@@ -868,7 +887,7 @@
                     row.find('.hargajual').val(data.harga_jual);
                     row.find('.hargajualtext').text(formatRupiahWithDecimal(data.harga_jual));
                     row.find('.diskonitem').val(0);
-                    row.find('.stoktext').text(data.stok);
+                    row.find('.stoktext').text(formatStok(data.stok));
                     row.find('.stok').val(data.stok);
                     row.find('.barangqty').val(1).attr("max", data.stok);
                     row.find('.idbarang').val(data.id);
@@ -927,10 +946,10 @@
                     const stok = parseFloat(selectedOption.data('stok')) || 0;
                     const hargaJual = parseFloat(selectedOption.data('harga-jual')) || parseFloat(row.find('.hargajual').val()) || 0;
                     const kode = selectedOption.data('code') || row.find('.kodebarang').text();
-                    const namaBarang = $.trim(selectedOption.text()).replace(/\s+\(Stok:\s*\d+\)$/i, '');
+                    const namaBarang = $.trim(selectedOption.text()).replace(/\s+\(Stok:\s*[\d.,]+\)$/i, '');
 
                     row.find('.kodebarang').text(kode);
-                    row.find('.stoktext').text(stok);
+                    row.find('.stoktext').text(formatStok(stok));
                     row.find('.stok').val(stok);
                     row.find('.hargajual').val(hargaJual);
                     row.find('.barangqty').attr('max', stok > 0 ? stok : 999);
@@ -967,7 +986,7 @@
                                         harga_jual: item.harga_jual,
                                         stok: item.stok,
                                         kategori_cicilan: item.kategori_cicilan,
-                                        display: `${item.code} - ${item.text} (Stok: ${item.stok})`
+                                        display: `${item.code} - ${item.text} (Stok: ${formatStok(item.stok)})`
                                     };
                                 });
                                 process(suggestions);

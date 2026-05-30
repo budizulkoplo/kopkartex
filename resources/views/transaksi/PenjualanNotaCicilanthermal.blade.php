@@ -46,6 +46,7 @@
 <body class="struk" onload="printOut()">
 <section class="sheet">
 <div class="print-area">
+    <?php $formatQty = fn($qty) => rtrim(rtrim(number_format((float) $qty, 3, ',', '.'), '0'), ','); ?>
 
     <!-- Header -->
     <table style="width:100%; border-collapse:collapse;">
@@ -78,7 +79,7 @@
             <?php foreach($dtl as $v): ?>
                 <tr>
                     <td class="txt-left"><?= $v->nama_barang ?></td>
-                    <td class="txt-center"><?= $v->qty ?></td>
+                    <td class="txt-center"><?= $formatQty($v->qty) ?></td>
                     <td class="txt-right"><?= $v->harga*1 ?></td>
                     <td class="txt-right"><?= $v->harga * $v->qty ?></td>
                 </tr>

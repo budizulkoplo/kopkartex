@@ -290,6 +290,17 @@
                     currency: 'IDR'
                 }).format(angka);
             }
+
+            function formatStok(angka) {
+                const nilai = Number(angka || 0);
+                if (Number.isInteger(nilai)) {
+                    return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(nilai);
+                }
+                return new Intl.NumberFormat('id-ID', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 3
+                }).format(nilai);
+            }
             
             function numbering() {
                 $('#tbterima tbody tr').each(function(index) {
@@ -452,7 +463,7 @@
                         position: 'top-end',
                         icon: 'warning',
                         title: 'Stok habis!',
-                        text: `Produk "${datarow.text}" tidak tersedia (stok: ${datarow.stok})`,
+                        text: `Produk "${datarow.text}" tidak tersedia (stok: ${formatStok(datarow.stok)})`,
                         showConfirmButton: false,
                         timer: 2000
                     });
@@ -496,7 +507,7 @@
                             <input type="number" class="form-control form-control-sm diskonitem" name="diskon_item[]" value="0" min="0" step="0.01" onfocus="this.select()" onkeyup="kalkulasi(this)" onchange="kalkulasi(this)">
                         </td>
                         <td>
-                            <span class="stoktext">${parseFloat(datarow.stok || 0).toFixed(3).replace(/\.?0+$/, '')}</span>
+                            <span class="stoktext">${formatStok(datarow.stok)}</span>
                             <input type="hidden" class="stok" name="stok[]" value="${datarow.stok}">
                         </td>
                         <td>
@@ -565,8 +576,8 @@
                         }
                         
                         let stokInfo = data.stok > 0 ? 
-                            `<span class="text-success">Stok: ${parseFloat(data.stok || 0).toFixed(3).replace(/\.?0+$/, '')}</span>` : 
-                            `<span class="text-danger">Stok: ${parseFloat(data.stok || 0).toFixed(3).replace(/\.?0+$/, '')}</span>`;
+                            `<span class="text-success">Stok: ${formatStok(data.stok)}</span>` : 
+                            `<span class="text-danger">Stok: ${formatStok(data.stok)}</span>`;
                         
                         let cicilanInfo = data.kategori_cicilan == 0 ? 
                             `<span class="badge bg-warning">Cicilan 1x</span>` : 
@@ -619,7 +630,7 @@
                     row.find('.hargajualtext').text(formatRupiahWithDecimal(data.harga_jual));
                     row.find('.diskonitem').val(0);
                     row.find('.hargabeli').val(data.harga_beli || 0);
-                    row.find('.stoktext').text(parseFloat(data.stok || 0).toFixed(3).replace(/\.?0+$/, ''));
+                    row.find('.stoktext').text(formatStok(data.stok));
                     row.find('.stok').val(data.stok);
                     row.find('.barangqty').val(1);
                     row.find('.barangqty').attr("max", data.stok);
@@ -790,7 +801,7 @@
                                         stok: item.stok,
                                         type: item.type,
                                         kategori_cicilan: item.kategori_cicilan,
-                                        display: `${item.code} - ${item.text} (Stok: ${item.stok})`
+                                        display: `${item.code} - ${item.text} (Stok: ${formatStok(item.stok)})`
                                     };
                                 });
                                 process(suggestions);
@@ -817,7 +828,7 @@
                                 position: 'top-end',
                                 icon: 'warning',
                                 title: 'Stok habis!',
-                                text: `Produk "${item.text}" tidak tersedia (stok: ${item.stok})`,
+                                text: `Produk "${item.text}" tidak tersedia (stok: ${formatStok(item.stok)})`,
                                 showConfirmButton: false,
                                 timer: 2000
                             });

@@ -40,6 +40,17 @@ class PenerimaanController extends Controller
         return 'RCV-' . date("ymd") . str_pad($nomorUrut, 3, '0', STR_PAD_LEFT);
     }
 
+    private function parseTransactionDate($date): string
+    {
+        $parsed = Carbon::parse($date);
+
+        if (!preg_match('/\d{1,2}:\d{2}/', (string) $date)) {
+            $parsed->setTimeFrom(now());
+        }
+
+        return $parsed->format('Y-m-d H:i:s');
+    }
+
     // Method untuk mendapatkan invoice baru
     public function getInvoice()
     {
@@ -85,7 +96,7 @@ class PenerimaanController extends Controller
         DB::beginTransaction();
         try {
             $kartuStok = app(KartuStokService::class);
-            $formattedDate = Carbon::parse($request->date)->format('Y-m-d H:i:s');
+            $formattedDate = $this->parseTransactionDate($request->date);
             
             // Validasi supplier
             if (!$request->supplier_id) {
@@ -411,7 +422,7 @@ class PenerimaanController extends Controller
                 throw new Exception('Tanggal tempo wajib diisi jika metode bayar tempo.');
             }
 
-            $penerimaan->tgl_penerimaan = Carbon::parse($validated['tgl_penerimaan'])->format('Y-m-d H:i:s');
+            $penerimaan->tgl_penerimaan = $this->parseTransactionDate($validated['tgl_penerimaan']);
             $penerimaan->metode_bayar = $validated['metode_bayar'];
             $penerimaan->tgl_tempo = $validated['metode_bayar'] === 'tempo'
                 ? Carbon::parse($validated['tgl_tempo'])->format('Y-m-d')
@@ -698,7 +709,7 @@ class PenerimaanController extends Controller
         try {
             $penerimaan = Penerimaan::findOrFail($id);
             
-            $formattedDate = Carbon::parse($request->date)->format('Y-m-d H:i:s');
+            $formattedDate = $this->parseTransactionDate($request->date);
             
             if ($request->metode_bayar == 'tempo') {
                 if (!$request->tgl_tempo) {

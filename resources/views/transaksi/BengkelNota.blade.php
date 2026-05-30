@@ -43,6 +43,7 @@ $isCicilan = $hdr->metode_bayar == 'cicilan';
 $totalBP = 0;      // jasa + kategori 0
 $totalNonBP = 0;   // kategori 1
 $totalDiskonItem = 0;
+$formatQty = fn($qty) => rtrim(rtrim(number_format((float) $qty, 3, ',', '.'), '0'), ',');
 
 // Kelompokkan total
 foreach($dtl as $v){
@@ -133,7 +134,7 @@ if($v->jenis == 'jasa' && $v->jasa){
 <table>
 <tr>
     <td width="45%"><?= strtoupper($nama) ?></td>
-    <td width="10%" class="right"><?= $v->qty ?></td>
+    <td width="10%" class="right"><?= $formatQty($v->qty) ?></td>
     <td width="20%" class="right"><?= number_format($v->harga,0,',','.') ?></td>
     <td width="25%" class="right"><?= number_format($v->total ?? max(($v->harga * $v->qty) - ($v->diskon ?? 0), 0),0,',','.') ?></td>
 </tr>

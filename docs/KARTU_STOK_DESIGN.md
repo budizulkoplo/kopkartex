@@ -176,6 +176,7 @@ Untuk tampilan per barang, tambahkan baris saldo awal sebelum tanggal awal:
 - `kartu_stok` menjadi audit trail historis dan sumber laporan.
 - Revisi dan pembatalan transaksi jangan menghapus histori lama; buat mutasi pembalik agar jejak stok tetap bisa diaudit.
 - Mutasi antar unit wajib menghasilkan dua catatan dengan `batch_id` yang sama.
+- Penerimaan memakai input tanggal dari form dan jam saat transaksi disimpan jika form hanya mengirim tanggal. Ini mencegah histori kartu stok penerimaan tercatat semua di jam `00:00:00`.
 - Sebelum integrasi penuh, data lama perlu proses backfill agar laporan kartu stok historis tidak kosong.
 
 ## Rencana Backfill Data Lama
@@ -202,4 +203,4 @@ Implementasi backfill saat ini:
 app/Services/KartuStokBackfillService.php
 ```
 
-Service ini membaca histori transaksi existing dan mengisi `kartu_stok` tanpa mengubah `stok_unit`. Backfill awal sudah dijalankan saat integrasi ledger dibuat.
+Service ini membaca histori transaksi existing dan mengisi `kartu_stok` tanpa mengubah `stok_unit`. Untuk penerimaan lama yang masih memiliki waktu `00:00:00`, backfill memakai jam dari `created_at` sebagai fallback. Backfill awal sudah dijalankan saat integrasi ledger dibuat.
