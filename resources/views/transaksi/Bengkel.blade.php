@@ -433,6 +433,21 @@
                 }).format(angka);
             }
 
+            function formatStok(angka) {
+                const nilai = Number(angka || 0);
+
+                if (Number.isInteger(nilai)) {
+                    return new Intl.NumberFormat('id-ID', {
+                        maximumFractionDigits: 0
+                    }).format(nilai);
+                }
+
+                return new Intl.NumberFormat('id-ID', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 3
+                }).format(nilai);
+            }
+
             function numbering(tableId) {
                 $(tableId + ' tbody tr').each(function(index) {
                     $(this).find('td:first').text(index + 1);
@@ -715,7 +730,7 @@
                             <input type="hidden" name="idbarang[]" class="idbarang" value="${datarow ? datarow.id : ''}">
                         </td>
                         <td class="text-center">
-                            <span class="stoktext">${datarow ? datarow.stok : 0}</span>
+                            <span class="stoktext">${datarow ? formatStok(datarow.stok) : 0}</span>
                             <input type="hidden" class="stok" value="${datarow ? datarow.stok : 0}">
                         </td>
                         <td>
@@ -796,8 +811,8 @@
                         }
                         
                         let stokInfo = data.stok > 0 ? 
-                            `<span class="text-success">Stok: ${data.stok}</span>` : 
-                            `<span class="text-danger">Stok: ${data.stok}</span>`;
+                            `<span class="text-success">Stok: ${formatStok(data.stok)}</span>` : 
+                            `<span class="text-danger">Stok: ${formatStok(data.stok)}</span>`;
                         
                         let cicilanInfo = data.kategori_cicilan == 0 ? 
                             `<span class="badge bg-warning">Cicilan 1x</span>` : 
@@ -863,7 +878,7 @@
                     row.find('.hargajual').val(data.harga_jual);
                     row.find('.hargajualtext').text(formatRupiahWithDecimal(data.harga_jual));
                     row.find('.diskonitem').val(0);
-                    row.find('.stoktext').text(data.stok);
+                    row.find('.stoktext').text(formatStok(data.stok));
                     row.find('.stok').val(data.stok);
                     row.find('.barangqty').val(1).attr("max", data.stok);
                     row.find('.idbarang').val(data.id);
@@ -1048,7 +1063,7 @@
                                         harga_jual: item.harga_jual,
                                         stok: item.stok,
                                         kategori_cicilan: item.kategori_cicilan,
-                                        display: `${item.code} - ${item.text} (Stok: ${item.stok})`
+                                        display: `${item.code} - ${item.text} (Stok: ${formatStok(item.stok)})`
                                     };
                                 });
                                 process(suggestions);

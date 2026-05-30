@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
+use App\Services\KartuStokService;
 
 class BarangBengkelController extends Controller
 {
@@ -398,19 +399,27 @@ class BarangBengkelController extends Controller
 
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             $id = Crypt::decryptString($request->id);
             $barang = Barang::where('kelompok_unit', 'bengkel')->findOrFail($id);
-            
-            $stokUnit = StokUnit::updateOrCreate(
-                [
-                    'barang_id' => $barang->id,
-                    'unit_id' => 5
-                ],
-                [
-                    'stok' => $request->stok,
-                    'updated_at' => now()
-                ]
-            );
+
+            $kartuStok->setSaldo([
+                'tanggal' => now(),
+                'barang_id' => $barang->id,
+                'unit_id' => 5,
+                'saldo_akhir' => $request->stok,
+                'harga_pokok' => $barang->harga_beli,
+                'jenis_transaksi' => 'stock_adjustment',
+                'nomor_referensi' => 'BGL-STOK-' . $barang->id,
+                'referensi_tipe' => 'barang',
+                'referensi_id' => $barang->id,
+                'created_user' => auth()->id(),
+                'keterangan' => 'Update stok manual barang bengkel',
+            ]);
+
+            $stokUnit = StokUnit::where('barang_id', $barang->id)
+                ->where('unit_id', 5)
+                ->first();
 
             DB::commit();
 

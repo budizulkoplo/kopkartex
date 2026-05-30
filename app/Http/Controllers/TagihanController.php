@@ -14,6 +14,7 @@ use App\Models\Unit;
 use App\Models\StokUnit;
 use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
+use App\Services\KartuStokService;
 
 class TagihanController extends Controller
 {
@@ -148,6 +149,7 @@ class TagihanController extends Controller
         DB::beginTransaction();
 
         try {
+            $kartuStok = app(KartuStokService::class);
             $unitId = $request->unit_id;
             $anggotaId = $request->anggota_id;
             $total = $request->total;
@@ -187,18 +189,29 @@ class TagihanController extends Controller
                     throw new \Exception("Stok tidak cukup untuk barang: " . Barang::find($barangId)->nama_barang);
                 }
 
-                // Kurangi stok
-                $stok->decrement('stok', $qty);
-                $stok->save();
-
                 // Simpan detail penjualan
-                PenjualanDetail::create([
+                $detail = PenjualanDetail::create([
                     'penjualan_id' => $penjualan->id,
                     'barang_id' => $barangId,
                     'qty' => $qty,
                     'harga' => $harga,
                     'subtotal' => $item['subtotal'],
                     'created_at' => now(),
+                ]);
+
+                $kartuStok->keluar([
+                    'tanggal' => $penjualan->tanggal,
+                    'barang_id' => $barangId,
+                    'unit_id' => $unitId,
+                    'qty' => $qty,
+                    'harga_pokok' => Barang::where('id', $barangId)->value('harga_beli'),
+                    'jenis_transaksi' => 'penjualan',
+                    'nomor_referensi' => $penjualan->nomor_invoice,
+                    'referensi_tipe' => 'penjualan',
+                    'referensi_id' => $penjualan->id,
+                    'referensi_detail_id' => $detail->id,
+                    'created_user' => auth()->id(),
+                    'keterangan' => 'Penjualan voucher/tagihan',
                 ]);
             }
 

@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use App\Services\KartuStokService;
 
 class TransaksiBengkelController extends Controller
 {
@@ -179,6 +180,7 @@ class TransaksiBengkelController extends Controller
         DB::beginTransaction();
 
         try {
+            $kartuStok = app(KartuStokService::class);
 
             $date = Carbon::parse($request->tanggal)->setTimeFrom(Carbon::now());
             $computedSubtotal = $this->calculateRequestSubtotal($request);
@@ -265,7 +267,7 @@ class TransaksiBengkelController extends Controller
                         return response()->json('Stok tidak mencukupi', 500);
                     }
 
-                    TransaksiBengkelDetail::create([
+                    $detail = TransaksiBengkelDetail::create([
                         'transaksi_bengkel_id' => $transaksi->id,
                         'jenis'     => 'barang',
                         'barang_id' => $idBarang,
@@ -275,7 +277,20 @@ class TransaksiBengkelController extends Controller
                         'total'     => $this->calculateLineTotal($qty, $harga, $diskonItem),
                     ]);
 
-                    $stok->decrement('stok', $qty);
+                    $kartuStok->keluar([
+                        'tanggal' => $transaksi->tanggal,
+                        'barang_id' => $idBarang,
+                        'unit_id' => Auth::user()->unit_kerja,
+                        'qty' => $qty,
+                        'harga_pokok' => Barang::where('id', $idBarang)->value('harga_beli'),
+                        'jenis_transaksi' => 'transaksi_bengkel',
+                        'nomor_referensi' => $transaksi->nomor_invoice,
+                        'referensi_tipe' => 'transaksi_bengkels',
+                        'referensi_id' => $transaksi->id,
+                        'referensi_detail_id' => $detail->id,
+                        'created_user' => Auth::id(),
+                        'keterangan' => 'Transaksi bengkel',
+                    ]);
                 }
             }
 
@@ -536,6 +551,7 @@ public function revise($id): View|RedirectResponse
         DB::beginTransaction();
 
         try {
+            $kartuStok = app(KartuStokService::class);
             $transaksi = TransaksiBengkel::findOrFail($id);
 
             // Cek status
@@ -555,9 +571,20 @@ public function revise($id): View|RedirectResponse
                     ->where('barang_id', $detail->barang_id)
                     ->first();
 
-                if ($stok) {
-                    $stok->increment('stok', $detail->qty);
-                }
+                $kartuStok->masuk([
+                    'tanggal' => now(),
+                    'barang_id' => $detail->barang_id,
+                    'unit_id' => Auth::user()->unit_kerja,
+                    'qty' => $detail->qty,
+                    'harga_pokok' => $detail->barang?->harga_beli,
+                    'jenis_transaksi' => 'revisi_bengkel',
+                    'nomor_referensi' => $transaksi->nomor_invoice,
+                    'referensi_tipe' => 'transaksi_bengkels',
+                    'referensi_id' => $transaksi->id,
+                    'referensi_detail_id' => $detail->id,
+                    'created_user' => Auth::id(),
+                    'keterangan' => 'Pembalik stok detail lama revisi bengkel',
+                ]);
             }
 
             // =============================
@@ -640,7 +667,7 @@ public function revise($id): View|RedirectResponse
                         throw new Exception('Stok ' . $barang->nama_barang . ' tidak mencukupi. Stok tersedia: ' . ($stok->stok ?? 0));
                     }
 
-                    TransaksiBengkelDetail::create([
+                    $detail = TransaksiBengkelDetail::create([
                         'transaksi_bengkel_id' => $transaksi->id,
                         'jenis' => 'barang',
                         'barang_id' => $item['id'],
@@ -650,8 +677,20 @@ public function revise($id): View|RedirectResponse
                         'total' => $this->calculateLineTotal($item['qty'], $item['harga'], $item['diskon'] ?? 0),
                     ]);
 
-                    // Kurangi stok
-                    $stok->decrement('stok', $item['qty']);
+                    $kartuStok->keluar([
+                        'tanggal' => $transaksi->tanggal,
+                        'barang_id' => $item['id'],
+                        'unit_id' => Auth::user()->unit_kerja,
+                        'qty' => $item['qty'],
+                        'harga_pokok' => $barang->harga_beli,
+                        'jenis_transaksi' => 'revisi_bengkel',
+                        'nomor_referensi' => $transaksi->nomor_invoice,
+                        'referensi_tipe' => 'transaksi_bengkels',
+                        'referensi_id' => $transaksi->id,
+                        'referensi_detail_id' => $detail->id,
+                        'created_user' => Auth::id(),
+                        'keterangan' => 'Stok detail baru revisi bengkel',
+                    ]);
                 }
             }
 
@@ -802,6 +841,7 @@ public function revise($id): View|RedirectResponse
         DB::beginTransaction();
 
         try {
+            $kartuStok = app(KartuStokService::class);
             $transaksi = TransaksiBengkel::findOrFail($id);
 
             // Cek status
@@ -824,9 +864,20 @@ public function revise($id): View|RedirectResponse
                     ->where('barang_id', $detail->barang_id)
                     ->first();
 
-                if ($stok) {
-                    $stok->increment('stok', $detail->qty);
-                }
+                $kartuStok->masuk([
+                    'tanggal' => now(),
+                    'barang_id' => $detail->barang_id,
+                    'unit_id' => Auth::user()->unit_kerja,
+                    'qty' => $detail->qty,
+                    'harga_pokok' => $detail->barang?->harga_beli,
+                    'jenis_transaksi' => 'pembatalan_bengkel',
+                    'nomor_referensi' => $transaksi->nomor_invoice,
+                    'referensi_tipe' => 'transaksi_bengkels',
+                    'referensi_id' => $transaksi->id,
+                    'referensi_detail_id' => $detail->id,
+                    'created_user' => Auth::id(),
+                    'keterangan' => 'Pembatalan transaksi bengkel',
+                ]);
             }
 
             // Update status transaksi

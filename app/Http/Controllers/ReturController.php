@@ -17,6 +17,7 @@ use Illuminate\View\View;
 use Exception;
 use Illuminate\Support\Facades\Crypt;
 use Yajra\DataTables\Facades\DataTables;
+use App\Services\KartuStokService;
 
 class ReturController extends Controller
 {
@@ -244,6 +245,7 @@ class ReturController extends Controller
     {
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             $date = Carbon::parse($request->tgl_retur);
             $unitId = Auth::user()->unit_kerja;
             
@@ -330,10 +332,20 @@ class ReturController extends Controller
                 $dtl->subtotal = $subtotal;
                 $dtl->save();
                 
-                // Kurangi stok
-                StokUnit::where('unit_id', $unitId)
-                    ->where('barang_id', $barangId)
-                    ->decrement('stok', $quantities[$index]);
+                $kartuStok->keluar([
+                    'tanggal' => $hdr->tgl_retur,
+                    'barang_id' => $barangId,
+                    'unit_id' => $unitId,
+                    'qty' => $quantities[$index],
+                    'harga_pokok' => $hargaBeliArr[$index] ?? 0,
+                    'jenis_transaksi' => 'retur_pembelian',
+                    'nomor_referensi' => $hdr->nomor_retur,
+                    'referensi_tipe' => 'retur',
+                    'referensi_id' => $hdr->id,
+                    'referensi_detail_id' => $dtl->id,
+                    'created_user' => Auth::id(),
+                    'keterangan' => 'Retur pembelian ke supplier',
+                ]);
             }
             
             // Update grand total di header
@@ -477,14 +489,26 @@ class ReturController extends Controller
     {
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             $retur = ReturBarang::with('details')->findOrFail($id);
             $unitId = $retur->unit_id;
             
             // Kembalikan semua stok
             foreach ($retur->details as $detail) {
-                StokUnit::where('unit_id', $unitId)
-                    ->where('barang_id', $detail->barang_id)
-                    ->increment('stok', $detail->qty);
+                $kartuStok->masuk([
+                    'tanggal' => now(),
+                    'barang_id' => $detail->barang_id,
+                    'unit_id' => $unitId,
+                    'qty' => $detail->qty,
+                    'harga_pokok' => $detail->harga_beli,
+                    'jenis_transaksi' => 'pembatalan',
+                    'nomor_referensi' => $retur->nomor_retur,
+                    'referensi_tipe' => 'retur',
+                    'referensi_id' => $retur->id,
+                    'referensi_detail_id' => $detail->id,
+                    'created_user' => Auth::id(),
+                    'keterangan' => 'Pembatalan retur pembelian',
+                ]);
             }
             
             // Hapus detail

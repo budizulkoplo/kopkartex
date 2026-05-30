@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
+use App\Services\KartuStokService;
 
 class MutasiStockController extends Controller
 {
@@ -113,6 +114,7 @@ class MutasiStockController extends Controller
     public function store(Request $request){
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             $formattedDate = Carbon::parse($request->date)->format('Y-m-d');
             $hdr=new MutasiStok;
             $hdr->dari_unit = $request->unit1;
@@ -126,6 +128,7 @@ class MutasiStockController extends Controller
 
             $quantities = $request->input('qty');
             $barang = $request->input('id');
+            $batchId = (string) \Illuminate\Support\Str::uuid();
             foreach ($barang as $index => $id) {
                 $qty = (float) ($quantities[$index] ?? 0);
                 $dtl = new MutasiStokDetail;
@@ -133,14 +136,38 @@ class MutasiStockController extends Controller
                 $dtl->barang_id = $barang[$index];
                 $dtl->qty = $qty;
                 $dtl->save();
-                DB::statement("
-                    INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at,created_at) VALUES (?, ?, ? ,NOW(),NOW())
-                    ON DUPLICATE KEY UPDATE stok = stok - ?,updated_at=VALUES(updated_at),created_at=VALUES(created_at)", 
-                    [$barang[$index], $request->unit1, $qty, $qty]);
-                DB::statement("
-                    INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at,created_at) VALUES (?, ?, ? ,NOW(),NOW())
-                    ON DUPLICATE KEY UPDATE stok = stok + ?,updated_at=VALUES(updated_at),created_at=VALUES(created_at)", 
-                    [$barang[$index], $request->unit2, $qty, $qty]);
+                $kartuStok->keluar([
+                    'tanggal' => $formattedDate,
+                    'barang_id' => $barang[$index],
+                    'unit_id' => $request->unit1,
+                    'unit_lawan_id' => $request->unit2,
+                    'qty' => $qty,
+                    'harga_pokok' => Barang::where('id', $barang[$index])->value('harga_beli'),
+                    'jenis_transaksi' => 'mutasi_keluar',
+                    'nomor_referensi' => 'MUT-' . str_pad($hdr->id, 6, '0', STR_PAD_LEFT),
+                    'referensi_tipe' => 'mutasi_stok',
+                    'referensi_id' => $hdr->id,
+                    'referensi_detail_id' => $dtl->id,
+                    'batch_id' => $batchId,
+                    'created_user' => auth()->id(),
+                    'keterangan' => 'Mutasi stok keluar antar unit',
+                ]);
+                $kartuStok->masuk([
+                    'tanggal' => $formattedDate,
+                    'barang_id' => $barang[$index],
+                    'unit_id' => $request->unit2,
+                    'unit_lawan_id' => $request->unit1,
+                    'qty' => $qty,
+                    'harga_pokok' => Barang::where('id', $barang[$index])->value('harga_beli'),
+                    'jenis_transaksi' => 'mutasi_masuk',
+                    'nomor_referensi' => 'MUT-' . str_pad($hdr->id, 6, '0', STR_PAD_LEFT),
+                    'referensi_tipe' => 'mutasi_stok',
+                    'referensi_id' => $hdr->id,
+                    'referensi_detail_id' => $dtl->id,
+                    'batch_id' => $batchId,
+                    'created_user' => auth()->id(),
+                    'keterangan' => 'Mutasi stok masuk antar unit',
+                ]);
             }
             DB::commit();
             return response()->json($hdr);
@@ -191,6 +218,7 @@ class MutasiStockController extends Controller
     {
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             $mutasi = MutasiStok::find($request->id);
             
             if (!$mutasi) {
@@ -209,21 +237,39 @@ class MutasiStockController extends Controller
             
             // Kembalikan stok untuk setiap barang
             foreach ($details as $detail) {
-                // Kembalikan ke unit asal (tambah stok)
-                DB::table('stok_unit')
-                    ->where('barang_id', $detail->barang_id)
-                    ->where('unit_id', $mutasi->dari_unit)
-                    ->update([
-                        'stok' => DB::raw("stok + {$detail->qty}")
-                    ]);
-                    
-                // Kurangi dari unit tujuan
-                DB::table('stok_unit')
-                    ->where('barang_id', $detail->barang_id)
-                    ->where('unit_id', $mutasi->ke_unit)
-                    ->update([
-                        'stok' => DB::raw("stok - {$detail->qty}")
-                    ]);
+                $batchId = (string) \Illuminate\Support\Str::uuid();
+                $kartuStok->masuk([
+                    'tanggal' => now(),
+                    'barang_id' => $detail->barang_id,
+                    'unit_id' => $mutasi->dari_unit,
+                    'unit_lawan_id' => $mutasi->ke_unit,
+                    'qty' => $detail->qty,
+                    'harga_pokok' => Barang::where('id', $detail->barang_id)->value('harga_beli'),
+                    'jenis_transaksi' => 'pembatalan',
+                    'nomor_referensi' => 'MUT-' . str_pad($mutasi->id, 6, '0', STR_PAD_LEFT),
+                    'referensi_tipe' => 'mutasi_stok',
+                    'referensi_id' => $mutasi->id,
+                    'referensi_detail_id' => $detail->id,
+                    'batch_id' => $batchId,
+                    'created_user' => auth()->id(),
+                    'keterangan' => 'Pembatalan mutasi: kembali ke unit asal',
+                ]);
+                $kartuStok->keluar([
+                    'tanggal' => now(),
+                    'barang_id' => $detail->barang_id,
+                    'unit_id' => $mutasi->ke_unit,
+                    'unit_lawan_id' => $mutasi->dari_unit,
+                    'qty' => $detail->qty,
+                    'harga_pokok' => Barang::where('id', $detail->barang_id)->value('harga_beli'),
+                    'jenis_transaksi' => 'pembatalan',
+                    'nomor_referensi' => 'MUT-' . str_pad($mutasi->id, 6, '0', STR_PAD_LEFT),
+                    'referensi_tipe' => 'mutasi_stok',
+                    'referensi_id' => $mutasi->id,
+                    'referensi_detail_id' => $detail->id,
+                    'batch_id' => $batchId,
+                    'created_user' => auth()->id(),
+                    'keterangan' => 'Pembatalan mutasi: keluar dari unit tujuan',
+                ]);
                     
                 // Update status detail menjadi canceled
                 $detail->canceled = 1;
@@ -317,6 +363,7 @@ class MutasiStockController extends Controller
     public function Kembalikan(Request $request){
     DB::beginTransaction();
     try {
+        $kartuStok = app(KartuStokService::class);
         $cekhdr = MutasiStok::find($request->idmutasi);
         
         if (!$cekhdr) {
@@ -339,21 +386,39 @@ class MutasiStockController extends Controller
         
         $qty = (float) $dtl->qty;
 
-        // Kembalikan stok ke unit asal
-        DB::table('stok_unit')
-            ->where('barang_id', $request->idbarang)
-            ->where('unit_id', $cekhdr->dari_unit)
-            ->update([
-                'stok' => DB::raw('stok + ' . $qty)
-            ]);
-            
-        // Kurangi stok dari unit tujuan
-        DB::table('stok_unit')
-            ->where('barang_id', $request->idbarang)
-            ->where('unit_id', $cekhdr->ke_unit)
-            ->update([
-                'stok' => DB::raw('stok - ' . $qty)
-            ]);
+        $batchId = (string) \Illuminate\Support\Str::uuid();
+        $kartuStok->masuk([
+            'tanggal' => now(),
+            'barang_id' => $request->idbarang,
+            'unit_id' => $cekhdr->dari_unit,
+            'unit_lawan_id' => $cekhdr->ke_unit,
+            'qty' => $qty,
+            'harga_pokok' => Barang::where('id', $request->idbarang)->value('harga_beli'),
+            'jenis_transaksi' => 'pembatalan',
+            'nomor_referensi' => 'MUT-' . str_pad($cekhdr->id, 6, '0', STR_PAD_LEFT),
+            'referensi_tipe' => 'mutasi_stok',
+            'referensi_id' => $cekhdr->id,
+            'referensi_detail_id' => $dtl->id,
+            'batch_id' => $batchId,
+            'created_user' => auth()->id(),
+            'keterangan' => 'Pengembalian item mutasi ke unit asal',
+        ]);
+        $kartuStok->keluar([
+            'tanggal' => now(),
+            'barang_id' => $request->idbarang,
+            'unit_id' => $cekhdr->ke_unit,
+            'unit_lawan_id' => $cekhdr->dari_unit,
+            'qty' => $qty,
+            'harga_pokok' => Barang::where('id', $request->idbarang)->value('harga_beli'),
+            'jenis_transaksi' => 'pembatalan',
+            'nomor_referensi' => 'MUT-' . str_pad($cekhdr->id, 6, '0', STR_PAD_LEFT),
+            'referensi_tipe' => 'mutasi_stok',
+            'referensi_id' => $cekhdr->id,
+            'referensi_detail_id' => $dtl->id,
+            'batch_id' => $batchId,
+            'created_user' => auth()->id(),
+            'keterangan' => 'Pengembalian item mutasi dari unit tujuan',
+        ]);
             
         // Update status detail menjadi canceled
         $dtl->canceled = 1;

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Yajra\DataTables\DataTables;
+use App\Services\KartuStokService;
 
 class AmbilBarangController extends Controller
 {
@@ -31,14 +32,26 @@ class AmbilBarangController extends Controller
         
     }
     public function DeleteItem(Request $request){
+        $kartuStok = app(KartuStokService::class);
         $dtl = PenjualanDetail::find($request->id);
         $dtl->delete();
         DB::statement("CALL RecalcPenjualan(?)", [$dtl->penjualan_id]);
         if($request->retur){
             $jual = Penjualan::find($dtl->penjualan_id);
-            StokUnit::where('unit_id', $jual->unit_id)
-            ->where('barang_id', $dtl->barang_id)
-            ->increment('stok', $dtl->qty);
+            $kartuStok->masuk([
+                'tanggal' => now(),
+                'barang_id' => $dtl->barang_id,
+                'unit_id' => $jual->unit_id,
+                'qty' => $dtl->qty,
+                'harga_pokok' => DB::table('barang')->where('id', $dtl->barang_id)->value('harga_beli'),
+                'jenis_transaksi' => 'retur_penjualan',
+                'nomor_referensi' => $jual->nomor_invoice,
+                'referensi_tipe' => 'penjualan',
+                'referensi_id' => $jual->id,
+                'referensi_detail_id' => $dtl->id,
+                'created_user' => Auth::id(),
+                'keterangan' => 'Retur item ambil barang',
+            ]);
             if($jual->metode_bayar=='cicilan'){
                 PenjualanCicil::where('penjualan_id', $jual->id)->forceDelete();
                 for ($i = 1; $i <= $jual->tenor; $i++) {
@@ -73,6 +86,7 @@ class AmbilBarangController extends Controller
         $request->validate(['id' => 'required']);
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             $jual = Penjualan::find($request->id);
             $jual->status_ambil = $request->status;
             
@@ -191,9 +205,20 @@ class AmbilBarangController extends Controller
                 // Kurangi stok hanya jika status_ambil = 'finish'
                 $detail = PenjualanDetail::where('penjualan_id', $request->id)->get();
                 foreach ($detail as $value) {
-                    StokUnit::where('unit_id', $jual->unit_id)
-                        ->where('barang_id', $value->barang_id)
-                        ->decrement('stok', $value->qty);
+                    $kartuStok->keluar([
+                        'tanggal' => $jual->ambil_at ?? now(),
+                        'barang_id' => $value->barang_id,
+                        'unit_id' => $jual->unit_id,
+                        'qty' => $value->qty,
+                        'harga_pokok' => DB::table('barang')->where('id', $value->barang_id)->value('harga_beli'),
+                        'jenis_transaksi' => 'penjualan',
+                        'nomor_referensi' => $jual->nomor_invoice,
+                        'referensi_tipe' => 'penjualan',
+                        'referensi_id' => $jual->id,
+                        'referensi_detail_id' => $value->id,
+                        'created_user' => Auth::id(),
+                        'keterangan' => 'Ambil pesanan mobile',
+                    ]);
                 }
             }
             

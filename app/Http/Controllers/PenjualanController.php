@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use App\Services\KartuStokService;
 
 class PenjualanController extends Controller
 {
@@ -278,6 +279,7 @@ class PenjualanController extends Controller
     public function Store(Request $request){
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             $date = Carbon::parse($request->tanggal)->setTimeFrom(Carbon::now());
             $computedSubtotal = $this->calculateRequestSubtotal($request->qty ?? [], $request->harga_jual ?? [], $request->diskon_item ?? []);
             $computedGrandTotal = $this->calculatePercentGrandTotal($computedSubtotal, $request->diskon ?? 0);
@@ -376,7 +378,20 @@ class PenjualanController extends Controller
                 $dtl->diskon = $this->normalizeItemDiscount($request->diskon_item[$no] ?? 0, $request->qty[$no] * $request->harga_jual[$no]);
                 $dtl->save();
 
-                StokUnit::where('unit_id',Auth::user()->unit_kerja)->where('barang_id',$item)->decrement('stok', $request->qty[$no]);
+                $kartuStok->keluar([
+                    'tanggal' => $penjualan->tanggal,
+                    'barang_id' => $item,
+                    'unit_id' => Auth::user()->unit_kerja,
+                    'qty' => $request->qty[$no],
+                    'harga_pokok' => Barang::where('id', $item)->value('harga_beli'),
+                    'jenis_transaksi' => 'penjualan',
+                    'nomor_referensi' => $penjualan->nomor_invoice,
+                    'referensi_tipe' => 'penjualan',
+                    'referensi_id' => $penjualan->id,
+                    'referensi_detail_id' => $dtl->id,
+                    'created_user' => Auth::id(),
+                    'keterangan' => 'Penjualan toko',
+                ]);
                 $no++;
             }
             
@@ -438,6 +453,7 @@ class PenjualanController extends Controller
     public function StoreUmum(Request $request){
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             $date = Carbon::parse($request->tanggal)->setTimeFrom(Carbon::now());
             $computedSubtotal = $this->calculateRequestSubtotal($request->qty ?? [], $request->harga_jual ?? [], $request->diskon_item ?? []);
             $computedGrandTotal = $this->calculatePercentGrandTotal($computedSubtotal, $request->diskon ?? 0);
@@ -549,7 +565,20 @@ class PenjualanController extends Controller
                 $dtl->diskon = $this->normalizeItemDiscount($request->diskon_item[$no] ?? 0, $request->qty[$no] * $request->harga_jual[$no]);
                 $dtl->save();
 
-                StokUnit::where('unit_id',Auth::user()->unit_kerja)->where('barang_id',$item)->decrement('stok', $request->qty[$no]);
+                $kartuStok->keluar([
+                    'tanggal' => $penjualan->tanggal,
+                    'barang_id' => $item,
+                    'unit_id' => Auth::user()->unit_kerja,
+                    'qty' => $request->qty[$no],
+                    'harga_pokok' => Barang::where('id', $item)->value('harga_beli'),
+                    'jenis_transaksi' => 'penjualan',
+                    'nomor_referensi' => $penjualan->nomor_invoice,
+                    'referensi_tipe' => 'penjualan',
+                    'referensi_id' => $penjualan->id,
+                    'referensi_detail_id' => $dtl->id,
+                    'created_user' => Auth::id(),
+                    'keterangan' => 'Penjualan umum toko',
+                ]);
                 $no++;
             }
             
@@ -719,6 +748,7 @@ class PenjualanController extends Controller
         DB::beginTransaction();
 
         try {
+            $kartuStok = app(KartuStokService::class);
             $penjualan = Penjualan::findOrFail($id);
 
             if ($penjualan->unit_id != Auth::user()->unit_kerja) {
@@ -735,9 +765,20 @@ class PenjualanController extends Controller
                     ->where('barang_id', $detail->barang_id)
                     ->first();
 
-                if ($stok) {
-                    $stok->increment('stok', $detail->qty);
-                }
+                $kartuStok->masuk([
+                    'tanggal' => now(),
+                    'barang_id' => $detail->barang_id,
+                    'unit_id' => Auth::user()->unit_kerja,
+                    'qty' => $detail->qty,
+                    'harga_pokok' => $detail->barang?->harga_beli,
+                    'jenis_transaksi' => 'revisi',
+                    'nomor_referensi' => $penjualan->nomor_invoice,
+                    'referensi_tipe' => 'penjualan',
+                    'referensi_id' => $penjualan->id,
+                    'referensi_detail_id' => $detail->id,
+                    'created_user' => Auth::id(),
+                    'keterangan' => 'Pembalik stok detail lama revisi penjualan',
+                ]);
             }
 
             PenjualanDetail::where('penjualan_id', $id)->delete();
@@ -801,7 +842,7 @@ class PenjualanController extends Controller
                     throw new Exception('Stok ' . $barang->nama_barang . ' tidak mencukupi. Stok tersedia: ' . ($stok->stok ?? 0));
                 }
 
-                PenjualanDetail::create([
+                $dtlBaru = PenjualanDetail::create([
                     'penjualan_id' => $penjualan->id,
                     'barang_id' => $item['id'],
                     'qty' => $item['qty'],
@@ -816,7 +857,20 @@ class PenjualanController extends Controller
                     $totalCicilan1 += $subtotalItem;
                 }
 
-                $stok->decrement('stok', $item['qty']);
+                $kartuStok->keluar([
+                    'tanggal' => $penjualan->tanggal,
+                    'barang_id' => $item['id'],
+                    'unit_id' => Auth::user()->unit_kerja,
+                    'qty' => $item['qty'],
+                    'harga_pokok' => $barang->harga_beli,
+                    'jenis_transaksi' => 'revisi',
+                    'nomor_referensi' => $penjualan->nomor_invoice,
+                    'referensi_tipe' => 'penjualan',
+                    'referensi_id' => $penjualan->id,
+                    'referensi_detail_id' => $dtlBaru->id,
+                    'created_user' => Auth::id(),
+                    'keterangan' => 'Stok detail baru revisi penjualan',
+                ]);
             }
 
             if ($request->metodebayar == 'cicilan') {
@@ -948,6 +1002,7 @@ class PenjualanController extends Controller
     {
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             $penjualanId = $request->penjualan_id;
             $items = $request->items;
             
@@ -962,9 +1017,20 @@ class PenjualanController extends Controller
                 $detail = PenjualanDetail::findOrFail($item['id']);
                 
                 // Kembalikan stok
-                StokUnit::where('unit_id', $penjualan->unit_id)
-                    ->where('barang_id', $item['barang_id'])
-                    ->increment('stok', $item['qty']);
+                $kartuStok->masuk([
+                    'tanggal' => now(),
+                    'barang_id' => $item['barang_id'],
+                    'unit_id' => $penjualan->unit_id,
+                    'qty' => $item['qty'],
+                    'harga_pokok' => $detail->barang?->harga_beli,
+                    'jenis_transaksi' => 'retur_penjualan',
+                    'nomor_referensi' => $penjualan->nomor_invoice,
+                    'referensi_tipe' => 'penjualan',
+                    'referensi_id' => $penjualan->id,
+                    'referensi_detail_id' => $detail->id,
+                    'created_user' => Auth::id(),
+                    'keterangan' => 'Retur penjualan',
+                ]);
                 
                 // Hapus item dari penjualan
                 $detail->delete();

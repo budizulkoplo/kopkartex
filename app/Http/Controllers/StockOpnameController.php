@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Hash;
+use App\Services\KartuStokService;
 
 class StockOpnameController extends Controller
 {
@@ -254,6 +255,7 @@ class StockOpnameController extends Controller
     {
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             // Validasi
             $request->validate([
                 'tgl_opname' => 'required|date',
@@ -320,21 +322,19 @@ class StockOpnameController extends Controller
                 }
             }
 
-            $stokUnit = StokUnit::withTrashed()
-                ->where('barang_id', $barangId)
-                ->where('unit_id', $unitId)
-                ->first();
-
-            if (!$stokUnit) {
-                $stokUnit = new StokUnit();
-                $stokUnit->barang_id = $barangId;
-                $stokUnit->unit_id = $unitId;
-            } elseif ($stokUnit->trashed()) {
-                $stokUnit->restore();
-            }
-
-            $stokUnit->stok = $totalFisik;
-            $stokUnit->save();
+            $kartuStok->setSaldo([
+                'tanggal' => $tglOpname,
+                'barang_id' => $barangId,
+                'unit_id' => $unitId,
+                'saldo_akhir' => $totalFisik,
+                'harga_pokok' => $barang->harga_beli,
+                'jenis_transaksi' => 'stock_opname',
+                'nomor_referensi' => 'OPN-' . str_pad($opnameHdr->id, 6, '0', STR_PAD_LEFT),
+                'referensi_tipe' => 'stock_opname',
+                'referensi_id' => $opnameHdr->id,
+                'created_user' => Auth::id(),
+                'keterangan' => $opnameHdr->keterangan ?? 'Input stock opname',
+            ]);
             
             DB::commit();
             

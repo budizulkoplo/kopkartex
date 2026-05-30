@@ -13,6 +13,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\KartuStokService;
 
 class StockAdjustmentController extends Controller
 {
@@ -105,6 +106,7 @@ class StockAdjustmentController extends Controller
         DB::beginTransaction();
 
         try {
+            $kartuStok = app(KartuStokService::class);
             $unitId = Auth::user()->unit_kerja;
 
             $header = StockAdjustment::create([
@@ -180,13 +182,10 @@ class StockAdjustmentController extends Controller
                         throw new Exception('Tipe adjustment tidak dikenali.');
                 }
 
-                $stokUnit->stok = $newStock;
-                $stokUnit->save();
-
                 $detailNote = trim((string) ($item['note'] ?? ''));
                 $newSatuanName = optional(Satuan::find($newSatuanId))->name ?? $oldSatuanName;
 
-                StockAdjustmentDetail::create([
+                $detail = StockAdjustmentDetail::create([
                     'stock_adjustment_id' => $header->id,
                     'barang_id' => $barang->id,
                     'adjustment_type' => $item['adjustment_type'],
@@ -197,6 +196,21 @@ class StockAdjustmentController extends Controller
                     'new_satuan_id' => $newSatuanId,
                     'conversion_factor' => $conversionFactor,
                     'note' => $detailNote !== '' ? $detailNote : $this->defaultDetailNote($item['adjustment_type'], $oldStock, $newStock, $oldSatuanName, $newSatuanName, $conversionFactor),
+                ]);
+
+                $kartuStok->setSaldo([
+                    'tanggal' => $header->tanggal_adjustment,
+                    'barang_id' => $barang->id,
+                    'unit_id' => $unitId,
+                    'saldo_akhir' => $newStock,
+                    'harga_pokok' => $barang->harga_beli,
+                    'jenis_transaksi' => 'stock_adjustment',
+                    'nomor_referensi' => $header->kode_adjustment,
+                    'referensi_tipe' => 'stock_adjustments',
+                    'referensi_id' => $header->id,
+                    'referensi_detail_id' => $detail->id,
+                    'created_user' => Auth::id(),
+                    'keterangan' => $detail->note,
                 ]);
             }
 

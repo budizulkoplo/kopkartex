@@ -15,6 +15,7 @@ use Illuminate\View\View;
 use App\Models\Satuan;
 use App\Models\Kategori;
 use Illuminate\Support\Facades\Auth;
+use App\Services\KartuStokService;
 
 class PenerimaanController extends Controller
 {
@@ -83,6 +84,7 @@ class PenerimaanController extends Controller
     {
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             $formattedDate = Carbon::parse($request->date)->format('Y-m-d H:i:s');
             
             // Validasi supplier
@@ -185,15 +187,20 @@ class PenerimaanController extends Controller
                 $dtl->subtotal     = $total;
                 $dtl->save();
 
-                // Update stok
-                DB::statement("
-                    INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at, created_at) 
-                    VALUES (?, ?, ?, NOW(), NOW())
-                    ON DUPLICATE KEY UPDATE 
-                        stok = stok + VALUES(stok),
-                        updated_at = VALUES(updated_at)",
-                    [$barangId, Auth::user()->unit_kerja, $quantities[$index]]
-                );
+                $kartuStok->masuk([
+                    'tanggal' => $hdr->tgl_penerimaan,
+                    'barang_id' => $barangId,
+                    'unit_id' => Auth::user()->unit_kerja,
+                    'qty' => $quantities[$index],
+                    'harga_pokok' => $hargaBeliArr[$index] ?? 0,
+                    'jenis_transaksi' => 'penerimaan',
+                    'nomor_referensi' => $hdr->nomor_invoice,
+                    'referensi_tipe' => 'penerimaan',
+                    'referensi_id' => $hdr->idpenerimaan,
+                    'referensi_detail_id' => $dtl->id,
+                    'created_user' => Auth::id(),
+                    'keterangan' => 'Penerimaan barang dari supplier',
+                ]);
 
                 // Update harga di master barang
                 Barang::where('id', $barangId)->update([
@@ -396,6 +403,7 @@ class PenerimaanController extends Controller
 
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             $penerimaanId = $validated['penerimaan_id'];
             $penerimaan = Penerimaan::findOrFail($penerimaanId);
 
@@ -444,11 +452,20 @@ class PenerimaanController extends Controller
                         throw new Exception('Stok tidak cukup untuk menghapus item');
                     }
 
-                    DB::statement("
-                        UPDATE stok_unit
-                        SET stok = stok - ?, updated_at = NOW()
-                        WHERE barang_id = ? AND unit_id = ?
-                    ", [$oldQty, $detail->barang_id, Auth::user()->unit_kerja]);
+                    $kartuStok->keluar([
+                        'tanggal' => now(),
+                        'barang_id' => $detail->barang_id,
+                        'unit_id' => Auth::user()->unit_kerja,
+                        'qty' => $oldQty,
+                        'harga_pokok' => $detail->harga_beli,
+                        'jenis_transaksi' => 'revisi',
+                        'nomor_referensi' => $penerimaan->nomor_invoice,
+                        'referensi_tipe' => 'penerimaan',
+                        'referensi_id' => $penerimaanId,
+                        'referensi_detail_id' => $detail->id,
+                        'created_user' => Auth::id(),
+                        'keterangan' => 'Hapus item dari penerimaan',
+                    ]);
 
                     $detail->delete();
 
@@ -479,13 +496,26 @@ class PenerimaanController extends Controller
                         throw new Exception('Stok tidak cukup untuk revisi');
                     }
 
-                    DB::statement("
-                        INSERT INTO stok_unit (barang_id, unit_id, stok, updated_at, created_at)
-                        VALUES (?, ?, ?, NOW(), NOW())
-                        ON DUPLICATE KEY UPDATE
-                            stok = stok + VALUES(stok),
-                            updated_at = VALUES(updated_at)
-                    ", [$detail->barang_id, Auth::user()->unit_kerja, $selisih]);
+                    $payload = [
+                        'tanggal' => now(),
+                        'barang_id' => $detail->barang_id,
+                        'unit_id' => Auth::user()->unit_kerja,
+                        'qty' => abs($selisih),
+                        'harga_pokok' => $newHargaBeli,
+                        'jenis_transaksi' => 'revisi',
+                        'nomor_referensi' => $penerimaan->nomor_invoice,
+                        'referensi_tipe' => 'penerimaan',
+                        'referensi_id' => $penerimaanId,
+                        'referensi_detail_id' => $detail->id,
+                        'created_user' => Auth::id(),
+                        'keterangan' => 'Revisi qty penerimaan',
+                    ];
+
+                    if ($selisih > 0) {
+                        $kartuStok->masuk($payload);
+                    } else {
+                        $kartuStok->keluar($payload);
+                    }
                 }
 
                 $newPpn = ($newQty * $newHargaBeli) * ($ppnPercent / 100);
@@ -546,18 +576,25 @@ class PenerimaanController extends Controller
     {
         DB::beginTransaction();
         try {
+            $kartuStok = app(KartuStokService::class);
             $penerimaan = Penerimaan::with('details')->findOrFail($id);
             
             // Kembalikan semua stok
             foreach ($penerimaan->details as $detail) {
-                DB::statement("
-                    UPDATE stok_unit 
-                    SET stok = stok - ?, 
-                        updated_at = NOW()
-                    WHERE barang_id = ? 
-                    AND unit_id = ?",
-                    [$detail->jumlah, $detail->barang_id, Auth::user()->unit_kerja]
-                );
+                $kartuStok->keluar([
+                    'tanggal' => now(),
+                    'barang_id' => $detail->barang_id,
+                    'unit_id' => Auth::user()->unit_kerja,
+                    'qty' => $detail->jumlah,
+                    'harga_pokok' => $detail->harga_beli,
+                    'jenis_transaksi' => 'pembatalan',
+                    'nomor_referensi' => $penerimaan->nomor_invoice,
+                    'referensi_tipe' => 'penerimaan',
+                    'referensi_id' => $penerimaan->idpenerimaan,
+                    'referensi_detail_id' => $detail->id,
+                    'created_user' => Auth::id(),
+                    'keterangan' => 'Pembatalan penerimaan',
+                ]);
             }
             
             // Hapus detail

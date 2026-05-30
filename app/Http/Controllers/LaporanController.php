@@ -196,6 +196,148 @@ class LaporanController extends Controller
         ]);
     }
 
+    public function kartuStok(Request $request)
+    {
+        $tanggalAwal = $request->get('tanggal_awal', now()->startOfMonth()->format('Y-m-d'));
+        $tanggalAkhir = $request->get('tanggal_akhir', now()->format('Y-m-d'));
+        $unitId = $request->get('unit_id', Auth::user()->unit_kerja);
+        $barangId = $request->get('barang_id');
+        $jenisTransaksi = $request->get('jenis_transaksi');
+        $keyword = trim((string) $request->get('keyword', ''));
+
+        $units = Unit::query()
+            ->whereNull('deleted_at')
+            ->orderBy('nama_unit')
+            ->get(['id', 'nama_unit']);
+
+        $jenisOptions = DB::table('kartu_stok')
+            ->select('jenis_transaksi')
+            ->whereNotNull('jenis_transaksi')
+            ->distinct()
+            ->orderBy('jenis_transaksi')
+            ->pluck('jenis_transaksi');
+
+        return view('laporan.kartu_stok', [
+            'tanggal_awal' => $tanggalAwal,
+            'tanggal_akhir' => $tanggalAkhir,
+            'unit_id' => $unitId,
+            'barang_id' => $barangId,
+            'jenis_transaksi' => $jenisTransaksi,
+            'keyword' => $keyword,
+            'units' => $units,
+            'jenisOptions' => $jenisOptions,
+        ]);
+    }
+
+    public function kartuStokData(Request $request)
+    {
+        $tanggalAwal = $request->get('tanggal_awal', now()->startOfMonth()->format('Y-m-d'));
+        $tanggalAkhir = $request->get('tanggal_akhir', now()->format('Y-m-d'));
+        $unitId = $request->get('unit_id', Auth::user()->unit_kerja);
+        $jenisTransaksi = $request->get('jenis_transaksi');
+        $keyword = trim((string) $request->get('keyword', ''));
+
+        $query = DB::table('kartu_stok as ks')
+            ->join('barang as b', 'b.id', '=', 'ks.barang_id')
+            ->leftJoin('unit as u', 'u.id', '=', 'ks.unit_id')
+            ->leftJoin('stok_unit as su', function ($join) {
+                $join->on('su.barang_id', '=', 'ks.barang_id')
+                    ->on('su.unit_id', '=', 'ks.unit_id')
+                    ->whereNull('su.deleted_at');
+            })
+            ->select([
+                'ks.barang_id',
+                'ks.unit_id',
+                'b.kode_barang',
+                'b.nama_barang',
+                DB::raw('COALESCE(u.nama_unit, "-") as nama_unit'),
+                DB::raw('COALESCE(su.stok, 0) as stok_sekarang'),
+                DB::raw('SUM(ks.qty_masuk) as total_masuk'),
+                DB::raw('SUM(ks.qty_keluar) as total_keluar'),
+                DB::raw('COUNT(ks.id) as jumlah_mutasi'),
+                DB::raw('MAX(ks.tanggal) as transaksi_terakhir'),
+            ])
+            ->whereBetween('ks.tanggal', [
+                Carbon::parse($tanggalAwal)->startOfDay(),
+                Carbon::parse($tanggalAkhir)->endOfDay(),
+            ])
+            ->when($unitId, fn ($builder) => $builder->where('ks.unit_id', $unitId))
+            ->when($jenisTransaksi, fn ($builder) => $builder->where('ks.jenis_transaksi', $jenisTransaksi))
+            ->when($keyword !== '', function ($builder) use ($keyword) {
+                $builder->where(function ($query) use ($keyword) {
+                    $query->where('b.kode_barang', 'like', '%' . $keyword . '%')
+                        ->orWhere('b.nama_barang', 'like', '%' . $keyword . '%')
+                        ->orWhere('ks.nomor_referensi', 'like', '%' . $keyword . '%')
+                        ->orWhere('ks.keterangan', 'like', '%' . $keyword . '%');
+                });
+            })
+            ->groupBy('ks.barang_id', 'ks.unit_id', 'b.kode_barang', 'b.nama_barang', 'u.nama_unit', 'su.stok');
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('stok_sekarang', fn ($row) => $this->formatQty($row->stok_sekarang))
+            ->editColumn('total_masuk', fn ($row) => $this->formatQty($row->total_masuk))
+            ->editColumn('total_keluar', fn ($row) => $this->formatQty($row->total_keluar))
+            ->editColumn('transaksi_terakhir', fn ($row) => $row->transaksi_terakhir ? Carbon::parse($row->transaksi_terakhir)->format('d-m-Y H:i') : '-')
+            ->addColumn('aksi', function ($row) {
+                return '<button type="button" class="btn btn-sm btn-primary btn-kartu-stok" data-barang-id="' . $row->barang_id . '" data-unit-id="' . $row->unit_id . '" data-barang="' . e($row->kode_barang . ' - ' . $row->nama_barang) . '" data-unit="' . e($row->nama_unit) . '">Kartu Stok</button>';
+            })
+            ->rawColumns(['aksi'])
+            ->make(true);
+    }
+
+    public function kartuStokHistoryData(Request $request, $barangId)
+    {
+        $tanggalAwal = $request->get('tanggal_awal', now()->startOfMonth()->format('Y-m-d'));
+        $tanggalAkhir = $request->get('tanggal_akhir', now()->format('Y-m-d'));
+        $unitId = $request->get('unit_id', Auth::user()->unit_kerja);
+        $jenisTransaksi = $request->get('jenis_transaksi');
+
+        $query = DB::table('kartu_stok as ks')
+            ->leftJoin('users as usr', 'usr.id', '=', 'ks.created_user')
+            ->select([
+                'ks.id',
+                'ks.tanggal',
+                'ks.jenis_transaksi',
+                'ks.qty_masuk',
+                'ks.qty_keluar',
+                'ks.saldo_awal',
+                'ks.saldo_akhir',
+                'ks.nomor_referensi',
+                'ks.keterangan',
+                DB::raw('COALESCE(usr.name, "-") as user_name'),
+            ])
+            ->where('ks.barang_id', $barangId)
+            ->whereBetween('ks.tanggal', [
+                Carbon::parse($tanggalAwal)->startOfDay(),
+                Carbon::parse($tanggalAkhir)->endOfDay(),
+            ])
+            ->when($unitId, fn ($builder) => $builder->where('ks.unit_id', $unitId))
+            ->when($jenisTransaksi, fn ($builder) => $builder->where('ks.jenis_transaksi', $jenisTransaksi))
+            ->orderBy('ks.tanggal')
+            ->orderBy('ks.id');
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('tanggal', fn ($row) => Carbon::parse($row->tanggal)->format('d-m-Y H:i'))
+            ->editColumn('qty_masuk', fn ($row) => $this->formatQty($row->qty_masuk))
+            ->editColumn('qty_keluar', fn ($row) => $this->formatQty($row->qty_keluar))
+            ->editColumn('saldo_awal', fn ($row) => $this->formatQty($row->saldo_awal))
+            ->editColumn('saldo_akhir', fn ($row) => $this->formatQty($row->saldo_akhir))
+            ->make(true);
+    }
+
+    private function formatQty($value): string
+    {
+        $number = (float) $value;
+
+        if (abs($number - round($number)) < 0.0005) {
+            return number_format($number, 0, ',', '.');
+        }
+
+        return rtrim(rtrim(number_format($number, 3, ',', '.'), '0'), ',');
+    }
+
     public function stokDetailExport(Request $request)
     {
         $bulan = $request->get('bulan', now()->format('Y-m'));
