@@ -12,6 +12,7 @@ use App\Exports\LaporanPenerimaanExport;
 use App\Models\Barang;
 use App\Models\Pinbrg;
 use App\Models\StockAdjustmentDetail;
+use App\Services\BarangNonMovingService;
 use App\Models\Unit;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -865,6 +866,8 @@ class LaporanController extends Controller
 
     public function stokOpnameData(Request $request)
     {
+        app(BarangNonMovingService::class)->restoreBengkelWithAnyTransaction();
+
         $bulan = $request->get('bulan', date('Y-m'));
         $unit  = $request->get('unit', 'all');
 

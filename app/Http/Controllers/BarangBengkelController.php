@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 use App\Services\KartuStokService;
+use App\Services\BarangNonMovingService;
 
 class BarangBengkelController extends Controller
 {
@@ -35,6 +36,8 @@ class BarangBengkelController extends Controller
     public function getdata(Request $request)
     {
         try {
+            app(BarangNonMovingService::class)->restoreBengkelWithAnyTransaction();
+
             $barang = Barang::with(['kategoriRelation', 'satuanRelation'])
                 ->where('kelompok_unit', 'bengkel')
                 ->select('barang.*');
@@ -498,6 +501,9 @@ class BarangBengkelController extends Controller
 
     public function markNonMovingCandidates(Request $request)
     {
+        $nonMoving = app(BarangNonMovingService::class);
+        $nonMoving->restoreBengkelWithAnyTransaction();
+
         $bulan = now()->format('Y-m');
 
         $candidateIds = Barang::query()
@@ -506,14 +512,11 @@ class BarangBengkelController extends Controller
             ->whereDoesntHave('stok', function ($query) {
                 $query->where('unit_id', 5)
                     ->where('stok', '>', 0);
-            })
-            ->whereNotExists(function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('transaksi_bengkel_details')
-                    ->whereColumn('transaksi_bengkel_details.barang_id', 'barang.id')
-                    ->where('transaksi_bengkel_details.jenis', 'barang')
-                    ->whereNull('transaksi_bengkel_details.deleted_at');
-            })
+            });
+
+        $nonMoving->whereHasNoTransaction($candidateIds);
+
+        $candidateIds = $candidateIds
             ->pluck('barang.id');
 
         if ($candidateIds->isEmpty()) {

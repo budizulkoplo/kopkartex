@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 use App\Services\KartuStokService;
+use App\Services\BarangNonMovingService;
 
 class MutasiStockController extends Controller
 {
@@ -85,6 +86,8 @@ class MutasiStockController extends Controller
     }
     
     public function getBarangByCode(Request $request){
+        app(BarangNonMovingService::class)->restoreByCode((string) $request->kode);
+
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
             ->where("barang.kode_barang", "=",$request->kode)
             ->where('stok_unit.unit_id',$request->unit)

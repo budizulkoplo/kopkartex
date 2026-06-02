@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use App\Services\KartuStokService;
+use App\Services\BarangNonMovingService;
 
 class TransaksiBengkelController extends Controller
 {
@@ -134,6 +135,8 @@ class TransaksiBengkelController extends Controller
     }
 
     public function getBarangByCode(Request $request){
+        app(BarangNonMovingService::class)->restoreByCode((string) $request->kode, 'bengkel');
+
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
         ->join('kategori','kategori.id','=','barang.idkategori')
         ->where("barang.kode_barang", "=",$request->kode)

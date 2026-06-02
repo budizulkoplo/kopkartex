@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use App\Services\KartuStokService;
+use App\Services\BarangNonMovingService;
 
 class PenjualanController extends Controller
 {
@@ -221,6 +222,8 @@ class PenjualanController extends Controller
     }
 
     public function getBarangByCode(Request $request){
+        app(BarangNonMovingService::class)->restoreByCode((string) $request->kode);
+
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
         ->join('kategori','kategori.id','barang.idkategori')
         ->where("barang.kode_barang", "=",$request->kode)
@@ -249,6 +252,8 @@ class PenjualanController extends Controller
     }
 
     public function getBarangByCodeUmum(Request $request){
+        app(BarangNonMovingService::class)->restoreByCode((string) $request->kode);
+
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
         ->join('kategori','kategori.id','barang.idkategori')
         ->where("barang.kode_barang", "=",$request->kode)

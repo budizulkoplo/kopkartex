@@ -43,6 +43,8 @@ class KartuStokService
             throw new RuntimeException('Barang dan unit wajib diisi untuk kartu stok.');
         }
 
+        app(BarangNonMovingService::class)->restoreIfNonMoving($barangId);
+
         $stokUnit = StokUnit::withTrashed()
             ->where('barang_id', $barangId)
             ->where('unit_id', $unitId)

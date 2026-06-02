@@ -18,6 +18,7 @@ use Exception;
 use Illuminate\Support\Facades\Crypt;
 use Yajra\DataTables\Facades\DataTables;
 use App\Services\KartuStokService;
+use App\Services\BarangNonMovingService;
 
 class ReturController extends Controller
 {
@@ -88,6 +89,8 @@ class ReturController extends Controller
     
     public function getBarangByCode(Request $request)
     {
+        app(BarangNonMovingService::class)->restoreByCode((string) $request->kode);
+
         $unitId = Auth::user()->unit_kerja;
         
         $barang = StokUnit::join('barang', 'barang.id', 'stok_unit.barang_id')
