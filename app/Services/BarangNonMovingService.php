@@ -9,9 +9,8 @@ use Illuminate\Support\Facades\DB;
 class BarangNonMovingService
 {
     private array $transactionSources = [
-        ['table' => 'kartu_stok', 'column' => 'barang_id'],
-        ['table' => 'stock_opname', 'column' => 'id_barang', 'deleted_at' => true],
-        ['table' => 'stock_opname_dtl', 'column' => 'id_barang', 'deleted_at' => true],
+        ['table' => 'kartu_stok', 'column' => 'barang_id', 'ignore_old_stock_opname' => true],
+        ['table' => 'stock_opname', 'column' => 'id_barang', 'deleted_at' => true, 'current_stock_opname_only' => true],
         ['table' => 'transaksi_bengkel_details', 'column' => 'barang_id', 'deleted_at' => true],
         ['table' => 'penjualan_detail', 'column' => 'barang_id', 'deleted_at' => true],
         ['table' => 'penerimaan_detail', 'column' => 'barang_id', 'deleted_at' => true],
@@ -104,6 +103,20 @@ class BarangNonMovingService
 
         if ($source['deleted_at'] ?? false) {
             $query->whereNull($source['table'] . '.deleted_at');
+        }
+
+        if ($source['ignore_old_stock_opname'] ?? false) {
+            $monthStart = now()->startOfMonth()->toDateString();
+
+            $query->where(function (Builder $builder) use ($source, $monthStart) {
+                $builder->where($source['table'] . '.jenis_transaksi', '<>', 'stock_opname')
+                    ->orWhere($source['table'] . '.tanggal', '>=', $monthStart);
+            });
+        }
+
+        if ($source['current_stock_opname_only'] ?? false) {
+            $query->where($source['table'] . '.tgl_opname', '>=', now()->startOfMonth()->toDateString())
+                ->where($source['table'] . '.status', '<>', 'pending');
         }
     }
 }
