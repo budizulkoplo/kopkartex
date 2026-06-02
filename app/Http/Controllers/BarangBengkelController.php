@@ -36,8 +36,6 @@ class BarangBengkelController extends Controller
     public function getdata(Request $request)
     {
         try {
-            app(BarangNonMovingService::class)->restoreBengkelWithAnyTransaction();
-
             $barang = Barang::with(['kategoriRelation', 'satuanRelation'])
                 ->where('kelompok_unit', 'bengkel')
                 ->select('barang.*');

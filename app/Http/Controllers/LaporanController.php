@@ -866,8 +866,6 @@ class LaporanController extends Controller
 
     public function stokOpnameData(Request $request)
     {
-        app(BarangNonMovingService::class)->restoreBengkelWithAnyTransaction();
-
         $bulan = $request->get('bulan', date('Y-m'));
         $unit  = $request->get('unit', 'all');
 
