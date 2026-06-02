@@ -454,7 +454,7 @@
 
             table = $('#tbstokopname').DataTable({
                 ordering: true,
-                order: [[1, 'desc']],
+                order: [[1, 'asc'], [2, 'asc'], [3, 'asc']],
                 pageLength: 50,
                 lengthMenu: [[25, 50, 100, 200, -1], [25, 50, 100, 200, "All"]],
                 responsive: true,
@@ -479,7 +479,13 @@
                     },
                     { 
                         data: "tgl_opname",
-                        className: "text-center"
+                        className: "text-center",
+                        render: function(data, type) {
+                            if (type === 'sort' || type === 'type') {
+                                return data || '';
+                            }
+                            return data || '-';
+                        }
                     },
                     { 
                         data: "unit",
@@ -497,34 +503,53 @@
                         data: "stock_awal",
                         className: "text-end",
                         render: function(data, type, row) {
-                            return parseFloat(data ?? row.stock_sistem ?? 0).toLocaleString('id-ID');
+                            const value = parseFloat(data ?? row.stock_sistem ?? 0) || 0;
+                            if (type === 'sort' || type === 'type') {
+                                return value;
+                            }
+                            return value.toLocaleString('id-ID');
                         }
                     },
                     { 
                         data: "stock_sistem", 
                         className: "text-end",
-                        render: function(data) {
-                            return parseFloat(data || 0).toLocaleString('id-ID');
+                        render: function(data, type) {
+                            const value = parseFloat(data || 0) || 0;
+                            if (type === 'sort' || type === 'type') {
+                                return value;
+                            }
+                            return value.toLocaleString('id-ID');
                         }
                     },
                     { 
                         data: null, 
                         className: "text-end", 
-                        render: function(data){
+                        render: function(data, type){
+                            const value = data.status === "pending" ? null : (parseFloat(data.stock_fisik || 0) || 0);
+                            if (type === 'sort' || type === 'type') {
+                                return value ?? -1;
+                            }
                             if (data.status === "pending") {
                                 return "<span class='text-muted'>-</span>";
                             }
-                            return parseFloat(data.stock_fisik || 0).toLocaleString('id-ID');
+                            return value.toLocaleString('id-ID');
                         }
                     },
                     { 
                         data: null, 
                         className: "text-end", 
-                        render: function(data){
+                        render: function(data, type){
+                            const selisih = data.status === "pending"
+                                ? null
+                                : (parseFloat(data.stock_fisik || 0) - parseFloat(data.stock_sistem || 0));
+
+                            if (type === 'sort' || type === 'type') {
+                                return selisih ?? 0;
+                            }
+
                             if (data.status === "pending") {
                                 return "<span class='text-muted'>-</span>";
                             }
-                            const selisih = parseFloat(data.stock_fisik || 0) - parseFloat(data.stock_sistem || 0);
                             let className = "text-muted";
                             let prefix = "";
                             

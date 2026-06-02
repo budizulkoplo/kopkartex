@@ -871,7 +871,10 @@ class LaporanController extends Controller
         $query = DB::table('stock_opname as so')
             ->leftJoin('unit as u', 'u.id', '=', 'so.id_unit')
             ->leftJoin('barang as b', 'b.id', '=', 'so.id_barang')
-            ->leftJoin('stock_opname_dtl as d', 'd.opnameid', '=', 'so.id')
+            ->leftJoin('stock_opname_dtl as d', function ($join) {
+                $join->on('d.opnameid', '=', 'so.id')
+                    ->whereNull('d.deleted_at');
+            })
             ->select(
                 'so.id',
                 'so.tgl_opname',
@@ -885,7 +888,12 @@ class LaporanController extends Controller
                 'so.status',
                 DB::raw('GROUP_CONCAT(CONCAT(d.qty," (exp: ",d.expired_date,")") SEPARATOR ", ") as detail_expired')
             )
-            ->whereRaw("DATE_FORMAT(so.tgl_opname, '%Y-%m') = ?", [$bulan]);
+            ->whereNull('so.deleted_at')
+            ->whereRaw("DATE_FORMAT(so.tgl_opname, '%Y-%m') = ?", [$bulan])
+            ->where(function ($builder) {
+                $builder->whereNull('b.is_non_moving')
+                    ->orWhere('b.is_non_moving', false);
+            });
 
         if ($unit != 'all') {
             $query->where('so.id_unit', $unit);
@@ -903,7 +911,9 @@ class LaporanController extends Controller
                 'so.keterangan',
                 'so.status'
             )
-            ->orderBy('so.tgl_opname','asc')
+            ->orderBy('so.tgl_opname', 'asc')
+            ->orderBy('u.nama_unit', 'asc')
+            ->orderBy('so.kode_barang', 'asc')
             ->get();
 
         return response()->json(['data' => $data]);
