@@ -88,6 +88,10 @@ class MutasiStockController extends Controller
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
             ->where("barang.kode_barang", "=",$request->kode)
             ->where('stok_unit.unit_id',$request->unit)
+            ->where(function ($query) {
+                $query->whereNull('barang.is_non_moving')
+                    ->orWhere('barang.is_non_moving', false);
+            })
             ->select('barang.id','barang.kode_barang as code','barang.nama_barang as text','stok_unit.stok')
             ->first();
             
@@ -102,6 +106,10 @@ class MutasiStockController extends Controller
         $barang = StokUnit::join('barang','barang.id','stok_unit.barang_id')
             ->whereRaw("CONCAT(barang.kode_barang, barang.nama_barang) LIKE ?", ["%{$request->q}%"])
             ->where('stok_unit.unit_id',$request->unit)
+            ->where(function ($query) {
+                $query->whereNull('barang.is_non_moving')
+                    ->orWhere('barang.is_non_moving', false);
+            })
             ->select('barang.id','barang.kode_barang as code','barang.nama_barang as text','stok_unit.stok')
             ->get();
             

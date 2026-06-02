@@ -15,6 +15,9 @@ class Barang extends Model
         'kode_barang',
         'nama_barang',
         'status_produk',
+        'is_non_moving',
+        'non_moving_at',
+        'non_moving_by',
         'kategori',
         'satuan',
         'type',
@@ -25,6 +28,11 @@ class Barang extends Model
         'idsatuan',
         'kelompok_unit',
         'img',
+    ];
+
+    protected $casts = [
+        'is_non_moving' => 'boolean',
+        'non_moving_at' => 'datetime',
     ];
 
     // Scope untuk filter kelompok unit
@@ -57,6 +65,19 @@ class Barang extends Model
             $builder->whereNull('status_produk')
                 ->orWhere('status_produk', 'aktif');
         });
+    }
+
+    public function scopeNormalMoving($query)
+    {
+        return $query->where(function ($builder) {
+            $builder->whereNull('is_non_moving')
+                ->orWhere('is_non_moving', false);
+        });
+    }
+
+    public function scopeNonMoving($query)
+    {
+        return $query->where('is_non_moving', true);
     }
 
     public function kategoriRelation()

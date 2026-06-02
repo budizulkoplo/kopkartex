@@ -57,6 +57,10 @@ class StockAdjustmentController extends Controller
             ->join('barang', 'barang.id', '=', 'stok_unit.barang_id')
             ->leftJoin('satuan', 'satuan.id', '=', 'barang.idsatuan')
             ->where('stok_unit.unit_id', $unitId)
+            ->where(function ($query) {
+                $query->whereNull('barang.is_non_moving')
+                    ->orWhere('barang.is_non_moving', false);
+            })
             ->when($q !== '', function ($builder) use ($q) {
                 $builder->where(function ($query) use ($q) {
                     $query->where('barang.kode_barang', 'like', '%' . $q . '%')

@@ -20,6 +20,15 @@
                             <div class="card-title">
                                 <div class="row row-cols-auto">
                                     <div class="col">
+                                        <div class="btn-group btn-group-sm" role="group" aria-label="Jenis barang">
+                                            <input type="radio" class="btn-check" name="jenisBarang" id="jenisNormal" value="normal" checked>
+                                            <label class="btn btn-outline-warning" for="jenisNormal">Barang</label>
+
+                                            <input type="radio" class="btn-check" name="jenisBarang" id="jenisNonMoving" value="non_moving">
+                                            <label class="btn btn-outline-warning" for="jenisNonMoving">Non Moving</label>
+                                        </div>
+                                    </div>
+                                    <div class="col">
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text bg-warning text-white">Kategori</span>
                                             <select class="form-select form-select-sm" id="fkategori">
@@ -48,6 +57,9 @@
                                 </button>
                                 <button class="btn btn-sm btn-success ms-1" data-bs-toggle="modal" data-bs-target="#modalQuickAdd">
                                     <i class="bi bi-lightning"></i> Quick Add
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary ms-1" id="btnMarkNonMoving">
+                                    <i class="bi bi-archive"></i> Pindah Kandidat Non Moving
                                 </button>
                             </div>
                         </div>
@@ -266,6 +278,7 @@
                     data: function(d) {
                         d.kategori = $('#fkategori').val();
                         d.status_produk = $('#fstatusproduk').val();
+                        d.jenis_barang = $('input[name="jenisBarang"]:checked').val();
                     },
                     type: "GET"
                 },
@@ -320,8 +333,10 @@
             });
 
             // Filter change
-            $('#fkategori, #fstatusproduk').on('change', function() {
+            $('#fkategori, #fstatusproduk, input[name="jenisBarang"]').on('change', function() {
                 table.ajax.reload();
+                const isNonMoving = $('input[name="jenisBarang"]:checked').val() === 'non_moving';
+                $('#btnadd, [data-bs-target="#modalQuickAdd"], #btnMarkNonMoving').toggle(!isNonMoving);
             });
 
             // Generate kode otomatis
@@ -523,6 +538,66 @@
                     error: function(xhr) {
                         Swal.fire('Error!', xhr.responseJSON?.message || 'Gagal mengubah status produk', 'error');
                     }
+                });
+            });
+
+            $(document).on('click', '.restorebtn', function() {
+                const encryptedId = $(this).data('id');
+
+                $.ajax({
+                    url: "{{ route('barangbengkel.nonmoving.restore') }}",
+                    method: "POST",
+                    data: {
+                        id: encryptedId,
+                        _token: "{{ csrf_token() }}"
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            table.ajax.reload(null, false);
+                            Swal.fire('Berhasil', response.message, 'success');
+                        } else {
+                            Swal.fire('Error!', response.message, 'error');
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire('Error!', xhr.responseJSON?.message || 'Gagal mengembalikan barang', 'error');
+                    }
+                });
+            });
+
+            $('#btnMarkNonMoving').on('click', function() {
+                Swal.fire({
+                    title: 'Pindahkan Kandidat Non Moving?',
+                    html: 'Barang bengkel dengan stok unit 5 = 0 dan belum pernah ada transaksi bengkel akan dipindahkan ke daftar Non Moving. Item pending di stock opname bulan ini juga akan dikeluarkan dari list.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Pindahkan',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (!result.isConfirmed) {
+                        return;
+                    }
+
+                    $.ajax({
+                        url: "{{ route('barangbengkel.nonmoving.mark') }}",
+                        method: "POST",
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        beforeSend: function() {
+                            $('#btnMarkNonMoving').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Memproses...');
+                        },
+                        success: function(response) {
+                            table.ajax.reload();
+                            Swal.fire('Selesai', response.message, 'success');
+                        },
+                        error: function(xhr) {
+                            Swal.fire('Error!', xhr.responseJSON?.message || 'Gagal memindahkan barang', 'error');
+                        },
+                        complete: function() {
+                            $('#btnMarkNonMoving').prop('disabled', false).html('<i class="bi bi-archive"></i> Pindah Kandidat Non Moving');
+                        }
+                    });
                 });
             });
 

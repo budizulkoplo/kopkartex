@@ -6,6 +6,9 @@ use App\Models\Barang;
 use App\Models\Kategori;
 use App\Models\Satuan;
 use App\Models\StokUnit;
+use App\Models\StockOpnameDTL;
+use App\Models\StockOpnameHDR;
+use App\Models\ModalAwal;
 use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -35,6 +38,13 @@ class BarangBengkelController extends Controller
             $barang = Barang::with(['kategoriRelation', 'satuanRelation'])
                 ->where('kelompok_unit', 'bengkel')
                 ->select('barang.*');
+
+            $jenisBarang = $request->input('jenis_barang', 'normal');
+            if ($jenisBarang === 'non_moving') {
+                $barang->nonMoving();
+            } else {
+                $barang->normalMoving();
+            }
 
             $statusProduk = $request->input('status_produk', 'aktif');
             if ($statusProduk === 'aktif') {
@@ -94,8 +104,16 @@ class BarangBengkelController extends Controller
                 ->editColumn('status_produk', function ($q) {
                     return $q->status_produk ?: 'aktif';
                 })
-                ->addColumn('aksi', function ($q) {
+                ->addColumn('aksi', function ($q) use ($jenisBarang) {
                     $encryptedId = Crypt::encryptString($q->id);
+                    if ($jenisBarang === 'non_moving') {
+                        return '
+                            <button class="btn btn-sm btn-success restorebtn" data-id="' . $encryptedId . '" title="Kembalikan ke barang normal">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                        ';
+                    }
+
                     return '
                         <button class="btn btn-sm btn-warning editbtn" data-id="' . $encryptedId . '" title="Edit">
                             <i class="bi bi-pencil-square"></i>
@@ -238,6 +256,7 @@ class BarangBengkelController extends Controller
                 $barang->kode_barang = $request->kode_barang;
                 $barang->kelompok_unit = 'bengkel';
                 $barang->status_produk = 'aktif';
+                $barang->is_non_moving = false;
             }
 
             $barang->nama_barang = $request->nama_barang;
@@ -246,6 +265,9 @@ class BarangBengkelController extends Controller
             $barang->idkategori  = $request->idkategori;
             $barang->idsatuan    = $request->idsatuan;
             $barang->status_produk = $request->input('status_produk', $barang->status_produk ?: 'aktif');
+            $barang->is_non_moving = false;
+            $barang->non_moving_at = null;
+            $barang->non_moving_by = null;
 
             // Handle upload image
             if ($request->hasFile('img')) {
@@ -355,6 +377,7 @@ class BarangBengkelController extends Controller
             $barang->idkategori = $request->idkategori;
             $barang->idsatuan = $request->idsatuan;
             $barang->status_produk = 'aktif';
+            $barang->is_non_moving = false;
             $barang->save();
 
             // Tambah ke stok unit untuk semua unit
@@ -470,6 +493,103 @@ class BarangBengkelController extends Controller
             'success' => true,
             'message' => 'Status produk bengkel berhasil diperbarui.',
             'status_produk' => $barang->status_produk,
+        ]);
+    }
+
+    public function markNonMovingCandidates(Request $request)
+    {
+        $bulan = now()->format('Y-m');
+
+        $candidateIds = Barang::query()
+            ->where('barang.kelompok_unit', 'bengkel')
+            ->normalMoving()
+            ->whereDoesntHave('stok', function ($query) {
+                $query->where('unit_id', 5)
+                    ->where('stok', '>', 0);
+            })
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('transaksi_bengkel_details')
+                    ->whereColumn('transaksi_bengkel_details.barang_id', 'barang.id')
+                    ->where('transaksi_bengkel_details.jenis', 'barang')
+                    ->whereNull('transaksi_bengkel_details.deleted_at');
+            })
+            ->pluck('barang.id');
+
+        if ($candidateIds->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Tidak ada kandidat barang non moving baru.',
+                'count' => 0,
+            ]);
+        }
+
+        DB::beginTransaction();
+        try {
+            Barang::whereIn('id', $candidateIds)->update([
+                'is_non_moving' => true,
+                'non_moving_at' => now(),
+                'non_moving_by' => auth()->id(),
+                'updated_at' => now(),
+            ]);
+
+            StockOpnameDTL::whereIn('id_barang', $candidateIds)
+                ->whereExists(function ($query) use ($bulan) {
+                    $query->select(DB::raw(1))
+                        ->from('stock_opname')
+                        ->whereColumn('stock_opname.id', 'stock_opname_dtl.opnameid')
+                        ->where('stock_opname.id_unit', 5)
+                        ->whereRaw("DATE_FORMAT(stock_opname.tgl_opname, '%Y-%m') = ?", [$bulan])
+                        ->where('stock_opname.status', 'pending')
+                        ->whereNull('stock_opname.deleted_at');
+                })
+                ->delete();
+
+            StockOpnameHDR::whereIn('id_barang', $candidateIds)
+                ->where('id_unit', 5)
+                ->whereRaw("DATE_FORMAT(tgl_opname, '%Y-%m') = ?", [$bulan])
+                ->where('status', 'pending')
+                ->delete();
+
+            ModalAwal::whereIn('barang_id', $candidateIds)
+                ->where('unit_id', 5)
+                ->where('periode', $bulan)
+                ->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => $candidateIds->count() . ' barang berhasil dipindahkan ke Barang Non Moving.',
+                'count' => $candidateIds->count(),
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memindahkan barang non moving: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function restoreNonMoving(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|string',
+        ]);
+
+        $id = Crypt::decryptString($request->id);
+        $barang = Barang::where('kelompok_unit', 'bengkel')->findOrFail($id);
+
+        $barang->is_non_moving = false;
+        $barang->non_moving_at = null;
+        $barang->non_moving_by = null;
+        $barang->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Barang berhasil dikembalikan ke daftar normal.',
         ]);
     }
 }

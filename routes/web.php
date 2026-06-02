@@ -288,6 +288,8 @@ Route::prefix('barangbengkel')->name('barangbengkel.')->middleware($menuAccessMi
     Route::get('/cekcode', [BarangBengkelController::class, 'CekCode'])->name('cekcode');
     Route::post('/store', [BarangBengkelController::class, 'Store'])->name('store');
     Route::post('/status', [BarangBengkelController::class, 'updateStatus'])->name('status');
+    Route::post('/non-moving/mark-candidates', [BarangBengkelController::class, 'markNonMovingCandidates'])->name('nonmoving.mark');
+    Route::post('/non-moving/restore', [BarangBengkelController::class, 'restoreNonMoving'])->name('nonmoving.restore');
     Route::delete('/hapus', [BarangBengkelController::class, 'Hapus'])->name('hapus');
     Route::post('/quickadd', [BarangBengkelController::class, 'quickAdd'])->name('quickadd');
     Route::post('/updatestok', [BarangBengkelController::class, 'updateStok'])->name('updatestok');

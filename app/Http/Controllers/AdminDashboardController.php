@@ -143,6 +143,10 @@ class AdminDashboardController extends Controller
             ->join('barang as b', 'b.id', '=', 's.barang_id')
             ->where('s.unit_id', $context['unit_id'])
             ->where('b.kelompok_unit', $context['item_group'])
+            ->where(function ($query) {
+                $query->whereNull('b.is_non_moving')
+                    ->orWhere('b.is_non_moving', false);
+            })
             ->select('b.nama_barang', DB::raw('SUM(s.stok) as total_stok'))
             ->groupBy('b.nama_barang')
             ->orderByDesc('total_stok')

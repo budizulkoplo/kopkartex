@@ -17,6 +17,18 @@ class MobileStokOpnameController extends BaseMobileController
 {
     private const STATUS_DRAFT = 'draft';
 
+    private function restoreNonMovingBarang(Barang $barang): void
+    {
+        if (! $barang->is_non_moving) {
+            return;
+        }
+
+        $barang->is_non_moving = false;
+        $barang->non_moving_at = null;
+        $barang->non_moving_by = null;
+        $barang->save();
+    }
+
     // Halaman scan barcode
     public function index()
     {
@@ -37,6 +49,8 @@ class MobileStokOpnameController extends BaseMobileController
                 ->with('error', 'Produk tidak ditemukan!');
         }
 
+        $this->restoreNonMovingBarang($barang);
+
         return redirect()->route('mobile.stokopname.create', ['id' => $barang->id]);
     }
 
@@ -44,6 +58,8 @@ class MobileStokOpnameController extends BaseMobileController
     public function create($id)
     {
         $barang = Barang::findOrFail($id);
+        $this->restoreNonMovingBarang($barang);
+
         return view('mobile.stokopname.create', compact('barang'));
     }
 

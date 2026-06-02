@@ -113,6 +113,10 @@ class TransaksiBengkelController extends Controller
                 $query->whereNull('barang.status_produk')
                     ->orWhere('barang.status_produk', 'aktif');
             })
+            ->where(function ($query) {
+                $query->whereNull('barang.is_non_moving')
+                    ->orWhere('barang.is_non_moving', false);
+            })
             ->whereRaw("CONCAT(barang.kode_barang, ' ', barang.nama_barang) LIKE ?", ["%{$keyword}%"])
             ->select(
                 'barang.kode_barang',
@@ -137,6 +141,10 @@ class TransaksiBengkelController extends Controller
         ->where(function ($query) {
             $query->whereNull('barang.status_produk')
                 ->orWhere('barang.status_produk', 'aktif');
+        })
+        ->where(function ($query) {
+            $query->whereNull('barang.is_non_moving')
+                ->orWhere('barang.is_non_moving', false);
         })
         ->select(
             'barang.kode_barang',

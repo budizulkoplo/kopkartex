@@ -35,6 +35,28 @@ class StockOpnameController extends Controller
         }
     }
 
+    private function normalMovingCondition($query, string $column = 'barang.is_non_moving'): void
+    {
+        $query->where(function ($builder) use ($column) {
+            $builder->whereNull($column)
+                ->orWhere($column, false);
+        });
+    }
+
+    private function restoreNonMovingBarang(Barang $barang): bool
+    {
+        if (! $barang->is_non_moving) {
+            return false;
+        }
+
+        $barang->is_non_moving = false;
+        $barang->non_moving_at = null;
+        $barang->non_moving_by = null;
+        $barang->save();
+
+        return true;
+    }
+
     public function index(Request $request): View
     {
         $bulan = $this->resolveBulan($request->bulan);
@@ -101,6 +123,9 @@ class StockOpnameController extends Controller
                     $q->whereNull('barang.status_produk')
                         ->orWhere('barang.status_produk', 'aktif');
                 })
+                ->where(function ($q) {
+                    $this->normalMovingCondition($q);
+                })
                 ->select(
                     'barang.id as id_barang',
                     'barang.kode_barang',
@@ -162,6 +187,9 @@ class StockOpnameController extends Controller
             // Ambil data barang
             $selectedBarang = DB::table('barang')
                 ->where('id', $barangId)
+                ->where(function ($q) {
+                    $this->normalMovingCondition($q);
+                })
                 ->select('id', 'kode_barang as code', 'nama_barang as text')
                 ->first();
                 
@@ -206,6 +234,9 @@ class StockOpnameController extends Controller
                 $q->whereNull('barang.status_produk')
                     ->orWhere('barang.status_produk', 'aktif');
             })
+            ->where(function ($q) {
+                $this->normalMovingCondition($q);
+            })
             ->where(function($q) use ($query) {
                 $q->where('barang.kode_barang', 'like', "%{$query}%")
                   ->orWhere('barang.nama_barang', 'like', "%{$query}%");
@@ -235,6 +266,9 @@ class StockOpnameController extends Controller
             ->where(function ($q) {
                 $q->whereNull('barang.status_produk')
                     ->orWhere('barang.status_produk', 'aktif');
+            })
+            ->where(function ($q) {
+                $this->normalMovingCondition($q);
             })
             ->select(
                 'barang.id',
@@ -364,12 +398,16 @@ class StockOpnameController extends Controller
         $bulan = $this->resolveBulan($request->bulan);
 
         // Cari di barang
-        $barang = DB::table('barang')
-            ->where('kode_barang', $kode)
-            ->select('id', 'kode_barang', 'nama_barang')
+        $barang = Barang::where('kode_barang', $kode)
+            ->where(function ($q) {
+                $q->whereNull('status_produk')
+                    ->orWhere('status_produk', 'aktif');
+            })
             ->first();
 
         if ($barang) {
+            $restoredFromNonMoving = $this->restoreNonMovingBarang($barang);
+
             // Cek apakah sudah ada data opname untuk bulan ini
             $startDate = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
             $endDate = Carbon::createFromFormat('Y-m', $bulan)->endOfMonth();
@@ -381,8 +419,13 @@ class StockOpnameController extends Controller
                 
             return response()->json([
                 'status' => 'found',
-                'data' => $barang,
+                'data' => [
+                    'id' => $barang->id,
+                    'kode_barang' => $barang->kode_barang,
+                    'nama_barang' => $barang->nama_barang,
+                ],
                 'has_data' => $existingOpname,
+                'restored_from_non_moving' => $restoredFromNonMoving,
                 'form_url' => route('stockopname.form', [
                     'barang_id' => $barang->id,
                     'bulan' => $bulan
@@ -503,6 +546,9 @@ class StockOpnameController extends Controller
             ->where('stock_opname.id_unit', $unitId)
             ->whereBetween('stock_opname.tgl_opname', [$startDate, $endDate])
             ->whereNull('stock_opname.deleted_at')
+            ->where(function ($q) {
+                $this->normalMovingCondition($q);
+            })
             ->select([
                 'stock_opname.id as opname_id',
                 'stock_opname.id_barang',
@@ -569,6 +615,9 @@ class StockOpnameController extends Controller
                 ->where(function ($q) {
                     $q->whereNull('barang.status_produk')
                         ->orWhere('barang.status_produk', 'aktif');
+                })
+                ->where(function ($q) {
+                    $this->normalMovingCondition($q);
                 })
                 ->select(
                     'barang.id as id_barang',
@@ -674,6 +723,9 @@ class StockOpnameController extends Controller
         $unitId = Auth::user()->unit_kerja;
         
         $dataModal = ModalAwal::with(['barang', 'unit'])
+            ->whereHas('barang', function ($query) {
+                $query->normalMoving();
+            })
             ->where('periode', $bulan)
             ->where('unit_id', $unitId)
             ->orderBy('kode_barang')

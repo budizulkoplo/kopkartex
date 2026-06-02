@@ -86,6 +86,10 @@ class LaporanController extends Controller
             )
             ->leftJoin('stok_unit as su', 'b.id', '=', 'su.barang_id')
             ->whereNull('b.deleted_at')
+            ->where(function ($query) {
+                $query->whereNull('b.is_non_moving')
+                    ->orWhere('b.is_non_moving', false);
+            })
             ->groupBy('b.id', 'b.kode_barang', 'b.nama_barang')
             ->orderBy('b.nama_barang')
             ->get();
@@ -108,6 +112,10 @@ class LaporanController extends Controller
                 })->toArray()
             )
             ->leftJoin('stok_unit as su', 'barang.id', '=', 'su.barang_id')
+            ->where(function ($query) {
+                $query->whereNull('barang.is_non_moving')
+                    ->orWhere('barang.is_non_moving', false);
+            })
             ->groupBy('barang.id', 'barang.kode_barang', 'barang.nama_barang');
         return DataTables::of($data)
             ->addIndexColumn()
@@ -622,6 +630,10 @@ class LaporanController extends Controller
                 $join->on('adjustment.barang_id', '=', 'b.id');
             })
             ->whereNull('b.deleted_at')
+            ->where(function ($query) {
+                $query->whereNull('b.is_non_moving')
+                    ->orWhere('b.is_non_moving', false);
+            })
             ->when($keyword !== '', function ($query) use ($keyword) {
                 $query->where(function ($builder) use ($keyword) {
                     $builder->where('b.kode_barang', 'like', '%' . $keyword . '%')
@@ -2505,6 +2517,11 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
             )
             ->where('ma.periode', $bulan);
 
+        $query->where(function ($builder) {
+            $builder->whereNull('b.is_non_moving')
+                ->orWhere('b.is_non_moving', false);
+        });
+
         if ($unit_id != 'all') {
             $query->where('ma.unit_id', $unit_id);
         }
@@ -2577,6 +2594,11 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
                 's.name as satuan' // Ambil name dari tabel satuan
             )
             ->where('ma.periode', $bulan);
+
+        $query->where(function ($builder) {
+            $builder->whereNull('b.is_non_moving')
+                ->orWhere('b.is_non_moving', false);
+        });
 
         if ($unit_id != 'all') {
             $query->where('ma.unit_id', $unit_id);
