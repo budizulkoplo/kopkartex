@@ -214,7 +214,7 @@
                                 <button type="button" class="btn btn-warning" onclick="clearform();">
                                     <i class="bi bi-arrow-clockwise"></i> Batal
                                 </button>
-                                <button type="submit" class="btn btn-success">
+                                <button type="submit" class="btn btn-success btn-submit-transaksi">
                                     <i class="bi bi-floppy-fill"></i> Simpan
                                 </button>
                             </div>
@@ -418,6 +418,7 @@
             var existingBarang = {};
             var typeaheadInstance = null;
             var enterPressed = false;
+            var isSubmitting = false;
             
             function loader(onoff) {
                 if(onoff)
@@ -967,7 +968,7 @@
                 $('#detailcus').html('').hide();
             }
 
-            function clearform() {
+            function clearform(refreshInvoice = true) {
                 $('#customer').val('');
                 $('#idcustomer').val('');
                 $('#customer-name').val('');
@@ -989,7 +990,9 @@
                 
                 $('.datepicker').datepicker('setDate', new Date());
                 clearBarcodeSearch();
-                invoice();
+                if (refreshInvoice) {
+                    invoice();
+                }
             }
 
             $(document).ready(function() {
@@ -1189,6 +1192,10 @@
                 // Submit form
                 $('#formTransaksi').on('submit', function(e) {
                     e.preventDefault();
+
+                    if (isSubmitting) {
+                        return;
+                    }
                     
                     if (!this.checkValidity()) {
                         e.stopPropagation();
@@ -1300,6 +1307,13 @@
                 });
 
                 function processSubmit() {
+                    if (isSubmitting) {
+                        return;
+                    }
+
+                    isSubmitting = true;
+                    $('.btn-submit-transaksi').prop('disabled', true);
+
                     let formData = new FormData($('#formTransaksi')[0]);
                     
                     // Tambahkan data jasa
@@ -1332,8 +1346,12 @@
                                     window.open(url, '_blank');
                                 }
                             });
-                            clearform();
-                            invoice();
+                            clearform(false);
+                            if (res.next_invoice) {
+                                $('.txtinv').text(res.next_invoice);
+                            } else {
+                                invoice();
+                            }
                         },
                         error: function(xhr) {
                             loader(false);
@@ -1346,6 +1364,10 @@
                                 text: errorMessage,
                                 icon: "error"
                             });
+                        },
+                        complete: function() {
+                            isSubmitting = false;
+                            $('.btn-submit-transaksi').prop('disabled', false);
                         }
                     });
                 }
@@ -1356,7 +1378,7 @@
                         method: 'GET',
                         beforeSend: function() { loader(true); },
                         success: function(response) {
-                            $('.txtinv').text(response);
+                            $('.txtinv').text(response.invoice || response);
                             loader(false);
                         },
                         error: function() { loader(false); }

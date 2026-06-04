@@ -163,7 +163,7 @@
                         <div class="row justify-content-end">
                             <div class="col-auto d-flex gap-2">
                                 <button type="button" class="btn btn-warning" onclick="clearform();"><i class="bi bi-arrow-clockwise"></i> Batal</button>
-                                <button type="submit" class="btn btn-success"><i class="bi bi-floppy-fill"></i> Simpan</button>
+                                <button type="submit" class="btn btn-success btn-submit-transaksi"><i class="bi bi-floppy-fill"></i> Simpan</button>
                             </div>
                         </div>
                     </div>
@@ -278,6 +278,7 @@
             var existingProducts = {}; // Menyimpan produk yang sudah ada di tabel
             var typeaheadInstance = null; // Simpan instance typeahead
             var enterPressed = false; // Flag untuk mencegah double execution
+            var isSubmitting = false;
             
             function loader(onoff) {
                 if (onoff)
@@ -393,7 +394,7 @@
                     dataType: 'json',
                     beforeSend: function(xhr) { loader(true); },
                     success: function(response) {
-                        $('.txtinv').text(response);
+                        $('.txtinv').text(response.invoice || response);
                         loader(false);
                     },
                     error: function(xhr, status, error) { loader(false); }
@@ -726,7 +727,7 @@
                 focusToBarcode(); // POIN 3: Kembali ke barcode
             }
             
-            function clearform() {
+            function clearform(refreshInvoice = true) {
                 $('#nonamecustomer').val('');
                 $('#idcustomer').val('');
                 $('#customer').val('');
@@ -751,8 +752,9 @@
                 // PERBAIKAN #1: Kosongkan pencarian
                 clearBarcodeSearch();
                 
-                // Refresh invoice
-                invoice();
+                if (refreshInvoice) {
+                    invoice();
+                }
             }
             
             let users = [];
@@ -1055,6 +1057,10 @@
                 // Submit form
                 $('#frmterima').on('submit', function(e) {
                     e.preventDefault(); 
+
+                    if (isSubmitting) {
+                        return;
+                    }
                     
                     // Validasi form
                     if (!this.checkValidity()) {
@@ -1163,6 +1169,13 @@
                 });
                 
                 function processSubmit() {
+                    if (isSubmitting) {
+                        return;
+                    }
+
+                    isSubmitting = true;
+                    $('.btn-submit-transaksi').prop('disabled', true);
+
                     var form = $('#frmterima')[0];
                     var formData = new FormData(form);
 
@@ -1179,9 +1192,13 @@
                         contentType: false,
                         beforeSend: function(xhr) { loader(true); },
                         success: function(response) {
-                            clearform();
+                            clearform(false);
                             loader(false);
-                            invoice();
+                            if (response.next_invoice) {
+                                $('.txtinv').text(response.next_invoice);
+                            } else {
+                                invoice();
+                            }
                             Swal.fire({
                                 title: 'Berhasil!',
                                 text: 'Nota penjualan berhasil dibuat',
@@ -1209,6 +1226,10 @@
                                 text: errorMessage,
                                 icon: "error"
                             });
+                        },
+                        complete: function() {
+                            isSubmitting = false;
+                            $('.btn-submit-transaksi').prop('disabled', false);
                         }
                     });
                 }

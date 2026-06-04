@@ -144,12 +144,12 @@
                             }
                             
                             body {
-                                font-family: 'Arial', sans-serif;
-                                font-size: 10px;
-                                line-height: 1.4;
+                                font-family: Arial, Helvetica, sans-serif;
+                                font-size: 11px;
+                                line-height: 1.45;
                                 color: #000;
-                                padding: 20px;
-                                background: white;
+                                padding: 14px;
+                                background: #fff;
                             }
                             
                             @page {
@@ -176,17 +176,17 @@
                                 text-align: center;
                                 margin-bottom: 10px;
                                 padding-bottom: 6px;
-                                border-bottom: 2px solid #ffc107;
+                                border-bottom: 2px solid #000;
                             }
                             
                             .header h1 {
-                                font-size: 15px;
+                                font-size: 17px;
                                 margin-bottom: 4px;
                                 color: #000;
                             }
                             
                             .header-info {
-                                font-size: 9px;
+                                font-size: 10.5px;
                                 line-height: 1.35;
                             }
                             
@@ -203,20 +203,19 @@
                             }
                             
                             th {
-                                background-color: #ffc107 !important;
+                                background: #fff !important;
                                 color: #000 !important;
                                 border: 1px solid #000 !important;
-                                padding: 6px 4px;
+                                padding: 5px 4px;
                                 font-weight: bold;
-                                font-size: 11px;
+                                font-size: 11.5px;
                                 text-align: left;
-                                -webkit-print-color-adjust: exact;
                             }
                             
                             td {
                                 border: 1px solid #000 !important;
                                 padding: 4px 3px;
-                                font-size: 8.5px;
+                                font-size: 10px;
                                 text-align: left;
                             }
                             
@@ -233,13 +232,11 @@
                             }
                             
                             .invoice-total {
-                                background-color: #fff3cd !important;
-                                -webkit-print-color-adjust: exact;
+                                background: #fff !important;
                             }
                             
                             .grand-total {
-                                background-color: #ffc107 !important;
-                                -webkit-print-color-adjust: exact;
+                                background: #fff !important;
                             }
                             
                             .subtotal-row td {
@@ -253,9 +250,9 @@
                             
                             .footer {
                                 margin-top: 20px;
-                                font-size: 10px;
+                                font-size: 10.5px;
                                 text-align: center;
-                                color: #666;
+                                color: #000;
                             }
                             
                             .page-break {

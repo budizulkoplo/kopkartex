@@ -148,7 +148,7 @@
                         <div class="row justify-content-end">
                             <div class="col-auto d-flex gap-2">
                                 <button type="button" class="btn btn-warning" onclick="clearform();"><i class="bi bi-arrow-clockwise"></i> Batal</button>
-                                <button type="submit" class="btn btn-success"><i class="bi bi-floppy-fill"></i> Simpan</button>
+                                <button type="submit" class="btn btn-success btn-submit-transaksi"><i class="bi bi-floppy-fill"></i> Simpan</button>
                             </div>
                         </div>
                     </div>
@@ -269,6 +269,7 @@
             var existingProducts = {};
             var typeaheadInstance = null;
             var enterPressed = false;
+            var isSubmitting = false;
             
             function loader(onoff) {
                 if (onoff)
@@ -415,7 +416,7 @@
                     dataType: 'json',
                     beforeSend: function(xhr) { loader(true); },
                     success: function(response) {
-                        $('.txtinv').text(response);
+                        $('.txtinv').text(response.invoice || response);
                         loader(false);
                     },
                     error: function(xhr, status, error) { loader(false); }
@@ -701,7 +702,7 @@
                 }
             }
             
-            function clearform() {
+            function clearform(refreshInvoice = true) {
                 $('#customer').val('');
                 $('#idcustomer').val('0');
                 $('textarea[name="note"]').val('');
@@ -720,7 +721,9 @@
                 
                 clearBarcodeSearch();
                 
-                invoice();
+                if (refreshInvoice) {
+                    invoice();
+                }
             }
             
             $(document).ready(function() {
@@ -922,6 +925,10 @@
                 // Submit form
                 $('#frmterima').on('submit', function(e) {
                     e.preventDefault(); 
+
+                    if (isSubmitting) {
+                        return;
+                    }
                     
                     // Validasi form
                     if (!this.checkValidity()) {
@@ -1020,6 +1027,13 @@
                 });
                 
                 function processSubmit() {
+                    if (isSubmitting) {
+                        return;
+                    }
+
+                    isSubmitting = true;
+                    $('.btn-submit-transaksi').prop('disabled', true);
+
                     var form = $('#frmterima')[0];
                     var formData = new FormData(form);
 
@@ -1036,9 +1050,13 @@
                         contentType: false,
                         beforeSend: function(xhr) { loader(true); },
                         success: function(response) {
-                            clearform();
+                            clearform(false);
                             loader(false);
-                            invoice();
+                            if (response.next_invoice) {
+                                $('.txtinv').text(response.next_invoice);
+                            } else {
+                                invoice();
+                            }
                             Swal.fire({
                                 title: 'Berhasil!',
                                 text: 'Nota penjualan umum berhasil dibuat',
@@ -1066,6 +1084,10 @@
                                 text: errorMessage,
                                 icon: "error"
                             });
+                        },
+                        complete: function() {
+                            isSubmitting = false;
+                            $('.btn-submit-transaksi').prop('disabled', false);
                         }
                     });
                 }

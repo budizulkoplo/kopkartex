@@ -442,7 +442,11 @@ class PenjualanController extends Controller
             }
             
             DB::commit();
-            return response()->json(['message' => 'Order saved successfully.','invoice'=>$penjualan->nomor_invoice]);
+            return response()->json([
+                'message' => 'Order saved successfully.',
+                'invoice'=>$penjualan->nomor_invoice,
+                'next_invoice'=>$this->genCode(),
+            ]);
         } catch (Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -629,7 +633,11 @@ class PenjualanController extends Controller
             }
             
             DB::commit();
-            return response()->json(['message' => 'Order saved successfully.','invoice'=>$penjualan->nomor_invoice]);
+            return response()->json([
+                'message' => 'Order saved successfully.',
+                'invoice'=>$penjualan->nomor_invoice,
+                'next_invoice'=>$this->genCodeUmum(),
+            ]);
         } catch (Exception $e) {
             DB::rollBack();
             return response()->json([

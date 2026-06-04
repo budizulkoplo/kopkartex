@@ -435,7 +435,8 @@ class TransaksiBengkelController extends Controller
 
             return response()->json([
                 'message'=>'Transaksi berhasil',
-                'invoice'=>$transaksi->nomor_invoice
+                'invoice'=>$transaksi->nomor_invoice,
+                'next_invoice'=>$this->genCode()
             ]);
 
         } catch (Exception $e) {
