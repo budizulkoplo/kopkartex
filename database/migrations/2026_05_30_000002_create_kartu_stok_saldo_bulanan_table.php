@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('kartu_stok_saldo_bulanan')) {
+            return;
+        }
+
         Schema::create('kartu_stok_saldo_bulanan', function (Blueprint $table) {
             $table->id();
             $table->string('periode', 7);
