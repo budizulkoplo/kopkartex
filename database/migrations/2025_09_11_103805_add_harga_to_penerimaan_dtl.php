@@ -11,11 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('penerimaan_dtl', function (Blueprint $table) {
-            $table->float('harga_beli')->default(0);
-            $table->float('harga_jual')->default(0);
-        });
+        if (! Schema::hasTable('penerimaan_detail')) {
+            return;
+        }
 
+        Schema::table('penerimaan_detail', function (Blueprint $table) {
+            if (! Schema::hasColumn('penerimaan_detail', 'harga_beli')) {
+                $table->float('harga_beli')->default(0);
+            }
+            if (! Schema::hasColumn('penerimaan_detail', 'harga_jual')) {
+                $table->float('harga_jual')->default(0);
+            }
+        });
     }
 
     /**
@@ -23,10 +30,17 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('penerimaan_dtl', function (Blueprint $table) {
-            $table->float('harga_beli')->default(0);
-            $table->float('harga_jual')->default(0);
-        });
+        if (! Schema::hasTable('penerimaan_detail')) {
+            return;
+        }
 
+        Schema::table('penerimaan_detail', function (Blueprint $table) {
+            if (Schema::hasColumn('penerimaan_detail', 'harga_beli')) {
+                $table->dropColumn('harga_beli');
+            }
+            if (Schema::hasColumn('penerimaan_detail', 'harga_jual')) {
+                $table->dropColumn('harga_jual');
+            }
+        });
     }
 };

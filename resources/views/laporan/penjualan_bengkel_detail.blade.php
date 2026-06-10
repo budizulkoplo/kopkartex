@@ -259,16 +259,17 @@
                                 page-break-before: always;
                             }
 
-                            th:nth-child(1), td:nth-child(1) { width: 5%; }
-                            th:nth-child(2), td:nth-child(2) { width: 11%; }
-                            th:nth-child(3), td:nth-child(3) { width: 14%; }
-                            th:nth-child(4), td:nth-child(4) { width: 14%; }
-                            th:nth-child(5), td:nth-child(5) { width: 10%; }
-                            th:nth-child(6), td:nth-child(6) { width: 22%; }
-                            th:nth-child(7), td:nth-child(7) { width: 7%; }
+                            th:nth-child(1), td:nth-child(1) { width: 4%; }
+                            th:nth-child(2), td:nth-child(2) { width: 9%; }
+                            th:nth-child(3), td:nth-child(3) { width: 12%; }
+                            th:nth-child(4), td:nth-child(4) { width: 13%; }
+                            th:nth-child(5), td:nth-child(5) { width: 16%; }
+                            th:nth-child(6), td:nth-child(6) { width: 24%; }
+                            th:nth-child(7), td:nth-child(7) { width: 5%; }
                             th:nth-child(8), td:nth-child(8) { width: 8%; }
                             th:nth-child(9), td:nth-child(9) { width: 9%; }
 
+                            td:nth-child(5),
                             td:nth-child(6) {
                                 word-break: break-word;
                                 overflow-wrap: break-word;

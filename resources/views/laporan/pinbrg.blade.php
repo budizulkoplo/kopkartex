@@ -492,6 +492,7 @@
                         'Total Harga': row.TOTAL_HARGA_formatted.replace(/[^0-9-]/g, ''),
                         'Jumlah Pinjaman': row.JUM_PIN_formatted.replace(/[^0-9-]/g, ''),
                         'Sisa Pinjaman': row.SISA_PIN_formatted.replace(/[^0-9-]/g, ''),
+                        ANGS_X: parseInt(row.ANGS_X || 0, 10),
                         'Angs ke-1': row.ANGSUR1_formatted === '-' ? 0 : row.ANGSUR1_formatted.replace(/[^0-9-]/g, ''),
                         'Angs ke-2': row.ANGSUR2_formatted === '-' ? 0 : row.ANGSUR2_formatted.replace(/[^0-9-]/g, ''),
                         Jenis: row.JENIS,

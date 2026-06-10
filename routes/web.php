@@ -6,6 +6,8 @@ use App\Http\Controllers\AnggotaController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\BarangController;
+use App\Http\Controllers\CashBankMasterController;
+use App\Http\Controllers\CashBankTransactionController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\MutasiStockController;
 use App\Http\Controllers\PenerimaanController;
@@ -306,6 +308,47 @@ Route::prefix('supplier')->middleware($menuAccessMiddleware)->group(function () 
     Route::delete('/hapus', [SupplierController::class, 'Hapus'])->name('supplier.hapus');
 });
 
+Route::prefix('cashbank')->name('cashbank.')->middleware($menuAccessMiddleware)->group(function () {
+    Route::prefix('master')->group(function () {
+        Route::get('/kode-dokumen', [CashBankMasterController::class, 'documentCodes'])->name('document-codes.index');
+        Route::get('/kode-dokumen/data', [CashBankMasterController::class, 'documentCodeData'])->name('document-codes.data');
+        Route::post('/kode-dokumen/store', [CashBankMasterController::class, 'storeDocumentCode'])->name('document-codes.store');
+        Route::delete('/kode-dokumen/delete', [CashBankMasterController::class, 'deleteDocumentCode'])->name('document-codes.delete');
+
+        Route::get('/coa', [CashBankMasterController::class, 'coas'])->name('coas.index');
+        Route::get('/coa/data', [CashBankMasterController::class, 'coaData'])->name('coas.data');
+        Route::post('/coa/store', [CashBankMasterController::class, 'storeCoa'])->name('coas.store');
+        Route::delete('/coa/delete', [CashBankMasterController::class, 'deleteCoa'])->name('coas.delete');
+
+        Route::get('/bank', [CashBankMasterController::class, 'banks'])->name('banks.index');
+        Route::get('/bank/data', [CashBankMasterController::class, 'bankData'])->name('banks.data');
+        Route::post('/bank/store', [CashBankMasterController::class, 'storeBank'])->name('banks.store');
+        Route::delete('/bank/delete', [CashBankMasterController::class, 'deleteBank'])->name('banks.delete');
+    });
+
+    Route::prefix('transaksi')->name('transactions.')->group(function () {
+        Route::get('/umum', [CashBankTransactionController::class, 'umum'])->name('umum.index');
+        Route::get('/pembayaran-hutang', [CashBankTransactionController::class, 'hutang'])->name('hutang.index');
+
+        foreach ([
+            'umum' => 'umum',
+            'pembayaran-hutang' => 'hutang',
+        ] as $uri => $name) {
+            Route::prefix($uri)->name($name . '.')->group(function () {
+                Route::post('/store', [CashBankTransactionController::class, 'store'])->name('store');
+                Route::get('/nomor', [CashBankTransactionController::class, 'getNumber'])->name('number');
+                Route::post('/quick-document', [CashBankTransactionController::class, 'quickDocument'])->name('quick-document');
+                Route::post('/quick-coa', [CashBankTransactionController::class, 'quickCoa'])->name('quick-coa');
+                Route::post('/quick-supplier', [CashBankTransactionController::class, 'quickSupplier'])->name('quick-supplier');
+                Route::get('/suppliers', [CashBankTransactionController::class, 'suppliers'])->name('suppliers');
+                Route::get('/invoices', [CashBankTransactionController::class, 'invoiceSearch'])->name('invoices');
+                Route::get('/logs', [CashBankTransactionController::class, 'logs'])->name('logs');
+                Route::get('/nota/{nomor}', [CashBankTransactionController::class, 'nota'])->name('nota');
+            });
+        }
+    });
+});
+    
 Route::get('/ss', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified', 'global.app']);
