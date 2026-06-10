@@ -80,6 +80,14 @@
             .cb-side .cb-field {
                 grid-template-columns: 120px minmax(0, 1fr);
             }
+            .cb-select2-sm + .select2-container--bootstrap-5 .select2-selection {
+                min-height: 31px;
+                font-size: 12px;
+                border-radius: 0;
+            }
+            #detailTable .select2-container {
+                min-width: 180px;
+            }
             .cb-line label {
                 width: 124px;
                 margin: 0;
@@ -329,7 +337,7 @@
                                 <div class="row g-2 mt-1 align-items-end">
                                     <div class="col-md-4">
                                         <label class="form-label">Kode Akun Detail</label>
-                                        <select class="form-control form-control-sm" id="detailCoaPicker">
+                                        <select class="form-control form-control-sm cb-select2-sm" id="detailCoaPicker">
                                             <option value="">Pilih COA</option>
                                             @foreach($coas as $coa)
                                                 <option value="{{ $coa->id }}">{{ $coa->kode_akun }} - {{ $coa->nama_akun }}</option>
@@ -525,6 +533,24 @@
                 return '<option value="">Pilih COA</option>' + coaOptions.map(coa => `<option value="${coa.id}" ${String(coa.id) === String(selectedId) ? 'selected' : ''}>${coa.label}</option>`).join('');
             }
 
+            function initCoaSelect2(target) {
+                if (!$.fn.select2) return;
+
+                target.each(function () {
+                    const select = $(this);
+                    if (select.data('select2')) {
+                        select.select2('destroy');
+                    }
+
+                    select.select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        placeholder: 'Pilih / cari COA',
+                        allowClear: true
+                    });
+                });
+            }
+
             function updateRefNota() {
                 const refs = [];
                 $('#detailTable tbody .nomor-invoice').each(function () {
@@ -572,7 +598,7 @@
                 const row = $(`
                     <tr>
                         <td>
-                            <select class="form-control form-control-sm" name="detail[${idx}][coa_id]">${optionHtml(selectedCoa)}</select>
+                            <select class="form-control form-control-sm detail-coa-select cb-select2-sm" name="detail[${idx}][coa_id]">${optionHtml(selectedCoa)}</select>
                         </td>
                         <td>
                             <input type="text" class="form-control form-control-sm invoice-search" autocomplete="off" placeholder="Cari invoice">
@@ -596,6 +622,7 @@
                     </tr>
                 `);
                 $('#detailTable tbody').append(row);
+                initCoaSelect2(row.find('.detail-coa-select'));
                 bindInvoiceSearch(row.find('.invoice-search'));
                 if (data.nomor_invoice) fillInvoice(row, data);
             }
@@ -786,7 +813,13 @@
                         const label = `${data.kode_akun} - ${data.nama_akun}`;
                         coaOptions.push({ id: data.id, label });
                         coaLookup[data.id] = { code: data.kode_akun, name: data.nama_akun };
-                        $('#detailTable tbody select').each(function () { $(this).append(`<option value="${data.id}">${label}</option>`); });
+                        $('#detailCoaPicker, #detailTable tbody .detail-coa-select').each(function () {
+                            const select = $(this);
+                            select.append(`<option value="${data.id}">${label}</option>`);
+                            if (select.data('select2')) {
+                                select.trigger('change.select2');
+                            }
+                        });
                         $('#coaModal').modal('hide');
                         this.reset();
                     })
@@ -846,6 +879,7 @@
             });
 
             if (jenis === 'pembayaran_hutang') addDetailRow();
+            initCoaSelect2($('#detailCoaPicker'));
             if (!$('#documentCode').val() && $('#documentCode option[value!=""]').length === 1) {
                 $('#documentCode option[value!=""]').first().prop('selected', true);
             }
