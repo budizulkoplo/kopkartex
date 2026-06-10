@@ -20,11 +20,10 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Kode</th>
-                                <th>Nama Bank</th>
+                                <th>ID Akun</th>
+                                <th>Nama Akun</th>
                                 <th>No Rekening</th>
-                                <th>Nama Rekening</th>
-                                <th>COA</th>
+                                <th>Nama Bank</th>
                                 <th>Status</th>
                                 <th>Aksi</th>
                             </tr>
@@ -46,29 +45,20 @@
                     <div class="modal-body">
                         <input type="hidden" name="id">
                         <div class="mb-2">
-                            <label class="form-label">Kode Bank</label>
-                            <input type="text" name="kode_bank" class="form-control form-control-sm" required>
+                            <label class="form-label">ID Akun</label>
+                            <input type="text" name="kode_akun" class="form-control form-control-sm" placeholder="110103" required>
                         </div>
                         <div class="mb-2">
-                            <label class="form-label">Nama Bank</label>
-                            <input type="text" name="nama_bank" class="form-control form-control-sm" required>
+                            <label class="form-label">Nama Akun</label>
+                            <input type="text" name="nama_akun" class="form-control form-control-sm" placeholder="Kas CV, Mandiri" required>
                         </div>
                         <div class="mb-2">
                             <label class="form-label">Nomor Rekening</label>
                             <input type="text" name="nomor_rekening" class="form-control form-control-sm">
                         </div>
                         <div class="mb-2">
-                            <label class="form-label">Nama Rekening</label>
-                            <input type="text" name="nama_rekening" class="form-control form-control-sm">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">COA Bank</label>
-                            <select name="coa_id" class="form-control form-control-sm">
-                                <option value="">Pilih COA</option>
-                                @foreach($coas as $coa)
-                                    <option value="{{ $coa->id }}">{{ $coa->kode_akun }} - {{ $coa->nama_akun }}</option>
-                                @endforeach
-                            </select>
+                            <label class="form-label">Nama Bank</label>
+                            <input type="text" name="nama_bank" class="form-control form-control-sm" placeholder="Bank BCA" required>
                         </div>
                         <div class="mb-2">
                             <label class="form-label">Keterangan</label>
@@ -96,11 +86,10 @@
                 ajax: "{{ route('cashbank.banks.data') }}",
                 columns: [
                     { data: 'id', visible: false },
-                    { data: 'kode_bank' },
-                    { data: 'nama_bank' },
+                    { data: 'kode_akun' },
+                    { data: 'nama_akun' },
                     { data: 'nomor_rekening' },
-                    { data: 'nama_rekening' },
-                    { data: 'coa_label' },
+                    { data: 'nama_bank' },
                     { data: 'is_active', render: data => data ? '<span class="badge bg-success">Aktif</span>' : '<span class="badge bg-secondary">Nonaktif</span>' },
                     { data: null, orderable: false, searchable: false, render: () => '<span class="badge rounded-pill bg-warning editcell"><i class="bi bi-pencil-square"></i></span> <span class="badge rounded-pill bg-danger delcell"><i class="bi bi-trash3-fill"></i></span>' }
                 ]
@@ -126,11 +115,10 @@
             $('#tableData tbody').on('click', '.editcell', function () {
                 const row = table.row($(this).closest('tr')).data();
                 $('[name=id]').val(row.id);
-                $('[name=kode_bank]').val(row.kode_bank);
-                $('[name=nama_bank]').val(row.nama_bank);
+                $('[name=kode_akun]').val(row.kode_akun);
+                $('[name=nama_akun]').val(row.nama_akun);
                 $('[name=nomor_rekening]').val(row.nomor_rekening);
-                $('[name=nama_rekening]').val(row.nama_rekening);
-                $('[name=coa_id]').val(row.coa_id);
+                $('[name=nama_bank]').val(row.nama_bank);
                 $('[name=keterangan]').val(row.keterangan);
                 $('#isActive').prop('checked', !!row.is_active);
                 $('#formModal').modal('show');

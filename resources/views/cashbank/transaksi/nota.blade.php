@@ -22,6 +22,7 @@
             </div>
             <div class="text-end">
                 <strong>{{ $transaction->nomor_transaksi }}</strong><br>
+                Periode {{ $transaction->periode ?? optional($transaction->tgl_transaksi)->format('Ym') }}<br>
                 {{ optional($transaction->tgl_transaksi)->format('d-m-Y') }}
             </div>
         </div>
@@ -44,6 +45,16 @@
                 <td>: {{ ucfirst($transaction->dibayar_dengan) }}</td>
                 <td>Bank</td>
                 <td>: {{ $transaction->bank->nama_bank ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td>No Ref / No Nota</td>
+                <td>: {{ $transaction->no_ref_nota ?? '-' }}</td>
+                <td>No Cash/Cek/Giro</td>
+                <td>: {{ $transaction->no_cash_cek_giro ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td>Tgl Giro/Cek</td>
+                <td colspan="3">: {{ $transaction->tgl_giro_cek ? $transaction->tgl_giro_cek->format('d-m-Y') : '-' }}</td>
             </tr>
             <tr>
                 <td>Guna Membayar</td>

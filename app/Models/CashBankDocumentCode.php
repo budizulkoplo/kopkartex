@@ -15,6 +15,8 @@ class CashBankDocumentCode extends Model
         'kode',
         'nama',
         'prefix',
+        'bank_id',
+        'coa_id',
         'keterangan',
         'is_active',
     ];
@@ -22,4 +24,14 @@ class CashBankDocumentCode extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    public function coa()
+    {
+        return $this->belongsTo(CashBankCoa::class, 'coa_id');
+    }
+
+    public function bank()
+    {
+        return $this->belongsTo(CashBankBank::class, 'bank_id');
+    }
 }

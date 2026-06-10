@@ -1,11 +1,190 @@
 <x-app-layout>
     <x-slot name="pagetitle">{{ $title }}</x-slot>
-    @php($routeScope = $jenis === 'pembayaran_hutang' ? 'hutang' : 'umum')
+    @php
+        $routeScope = $jenis === 'pembayaran_hutang' ? 'hutang' : 'umum';
+        $coaOptionsForJs = $coas->map(fn($coa) => [
+            'id' => $coa->id,
+            'label' => $coa->kode_akun . ' - ' . $coa->nama_akun,
+        ])->values();
+        $coaLookupForJs = $coas->mapWithKeys(fn($coa) => [
+            $coa->id => [
+                'code' => $coa->kode_akun,
+                'name' => $coa->nama_akun,
+            ],
+        ])->all();
+        $bankLookupForJs = $banks->mapWithKeys(fn($bank) => [
+            $bank->id => [
+                'account_code' => $bank->kode_akun ?? '',
+                'account_name' => $bank->nama_akun ?? '',
+            ],
+        ])->all();
+    @endphp
+    <x-slot name="csscustom">
+        <style>
+            .cb-compact {
+                font-size: 12px;
+            }
+            .cashbank-title {
+                font-size: 20px;
+                line-height: 1.2;
+            }
+            .cb-line {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                margin-bottom: 4px;
+                min-height: 24px;
+            }
+            .cb-form-grid {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 380px;
+                gap: 16px;
+                align-items: start;
+            }
+            .cb-field {
+                display: grid;
+                grid-template-columns: 120px minmax(0, 1fr);
+                gap: 6px;
+                align-items: center;
+                min-height: 29px;
+                margin-bottom: 4px;
+            }
+            .cb-field > label {
+                margin: 0;
+                font-weight: 700;
+                text-transform: uppercase;
+                white-space: nowrap;
+            }
+            .cb-control-row {
+                display: flex;
+                gap: 4px;
+                align-items: center;
+                min-width: 0;
+            }
+            .cb-control-row .form-control,
+            .cb-control-row .form-select,
+            .cb-field .form-control,
+            .cb-field .form-select,
+            .cb-field .btn {
+                height: 26px;
+                min-height: 26px;
+                padding-top: 1px;
+                padding-bottom: 1px;
+                border-radius: 0;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .cb-side {
+                padding-top: 6px;
+            }
+            .cb-side .cb-field {
+                grid-template-columns: 120px minmax(0, 1fr);
+            }
+            .cb-line label {
+                width: 124px;
+                margin: 0;
+                font-weight: 700;
+                text-transform: uppercase;
+                white-space: nowrap;
+            }
+            .cb-line-offset {
+                padding-left: 128px;
+            }
+            .cb-compact .form-control,
+            .cb-compact .btn {
+                height: 25px;
+                min-height: 25px;
+                padding-top: 1px;
+                padding-bottom: 1px;
+                border-radius: 0;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .cb-code {
+                flex: 0 0 96px;
+                max-width: 120px;
+            }
+            .cb-fill {
+                flex: 1 1 auto;
+                min-width: 120px;
+            }
+            .cb-cyan {
+                background-color: #72eeee;
+                color: #033;
+            }
+            .cb-new {
+                flex: 0 0 auto;
+                min-width: 42px;
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+            .cb-amount {
+                flex: 0 0 145px;
+                max-width: 145px;
+            }
+            .cb-ref-label {
+                width: 110px !important;
+                margin-left: 8px !important;
+                text-transform: none !important;
+            }
+            .cb-ref {
+                flex: 0 0 290px;
+                height: 48px !important;
+            }
+            .cb-giro-label {
+                width: 115px !important;
+                text-transform: none !important;
+                text-align: right;
+            }
+            .cb-giro {
+                flex: 0 0 170px;
+            }
+            .cb-giro-date-label {
+                width: 86px !important;
+                text-transform: none !important;
+                text-align: right;
+            }
+            .cb-giro-date {
+                flex: 0 0 130px;
+            }
+            .cb-period-label,
+            .cb-trx-label {
+                width: 100px !important;
+                text-align: right;
+            }
+            .cb-period {
+                flex: 0 0 84px;
+                background-color: #fff59d;
+            }
+            .cb-trx {
+                flex: 0 0 165px;
+            }
+            @media (max-width: 992px) {
+                .cb-form-grid {
+                    grid-template-columns: 1fr;
+                }
+                .cb-line {
+                    flex-wrap: wrap;
+                }
+                .cb-line label {
+                    width: 120px;
+                }
+                .cb-line-offset {
+                    padding-left: 0;
+                }
+                .cb-ref,
+                .cb-giro,
+                .cb-giro-date {
+                    flex: 1 1 140px;
+                }
+            }
+        </style>
+    </x-slot>
 
     <div class="app-content-header">
         <div class="container-fluid">
             <div class="d-flex justify-content-between align-items-center">
-                <h3 class="mb-0">{{ $title }}</h3>
+                <h3 class="mb-0 cashbank-title">{{ $title }}</h3>
                 <span class="badge bg-dark">{{ $nomor }}</span>
             </div>
         </div>
@@ -22,88 +201,152 @@
                                 <strong>Form Transaksi</strong>
                             </div>
                             <div class="card-body">
-                                <div class="row g-2">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Nomor Transaksi</label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="text" class="form-control" value="{{ $nomor }}" readonly id="nomorPreview">
-                                            <button type="button" class="btn btn-outline-secondary" id="btnRefreshNumber"><i class="bi bi-arrow-clockwise"></i></button>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Unit Usaha</label>
-                                        <select class="form-control form-control-sm" name="unit_id" required>
-                                            <option value="">Pilih Unit</option>
-                                            @foreach($units as $unit)
-                                                <option value="{{ $unit->id }}" @selected((int) auth()->user()->unit_kerja === (int) $unit->id)>{{ $unit->nama_unit }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Kode Dokumen</label>
-                                        <div class="input-group input-group-sm">
-                                            <select class="form-control" name="document_code_id" id="documentCode" required>
-                                                <option value="">Pilih Kode Dokumen</option>
-                                                @foreach($documents as $document)
-                                                    <option value="{{ $document->id }}">{{ $document->kode }} - {{ $document->nama }}</option>
+                                <div class="cb-compact cb-form-grid">
+                                    <div>
+                                        <div class="cb-field">
+                                            <label>Unit Usaha</label>
+                                            <select class="form-control form-control-sm" name="unit_id" required>
+                                                <option value="">Pilih Unit Usaha</option>
+                                                @foreach($units as $unit)
+                                                    <option value="{{ $unit->id }}" data-name="{{ $unit->nama_unit }}" @selected((int) auth()->user()->unit_kerja === (int) $unit->id)>{{ $unit->nama_unit }}</option>
                                                 @endforeach
                                             </select>
-                                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#documentModal"><i class="bi bi-plus-lg"></i></button>
+                                        </div>
+
+                                        <div class="cb-field">
+                                            <label>Kode Dokumen</label>
+                                            <div class="cb-control-row">
+                                                <select class="form-control form-control-sm" name="document_code_id" id="documentCode" required style="max-width: 120px;">
+                                                    <option value="">Kode</option>
+                                                    @foreach($documents as $document)
+                                                        <option value="{{ $document->id }}"
+                                                            data-name="{{ $document->nama }}"
+                                                            data-bank-id="{{ $document->bank_id }}"
+                                                            data-account-code="{{ $document->bank?->kode_akun ?? '' }}"
+                                                            data-account-name="{{ $document->bank?->nama_akun ?? '' }}">
+                                                            {{ $document->kode }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary cb-new" data-bs-toggle="modal" data-bs-target="#documentModal">New</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="cb-field">
+                                            <label></label>
+                                            <input type="text" class="form-control form-control-sm" id="documentNamePreview" readonly>
+                                        </div>
+
+                                        <div class="cb-field">
+                                            <label>Kode Akun</label>
+                                            <div class="cb-control-row">
+                                                <input type="hidden" name="coa_id" id="mainCoa">
+                                                <input type="text" class="form-control form-control-sm" id="mainCoaCode" readonly style="max-width: 120px;">
+                                                <input type="text" class="form-control form-control-sm cb-cyan" id="mainCoaName" readonly>
+                                            </div>
+                                        </div>
+
+                                        <div class="cb-field">
+                                            <label>Bayar Supplier</label>
+                                            <div class="cb-control-row">
+                                                <input type="text" class="form-control form-control-sm cb-cyan fw-semibold" id="supplierCodePreview" readonly style="max-width: 120px;">
+                                                <input type="text" class="form-control form-control-sm cb-cyan fw-semibold" id="supplierSearch" autocomplete="off">
+                                                <input type="hidden" name="supplier_id" id="supplierId">
+                                                <button type="button" class="btn btn-sm btn-outline-info cb-new" id="btnPickSupplier">Ambil</button>
+                                                <button type="button" class="btn btn-sm btn-outline-primary cb-new" data-bs-toggle="modal" data-bs-target="#supplierModal"><i class="bi bi-plus-lg"></i></button>
+                                            </div>
+                                        </div>
+
+                                        <div class="cb-field">
+                                            <label>Tgl Transaksi</label>
+                                            <input type="date" class="form-control form-control-sm" name="tgl_transaksi" value="{{ date('Y-m-d') }}" required style="max-width: 160px;">
+                                        </div>
+
+                                        <div class="cb-field">
+                                            <label>Dibayar Kepada</label>
+                                            <input type="text" class="form-control form-control-sm" id="paidToPreview" name="dibayar_kepada" required>
+                                        </div>
+
+                                        <div class="cb-field">
+                                            <label>Guna Pembayaran</label>
+                                            <input type="text" class="form-control form-control-sm" name="guna_membayar">
+                                        </div>
+
+                                        <div class="cb-field">
+                                            <label>Sejumlah</label>
+                                            <input type="number" class="form-control form-control-sm text-end" name="sejumlah" id="sejumlah" min="0" step="0.01" required style="max-width: 180px;">
+                                        </div>
+
+                                        <div class="cb-field">
+                                            <label>Dibayar Dengan</label>
+                                            <div class="cb-control-row">
+                                                <select class="form-control form-control-sm" name="dibayar_dengan" required style="max-width: 120px;">
+                                                    <option value="cash">CASH</option>
+                                                    <option value="kredit">KREDIT</option>
+                                                </select>
+                                                <select class="form-control form-control-sm" name="bank_id">
+                                                    <option value="">Kas / tanpa bank</option>
+                                                    @foreach($banks as $bank)
+                                                        <option value="{{ $bank->id }}">{{ $bank->nama_bank }} {{ $bank->nomor_rekening ? '- '.$bank->nomor_rekening : '' }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Kode Akun</label>
-                                        <div class="input-group input-group-sm">
-                                            <select class="form-control" name="coa_id" id="mainCoa" required>
-                                                <option value="">Pilih COA</option>
-                                                @foreach($coas as $coa)
-                                                    <option value="{{ $coa->id }}">{{ $coa->kode_akun }} - {{ $coa->nama_akun }}</option>
-                                                @endforeach
-                                            </select>
-                                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#coaModal"><i class="bi bi-plus-lg"></i></button>
+
+                                    <div class="cb-side">
+                                        <div class="cb-field">
+                                            <label>Periode</label>
+                                            <input type="text" class="form-control form-control-sm cb-period" name="periode" value="{{ date('Ym') }}" maxlength="6" required style="max-width: 100px;">
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Tanggal Transaksi</label>
-                                        <input type="date" class="form-control form-control-sm" name="tgl_transaksi" value="{{ date('Y-m-d') }}" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Akun Bank</label>
-                                        <select class="form-control form-control-sm" name="bank_id">
-                                            <option value="">Kas / tanpa bank</option>
-                                            @foreach($banks as $bank)
-                                                <option value="{{ $bank->id }}">{{ $bank->nama_bank }} {{ $bank->nomor_rekening ? '- '.$bank->nomor_rekening : '' }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Dibayar Kepada</label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="text" class="form-control typeahead" id="supplierSearch" name="dibayar_kepada" autocomplete="off" required>
-                                            <input type="hidden" name="supplier_id" id="supplierId">
-                                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#supplierModal"><i class="bi bi-plus-lg"></i></button>
+                                        <div class="cb-field">
+                                            <label>No.Transaksi</label>
+                                            <div class="cb-control-row">
+                                                <input type="text" class="form-control form-control-sm" value="{{ $nomor }}" readonly id="nomorPreview">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary cb-new" id="btnRefreshNumber"><i class="bi bi-arrow-clockwise"></i></button>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Dibayar Dengan</label>
-                                        <select class="form-control form-control-sm" name="dibayar_dengan" required>
-                                            <option value="cash">Cash</option>
-                                            <option value="kredit">Kredit</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Sejumlah</label>
-                                        <input type="number" class="form-control form-control-sm text-end" name="sejumlah" id="sejumlah" min="0" step="0.01" required>
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Guna Membayar</label>
-                                        <textarea class="form-control form-control-sm" name="guna_membayar" rows="2"></textarea>
+                                        <div class="cb-field">
+                                            <label>No Ref / No Nota</label>
+                                            <textarea class="form-control form-control-sm" name="no_ref_nota" id="noRefNota" rows="3" style="height: 70px;"></textarea>
+                                        </div>
+                                        <div class="cb-field">
+                                            <label>No Cash/Cek/Giro</label>
+                                            <input type="text" class="form-control form-control-sm" name="no_cash_cek_giro">
+                                        </div>
+                                        <div class="cb-field">
+                                            <label>Tgl Giro/Cek</label>
+                                            <input type="date" class="form-control form-control-sm" name="tgl_giro_cek">
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div class="d-flex justify-content-between align-items-center mt-3">
                                     <strong>Nama Akun Transaksi</strong>
                                     <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddDetail"><i class="bi bi-plus-lg"></i> Baris</button>
+                                </div>
+
+                                <div class="row g-2 mt-1 align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Kode Akun Detail</label>
+                                        <select class="form-control form-control-sm" id="detailCoaPicker">
+                                            <option value="">Pilih COA</option>
+                                            @foreach($coas as $coa)
+                                                <option value="{{ $coa->id }}">{{ $coa->kode_akun }} - {{ $coa->nama_akun }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Sub Akun</label>
+                                        <input type="text" class="form-control form-control-sm" id="subAccountCode" placeholder="Kode supplier">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Jumlah</label>
+                                        <input type="number" class="form-control form-control-sm text-end" id="detailAmountPicker" min="0" step="0.01">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-sm btn-info w-100" id="btnLoadSupplierInvoices"><i class="bi bi-search"></i> Ket</button>
+                                    </div>
                                 </div>
 
                                 <div class="table-responsive mt-2">
@@ -162,7 +405,16 @@
                     <div class="modal-body">
                         <input class="form-control form-control-sm mb-2" name="kode" placeholder="Kode" required>
                         <input class="form-control form-control-sm mb-2" name="nama" placeholder="Nama dokumen" required>
-                        <input class="form-control form-control-sm" name="prefix" placeholder="Prefix nomor">
+                        <input class="form-control form-control-sm mb-2" name="prefix" placeholder="Prefix nomor">
+                        <select class="form-control form-control-sm" name="bank_id">
+                            <option value="">Pilih Bank</option>
+                            @foreach($banks as $bank)
+                                <option value="{{ $bank->id }}">
+                                    {{ $bank->kode_bank }} - {{ $bank->nama_bank }}
+                                    | {{ $bank->kode_akun }} - {{ $bank->nama_akun }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="modal-footer"><button class="btn btn-primary btn-sm"><i class="bi bi-save"></i> Simpan</button></div>
                 </form>
@@ -209,11 +461,61 @@
         </div>
     </div>
 
+    <div class="modal fade" id="supplierPickModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ambil Supplier</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" class="form-control" id="supplierPickKeyword" placeholder="Cari kode / nama supplier">
+                        <button type="button" class="btn btn-primary" id="btnSupplierPickSearch"><i class="bi bi-search"></i> Cari</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped" id="supplierPickTable" style="font-size: small;">
+                            <thead>
+                                <tr>
+                                    <th>Kode</th>
+                                    <th>Nama Supplier</th>
+                                    <th>Alamat</th>
+                                    <th>Telp</th>
+                                    <th>Kontak</th>
+                                    <th>Email</th>
+                                    <th style="width: 70px">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="7" class="text-muted">Ketik kata kunci lalu cari.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <x-slot name="jscustom">
         <script>
             const jenis = @json($jenis);
-            const coaOptions = @json($coas->map(fn($coa) => ['id' => $coa->id, 'label' => $coa->kode_akun . ' - ' . $coa->nama_akun])->values());
+            const coaOptions = @json($coaOptionsForJs);
+            const coaLookup = @json($coaLookupForJs);
+            const bankLookup = @json($bankLookupForJs);
             let detailIndex = 0;
+            $('#noRefNota').data('auto-ref', true).on('input', function () {
+                $(this).data('auto-ref', false);
+            });
+
+            function setMainAccount(code = '', name = '') {
+                $('#mainCoa').val('');
+                $('#mainCoaCode').val(code || '');
+                $('#mainCoaName').val(name || '');
+            }
+
+            function syncUnitPreview() {
+                return true;
+            }
 
             function formatNumber(value) {
                 return new Intl.NumberFormat('id-ID').format(Number(value || 0));
@@ -221,6 +523,25 @@
 
             function optionHtml(selectedId = '') {
                 return '<option value="">Pilih COA</option>' + coaOptions.map(coa => `<option value="${coa.id}" ${String(coa.id) === String(selectedId) ? 'selected' : ''}>${coa.label}</option>`).join('');
+            }
+
+            function updateRefNota() {
+                const refs = [];
+                $('#detailTable tbody .nomor-invoice').each(function () {
+                    const ref = $(this).val();
+                    if (ref && !refs.includes(ref)) refs.push(ref);
+                });
+                if ($('#noRefNota').data('auto-ref')) {
+                    $('#noRefNota').val(refs.join(','));
+                }
+            }
+
+            function selectSupplier(data) {
+                $('#supplierId').val(data.id || '');
+                $('#supplierCodePreview').val(data.kode_supplier || '');
+                $('#supplierSearch').val(data.text || data.nama_supplier || '');
+                $('#paidToPreview').val(data.text || data.nama_supplier || '');
+                $('#subAccountCode').val(data.kode_supplier || '');
             }
 
             function recalc() {
@@ -242,14 +563,16 @@
                 });
                 $('#detailTotal').text(formatNumber(total));
                 if (total > 0) $('#sejumlah').val(total.toFixed(2));
+                updateRefNota();
             }
 
             function addDetailRow(data = {}) {
                 const idx = detailIndex++;
+                const selectedCoa = data.coa_id || $('#detailCoaPicker').val() || $('#mainCoa').val();
                 const row = $(`
                     <tr>
                         <td>
-                            <select class="form-control form-control-sm" name="detail[${idx}][coa_id]">${optionHtml($('#mainCoa').val())}</select>
+                            <select class="form-control form-control-sm" name="detail[${idx}][coa_id]">${optionHtml(selectedCoa)}</select>
                         </td>
                         <td>
                             <input type="text" class="form-control form-control-sm invoice-search" autocomplete="off" placeholder="Cari invoice">
@@ -278,7 +601,7 @@
             }
 
             function fillInvoice(row, data) {
-                row.find('.invoice-search').typeahead('val', data.nomor_invoice || data.text);
+                row.find('.invoice-search').val(data.nomor_invoice || data.text);
                 row.find('.penerimaan-id').val(data.id);
                 row.find('.nomor-invoice').val(data.nomor_invoice || data.text);
                 row.find('.nilai-invoice').val(data.nilai_invoice);
@@ -286,52 +609,152 @@
                 row.find('.jumlah-bayar').val(data.sisa);
                 row.find('.nilai-label').text(formatNumber(data.nilai_invoice));
                 row.find('.sudah-label').text(formatNumber(data.sudah_dibayar));
+                if (data.supplier_id) $('#supplierId').val(data.supplier_id);
+                if (data.nama_supplier) {
+                    selectSupplier({
+                        id: data.supplier_id,
+                        kode_supplier: data.kode_supplier || '',
+                        text: data.nama_supplier
+                    });
+                }
                 recalc();
             }
 
             function bindInvoiceSearch(input) {
-                const invoiceSource = new Bloodhound({
-                    datumTokenizer: Bloodhound.tokenizers.whitespace,
-                    queryTokenizer: Bloodhound.tokenizers.whitespace,
-                    remote: {
-                        url: '{{ route("cashbank.transactions.$routeScope.invoices") }}?supplier_id=' + encodeURIComponent($('#supplierId').val()) + '&q=%QUERY',
-                        wildcard: '%QUERY',
-                        transform: response => response
-                    }
-                });
-                input.typeahead({ hint: true, highlight: true, minLength: 1 }, {
-                    name: 'invoices',
-                    source: invoiceSource,
-                    display: 'text',
-                    templates: {
-                        suggestion: data => `<div><strong>${data.nomor_invoice}</strong><br><small>${data.nama_supplier} | Sisa: ${formatNumber(data.sisa)}</small></div>`
-                    }
-                }).on('typeahead:select', function (ev, suggestion) {
-                    fillInvoice($(this).closest('tr'), suggestion);
+                input.on('keydown', function (e) {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+
+                    const row = $(this).closest('tr');
+                    const keyword = $(this).val().trim();
+                    $.get("{{ route("cashbank.transactions.$routeScope.invoices") }}", {
+                        supplier_id: $('#supplierId').val(),
+                        supplier_code: $('#subAccountCode').val(),
+                        q: keyword
+                    }).done(function (rows) {
+                        if (!rows.length) {
+                            Swal.fire('Info', 'Invoice belum ditemukan atau sudah lunas.', 'info');
+                            return;
+                        }
+                        fillInvoice(row, rows[0]);
+                    }).fail(xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'));
                 });
             }
 
-            const supplierSource = new Bloodhound({
-                datumTokenizer: Bloodhound.tokenizers.whitespace,
-                queryTokenizer: Bloodhound.tokenizers.whitespace,
-                remote: { url: '{{ route("cashbank.transactions.$routeScope.suppliers") }}?q=%QUERY', wildcard: '%QUERY' }
+            $('#supplierSearch').on('input', function () {
+                if (!$(this).val()) {
+                    $('#supplierId').val('');
+                    $('#supplierCodePreview').val('');
+                }
+            }).on('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    $('#btnPickSupplier').trigger('click');
+                }
             });
 
-            $('#supplierSearch').typeahead({ hint: true, highlight: true, minLength: 1 }, {
-                name: 'suppliers',
-                source: supplierSource,
-                display: 'text',
-                templates: { suggestion: data => `<div><strong>${data.kode_supplier}</strong> - ${data.text}</div>` }
-            }).on('typeahead:select', function (ev, suggestion) {
-                $('#supplierId').val(suggestion.id);
-                $(this).val(suggestion.text);
-            }).on('input', function () {
-                if (!$(this).val()) $('#supplierId').val('');
+            function searchSupplierPicker() {
+                const keyword = $('#supplierPickKeyword').val();
+                const tbody = $('#supplierPickTable tbody');
+                tbody.html('<tr><td colspan="7" class="text-muted">Memuat...</td></tr>');
+
+                $.get("{{ route("cashbank.transactions.$routeScope.suppliers") }}", { q: keyword })
+                    .done(function (rows) {
+                        if (!rows.length) {
+                            tbody.html('<tr><td colspan="7" class="text-muted">Supplier tidak ditemukan.</td></tr>');
+                            return;
+                        }
+
+                        tbody.html(rows.map(row => `
+                            <tr>
+                                <td>${row.kode_supplier || ''}</td>
+                                <td>${row.text || ''}</td>
+                                <td>${row.alamat || ''}</td>
+                                <td>${row.telp || ''}</td>
+                                <td>${row.kontak_person || ''}</td>
+                                <td>${row.email || ''}</td>
+                                <td><button type="button" class="btn btn-sm btn-primary pick-supplier" data-id="${row.id}" data-code="${row.kode_supplier || ''}" data-name="${row.text || ''}">Pilih</button></td>
+                            </tr>
+                        `).join(''));
+                    })
+                    .fail(xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'));
+            }
+
+            $('#btnPickSupplier').on('click', function () {
+                $('#supplierPickKeyword').val($('#supplierSearch').val());
+                $('#supplierPickModal').modal('show');
+                searchSupplierPicker();
+            });
+
+            $('#btnSupplierPickSearch').on('click', searchSupplierPicker);
+            $('#supplierPickKeyword').on('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchSupplierPicker();
+                }
+            });
+            $('#supplierPickTable').on('click', '.pick-supplier', function () {
+                selectSupplier({
+                    id: $(this).data('id'),
+                    kode_supplier: $(this).data('code'),
+                    text: $(this).data('name')
+                });
+                $('#supplierPickModal').modal('hide');
             });
 
             $('#btnAddDetail').on('click', () => addDetailRow());
             $('#detailTable').on('input', '.jumlah-bayar', recalc);
             $('#detailTable').on('click', '.btnRemove', function () { $(this).closest('tr').remove(); recalc(); });
+
+            $('#documentCode').on('change', function () {
+                const selected = $(this).find(':selected');
+                $('#documentNamePreview').val(selected.attr('data-name') || selected.data('name') || '');
+                const bankId = selected.attr('data-bank-id') || selected.data('bank-id');
+                if (bankId) $('[name=bank_id]').val(bankId);
+                const bank = bankLookup[bankId] || {};
+                setMainAccount(
+                    selected.attr('data-account-code') || selected.data('account-code') || bank.account_code || '',
+                    selected.attr('data-account-name') || selected.data('account-name') || bank.account_name || ''
+                );
+            });
+
+            $('[name=unit_id]').on('change', syncUnitPreview);
+
+            $('#btnLoadSupplierInvoices').on('click', function () {
+                const supplierCode = $('#subAccountCode').val().trim();
+                if (!supplierCode) {
+                    Swal.fire('Perhatian', 'Isi kode supplier pada sub akun.', 'warning');
+                    return;
+                }
+
+                let remainingAmount = Number($('#detailAmountPicker').val() || 0);
+                $.get("{{ route("cashbank.transactions.$routeScope.invoices") }}", {
+                    supplier_code: supplierCode,
+                    q: ''
+                }).done(function (rows) {
+                    if (!rows.length) {
+                        Swal.fire('Info', 'Tidak ada nota hutang yang belum terbayar untuk supplier ini.', 'info');
+                        return;
+                    }
+
+                    rows.forEach(row => {
+                        let payAmount = row.sisa;
+                        if (remainingAmount > 0) {
+                            payAmount = Math.min(row.sisa, remainingAmount);
+                            remainingAmount -= payAmount;
+                            if (payAmount <= 0) return;
+                        }
+
+                        addDetailRow({
+                            ...row,
+                            coa_id: $('#detailCoaPicker').val(),
+                            sisa: payAmount
+                        });
+                        $('#detailTable tbody tr:last .jumlah-bayar').val(payAmount);
+                        recalc();
+                    });
+                }).fail(xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'));
+            });
 
             $('#btnRefreshNumber').on('click', function () {
                 $.get("{{ route("cashbank.transactions.$routeScope.number") }}", { jenis }).done(number => $('#nomorPreview').val(number));
@@ -345,7 +768,11 @@
                 e.preventDefault();
                 $.post("{{ route("cashbank.transactions.$routeScope.quick-document") }}", $(this).serialize())
                     .done(({ data }) => {
-                        $('#documentCode').append(`<option value="${data.id}" selected>${data.kode} - ${data.nama}</option>`);
+                        const bank = bankLookup[data.bank_id] || {};
+                        $('#documentCode').append(`<option value="${data.id}" data-name="${data.nama}" data-bank-id="${data.bank_id || ''}" data-account-code="${bank.account_code || ''}" data-account-name="${bank.account_name || ''}" selected>${data.kode}</option>`);
+                        $('#documentNamePreview').val(data.nama);
+                        if (data.bank_id) $('[name=bank_id]').val(data.bank_id);
+                        setMainAccount(bank.account_code, bank.account_name);
                         $('#documentModal').modal('hide');
                         this.reset();
                     })
@@ -358,7 +785,7 @@
                     .done(({ data }) => {
                         const label = `${data.kode_akun} - ${data.nama_akun}`;
                         coaOptions.push({ id: data.id, label });
-                        $('#mainCoa').append(`<option value="${data.id}" selected>${label}</option>`);
+                        coaLookup[data.id] = { code: data.kode_akun, name: data.nama_akun };
                         $('#detailTable tbody select').each(function () { $(this).append(`<option value="${data.id}">${label}</option>`); });
                         $('#coaModal').modal('hide');
                         this.reset();
@@ -370,8 +797,7 @@
                 e.preventDefault();
                 $.post("{{ route("cashbank.transactions.$routeScope.quick-supplier") }}", $(this).serialize())
                     .done(({ data }) => {
-                        $('#supplierId').val(data.id);
-                        $('#supplierSearch').typeahead('val', data.nama_supplier);
+                        selectSupplier(data);
                         $('#supplierModal').modal('hide');
                         this.reset();
                     })
@@ -383,8 +809,15 @@
                 $('#detailTable tbody').empty();
                 $('#detailTotal').text('0');
                 $('#supplierId').val('');
-                $('#supplierSearch').typeahead('val', '');
+                $('#supplierSearch').val('');
+                $('#supplierCodePreview').val('');
+                $('#paidToPreview').val('');
+                $('#documentNamePreview').val('');
+                setMainAccount('', '');
+                $('#noRefNota').data('auto-ref', true).val('');
                 $('input[name=tgl_transaksi]').val('{{ date('Y-m-d') }}');
+                $('input[name=periode]').val('{{ date('Ym') }}');
+                syncUnitPreview();
             });
 
             $('#cashbankForm').on('submit', function (e) {
@@ -413,6 +846,11 @@
             });
 
             if (jenis === 'pembayaran_hutang') addDetailRow();
+            if (!$('#documentCode').val() && $('#documentCode option[value!=""]').length === 1) {
+                $('#documentCode option[value!=""]').first().prop('selected', true);
+            }
+            syncUnitPreview();
+            $('#documentCode').trigger('change');
         </script>
     </x-slot>
 </x-app-layout>

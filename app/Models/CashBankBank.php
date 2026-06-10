@@ -14,6 +14,8 @@ class CashBankBank extends Model
     protected $fillable = [
         'kode_bank',
         'nama_bank',
+        'kode_akun',
+        'nama_akun',
         'nomor_rekening',
         'nama_rekening',
         'coa_id',

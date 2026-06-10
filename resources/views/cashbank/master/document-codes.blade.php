@@ -23,6 +23,8 @@
                                 <th>Kode</th>
                                 <th>Nama</th>
                                 <th>Prefix</th>
+                                <th>ID Akun Bank</th>
+                                <th>Akun Bank</th>
                                 <th>Keterangan</th>
                                 <th>Status</th>
                                 <th>Aksi</th>
@@ -57,6 +59,15 @@
                             <input type="text" name="prefix" class="form-control form-control-sm" placeholder="CBU">
                         </div>
                         <div class="mb-2">
+                            <label class="form-label">Bank</label>
+                            <select name="bank_id" class="form-control form-control-sm">
+                                <option value="">Pilih Bank</option>
+                                @foreach($banks as $bank)
+                                    <option value="{{ $bank->id }}">{{ $bank->kode_akun }} - {{ $bank->nama_akun }} | {{ $bank->nama_bank }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-2">
                             <label class="form-label">Keterangan</label>
                             <textarea name="keterangan" class="form-control form-control-sm" rows="2"></textarea>
                         </div>
@@ -85,6 +96,8 @@
                     { data: 'kode' },
                     { data: 'nama' },
                     { data: 'prefix' },
+                    { data: 'bank_label' },
+                    { data: 'account_label' },
                     { data: 'keterangan' },
                     { data: 'is_active', render: data => data ? '<span class="badge bg-success">Aktif</span>' : '<span class="badge bg-secondary">Nonaktif</span>' },
                     { data: null, orderable: false, searchable: false, render: () => '<span class="badge rounded-pill bg-warning editcell"><i class="bi bi-pencil-square"></i></span> <span class="badge rounded-pill bg-danger delcell"><i class="bi bi-trash3-fill"></i></span>' }
@@ -114,6 +127,7 @@
                 $('[name=kode]').val(row.kode);
                 $('[name=nama]').val(row.nama);
                 $('[name=prefix]').val(row.prefix);
+                $('[name=bank_id]').val(row.bank_id);
                 $('[name=keterangan]').val(row.keterangan);
                 $('#isActive').prop('checked', !!row.is_active);
                 $('#formModal').modal('show');

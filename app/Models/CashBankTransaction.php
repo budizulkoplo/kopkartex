@@ -19,17 +19,22 @@ class CashBankTransaction extends Model
         'coa_id',
         'bank_id',
         'tgl_transaksi',
+        'periode',
         'supplier_id',
         'dibayar_kepada',
         'guna_membayar',
+        'no_ref_nota',
         'sejumlah',
         'dibayar_dengan',
+        'no_cash_cek_giro',
+        'tgl_giro_cek',
         'status',
         'created_user',
     ];
 
     protected $casts = [
         'tgl_transaksi' => 'date',
+        'tgl_giro_cek' => 'date',
         'sejumlah' => 'decimal:2',
     ];
 

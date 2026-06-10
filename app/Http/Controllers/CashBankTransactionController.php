@@ -15,6 +15,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -36,10 +37,10 @@ class CashBankTransactionController extends Controller
             'jenis' => $jenis,
             'title' => $jenis === 'pembayaran_hutang' ? 'Cash Bank Pembayaran Hutang' : 'Cash Bank Umum',
             'nomor' => $this->genCode($jenis),
-            'units' => Unit::query()->select('id', 'nama_unit')->orderBy('nama_unit')->get()->unique('id'),
-            'documents' => CashBankDocumentCode::where('is_active', true)->orderBy('kode')->get(),
+            'units' => $this->unitOptions(),
+            'documents' => CashBankDocumentCode::with('bank')->where('is_active', true)->orderBy('kode')->get(),
             'coas' => CashBankCoa::where('is_active', true)->orderBy('kode_akun')->get(),
-            'banks' => CashBankBank::with('coa')->where('is_active', true)->orderBy('nama_bank')->get(),
+            'banks' => CashBankBank::where('is_active', true)->orderBy('nama_bank')->get(),
             'recentLogs' => CashBankTransaction::with(['logs.user'])
                 ->where('jenis', $jenis)
                 ->latest()
@@ -52,16 +53,20 @@ class CashBankTransactionController extends Controller
     {
         $validated = $request->validate([
             'jenis' => ['required', Rule::in(['umum', 'pembayaran_hutang'])],
-            'unit_id' => ['required', 'exists:unit,id'],
+            'unit_id' => ['required', 'integer'],
             'document_code_id' => ['required', 'exists:cashbank_document_codes,id'],
-            'coa_id' => ['required', 'exists:cashbank_coas,id'],
+            'coa_id' => ['nullable', 'exists:cashbank_coas,id'],
             'bank_id' => ['nullable', 'exists:cashbank_banks,id'],
             'tgl_transaksi' => ['required', 'date'],
+            'periode' => ['nullable', 'string', 'max:6'],
             'supplier_id' => ['nullable', 'exists:suppliers,id'],
             'dibayar_kepada' => ['required', 'string', 'max:150'],
             'guna_membayar' => ['nullable', 'string'],
+            'no_ref_nota' => ['nullable', 'string'],
             'sejumlah' => ['required', 'numeric', 'min:0.01'],
             'dibayar_dengan' => ['required', Rule::in(['cash', 'kredit'])],
+            'no_cash_cek_giro' => ['nullable', 'string', 'max:80'],
+            'tgl_giro_cek' => ['nullable', 'date'],
             'detail' => ['nullable', 'array'],
             'detail.*.coa_id' => ['nullable', 'exists:cashbank_coas,id'],
             'detail.*.penerimaan_id' => ['nullable', 'integer'],
@@ -83,11 +88,17 @@ class CashBankTransactionController extends Controller
                 'coa_id' => $validated['coa_id'],
                 'bank_id' => $validated['bank_id'] ?? null,
                 'tgl_transaksi' => Carbon::parse($validated['tgl_transaksi'])->format('Y-m-d'),
+                'periode' => $validated['periode'] ?? Carbon::parse($validated['tgl_transaksi'])->format('Ym'),
                 'supplier_id' => $validated['supplier_id'] ?? null,
                 'dibayar_kepada' => $validated['dibayar_kepada'],
                 'guna_membayar' => $validated['guna_membayar'] ?? null,
+                'no_ref_nota' => $validated['no_ref_nota'] ?? null,
                 'sejumlah' => $validated['sejumlah'],
                 'dibayar_dengan' => $validated['dibayar_dengan'],
+                'no_cash_cek_giro' => $validated['no_cash_cek_giro'] ?? null,
+                'tgl_giro_cek' => ! empty($validated['tgl_giro_cek'])
+                    ? Carbon::parse($validated['tgl_giro_cek'])->format('Y-m-d')
+                    : null,
                 'status' => 'posted',
                 'created_user' => Auth::id(),
             ]);
@@ -115,6 +126,18 @@ class CashBankTransactionController extends Controller
 
             if ($totalDetail > 0 && abs($totalDetail - (float) $validated['sejumlah']) > 0.01) {
                 throw new Exception('Total detail pembayaran harus sama dengan nominal sejumlah.');
+            }
+
+            $invoiceRefs = $transaction->details()
+                ->whereNotNull('nomor_invoice')
+                ->pluck('nomor_invoice')
+                ->filter()
+                ->values()
+                ->all();
+
+            if (empty($transaction->no_ref_nota) && ! empty($invoiceRefs)) {
+                $transaction->no_ref_nota = implode(',', $invoiceRefs);
+                $transaction->save();
             }
 
             $transaction->logs()->create([
@@ -164,6 +187,7 @@ class CashBankTransactionController extends Controller
             'kode' => ['required', 'string', 'max:30', 'unique:cashbank_document_codes,kode'],
             'nama' => ['required', 'string', 'max:100'],
             'prefix' => ['nullable', 'string', 'max:20'],
+            'bank_id' => ['nullable', 'exists:cashbank_banks,id'],
         ]);
 
         $document = CashBankDocumentCode::create($validated + ['is_active' => true]);
@@ -217,18 +241,27 @@ class CashBankTransactionController extends Controller
                     ->orWhere('kode_supplier', 'like', "%{$q}%");
             })
             ->limit(20)
-            ->get(['id', 'kode_supplier', 'nama_supplier'])
+            ->get(['id', 'kode_supplier', 'nama_supplier', 'alamat', 'telp', 'kontak_person', 'email'])
             ->map(fn ($supplier) => [
                 'id' => $supplier->id,
                 'kode_supplier' => $supplier->kode_supplier,
                 'text' => $supplier->nama_supplier,
+                'alamat' => $supplier->alamat,
+                'telp' => $supplier->telp,
+                'kontak_person' => $supplier->kontak_person,
+                'email' => $supplier->email,
             ]);
     }
 
     public function invoiceSearch(Request $request)
     {
         $supplierId = $request->input('supplier_id');
+        $supplierCode = $request->input('supplier_code');
         $q = $request->input('q', '');
+
+        if (! $supplierId && $supplierCode) {
+            $supplierId = Supplier::where('kode_supplier', $supplierCode)->value('id');
+        }
 
         $paidSub = DB::table('cashbank_transaction_details as cbd')
             ->join('cashbank_transactions as cb', 'cb.id', '=', 'cbd.transaction_id')
@@ -242,6 +275,8 @@ class CashBankTransactionController extends Controller
             ->select(
                 'penerimaan.idpenerimaan',
                 'penerimaan.nomor_invoice',
+                'penerimaan.idsupplier',
+                'penerimaan.kode_supplier',
                 'penerimaan.nama_supplier',
                 'penerimaan.grandtotal',
                 DB::raw('COALESCE(paid.total_bayar, 0) as sudah_dibayar'),
@@ -269,6 +304,8 @@ class CashBankTransactionController extends Controller
                 'id' => $row->idpenerimaan,
                 'text' => $row->nomor_invoice,
                 'nomor_invoice' => $row->nomor_invoice,
+                'supplier_id' => $row->idsupplier,
+                'kode_supplier' => $row->kode_supplier,
                 'nama_supplier' => $row->nama_supplier,
                 'nilai_invoice' => (float) $row->grandtotal,
                 'sudah_dibayar' => (float) $row->sudah_dibayar,
@@ -314,6 +351,30 @@ class CashBankTransactionController extends Controller
             ->count();
 
         return $prefix . '-' . date('ymd') . str_pad($total + 1, 3, '0', STR_PAD_LEFT);
+    }
+
+    private function unitOptions()
+    {
+        if (
+            Schema::hasColumn('unit', 'unit_usaha') &&
+            Schema::hasColumn('unit', 'nama_unit_usaha')
+        ) {
+            return DB::table('unit')
+                ->selectRaw('unit_usaha as id, nama_unit_usaha as nama_unit')
+                ->whereNotNull('unit_usaha')
+                ->whereNotNull('nama_unit_usaha')
+                ->whereNull('deleted_at')
+                ->distinct()
+                ->orderBy('unit_usaha')
+                ->get();
+        }
+
+        return Unit::query()
+            ->select('id', 'nama_unit')
+            ->orderBy('nama_unit')
+            ->get()
+            ->unique('id')
+            ->values();
     }
 
     private function syncPenerimaanStatus(CashBankTransaction $transaction): void

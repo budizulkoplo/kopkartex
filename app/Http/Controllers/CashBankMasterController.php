@@ -13,13 +13,17 @@ class CashBankMasterController extends Controller
 {
     public function documentCodes()
     {
-        return view('cashbank.master.document-codes');
+        return view('cashbank.master.document-codes', [
+            'banks' => CashBankBank::where('is_active', true)->orderBy('kode_bank')->get(),
+        ]);
     }
 
     public function documentCodeData()
     {
-        return DataTables::of(CashBankDocumentCode::query())
+        return DataTables::of(CashBankDocumentCode::with('bank'))
             ->addIndexColumn()
+            ->addColumn('bank_label', fn ($row) => $row->bank ? $row->bank->kode_akun . ' - ' . $row->bank->nama_akun : '-')
+            ->addColumn('account_label', fn ($row) => $row->bank ? trim(($row->bank->kode_akun ?? '-') . ' - ' . ($row->bank->nama_akun ?? '-')) : '-')
             ->make(true);
     }
 
@@ -30,9 +34,12 @@ class CashBankMasterController extends Controller
             'kode' => ['required', 'string', 'max:30', Rule::unique('cashbank_document_codes', 'kode')->ignore($id)],
             'nama' => ['required', 'string', 'max:100'],
             'prefix' => ['nullable', 'string', 'max:20'],
+            'bank_id' => ['nullable', 'exists:cashbank_banks,id'],
             'keterangan' => ['nullable', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);
+
+        $validated['coa_id'] = null;
 
         $validated['is_active'] = $request->boolean('is_active', true);
         $record = CashBankDocumentCode::updateOrCreate(['id' => $id], $validated);
@@ -92,9 +99,8 @@ class CashBankMasterController extends Controller
 
     public function bankData()
     {
-        return DataTables::of(CashBankBank::with('coa'))
+        return DataTables::of(CashBankBank::query())
             ->addIndexColumn()
-            ->addColumn('coa_label', fn ($row) => $row->coa ? $row->coa->kode_akun . ' - ' . $row->coa->nama_akun : '-')
             ->make(true);
     }
 
@@ -102,15 +108,17 @@ class CashBankMasterController extends Controller
     {
         $id = $request->input('id');
         $validated = $request->validate([
-            'kode_bank' => ['required', 'string', 'max:30', Rule::unique('cashbank_banks', 'kode_bank')->ignore($id)],
-            'nama_bank' => ['required', 'string', 'max:100'],
+            'kode_akun' => ['required', 'string', 'max:50', Rule::unique('cashbank_banks', 'kode_akun')->ignore($id)],
+            'nama_akun' => ['required', 'string', 'max:150'],
             'nomor_rekening' => ['nullable', 'string', 'max:50'],
-            'nama_rekening' => ['nullable', 'string', 'max:100'],
-            'coa_id' => ['nullable', 'exists:cashbank_coas,id'],
+            'nama_bank' => ['required', 'string', 'max:100'],
             'keterangan' => ['nullable', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
+        $validated['kode_bank'] = $validated['kode_akun'];
+        $validated['nama_rekening'] = $validated['nama_akun'];
+        $validated['coa_id'] = null;
         $validated['is_active'] = $request->boolean('is_active', true);
         $record = CashBankBank::updateOrCreate(['id' => $id], $validated);
 
