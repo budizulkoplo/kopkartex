@@ -30,14 +30,12 @@
                                 <thead>
                                     <tr>
                                         <th>No.</th>
-                                        <th>Nomor Anggota</th>
-                                        <th>NIK</th>
-                                        <th>Nama</th>
-                                        <th>Jabatan</th>
-                                        <th>Limit PPOB</th>
-                                        <th>Limit Hutang</th>
-                                        <th>Email</th>
-                                        <th>No HP</th>
+                                        @foreach ($baseColumns as $column)
+                                            <th>{{ $column['label'] }}</th>
+                                        @endforeach
+                                        @foreach ($legacyColumns as $column)
+                                            <th>{{ $column['label'] }}</th>
+                                        @endforeach
                                         <th>Aksi</th>
                                     </tr>
                                 </thead>
@@ -150,6 +148,35 @@
     </div>
     
     <x-slot name="csscustom">
+        <style>
+            #tabelAnggota th,
+            #tabelAnggota td {
+                white-space: nowrap;
+                vertical-align: middle;
+            }
+
+            #tabelAnggota .editable-cell {
+                min-width: 92px;
+                height: 28px;
+                padding: 2px 6px;
+                font-size: 12px;
+            }
+
+            #tabelAnggota .editable-cell.is-saving {
+                border-color: #ffc107;
+                background-color: #fff8e1;
+            }
+
+            #tabelAnggota .editable-cell.is-saved {
+                border-color: #198754;
+                background-color: #ecf8f1;
+            }
+
+            #tabelAnggota .editable-cell.is-error {
+                border-color: #dc3545;
+                background-color: #fff1f1;
+            }
+        </style>
     </x-slot>
     <x-slot name="jscustom">
         <script>
@@ -172,6 +199,63 @@
                 }
             }
             $(document).ready(function() {
+                const baseColumns = @json($baseColumns);
+                const legacyColumns = @json($legacyColumns);
+                const editableColumns = {...baseColumns, ...legacyColumns};
+                const editableColumnEntries = [
+                    ...Object.entries(baseColumns).map(([field, meta]) => ({field, meta, searchable: true})),
+                    ...Object.entries(legacyColumns).map(([field, meta]) => ({field, meta, searchable: false})),
+                ];
+
+                function escapeHtml(value) {
+                    return $('<div>').text(value ?? '').html();
+                }
+
+                function renderEditableCell(field, meta) {
+                    return function(data, type, row) {
+                        if (type !== 'display') {
+                            return data;
+                        }
+
+                        const inputType = meta.type === 'numeric'
+                            ? 'number'
+                            : (meta.type === 'date' ? 'date' : 'text');
+                        const value = data ?? '';
+                        const maxAttr = meta.max ? ` maxlength="${meta.max}"` : '';
+
+                        return `<input type="${inputType}" class="form-control form-control-sm editable-cell" data-user="${row.id}" data-field="${field}" data-original="${escapeHtml(value)}" value="${escapeHtml(value)}"${maxAttr}>`;
+                    }
+                }
+
+                const dataTableColumns = [
+                    { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                    ...editableColumnEntries.map(({field, meta, searchable}) => ({
+                        data: field,
+                        name: field,
+                        searchable: searchable,
+                        render: renderEditableCell(field, meta)
+                    })),
+                    {
+                        data: 'idusers',
+                        name: 'action',
+                        orderable: false,
+                        searchable: false,
+                        render: function(data, type, row) {
+                            return `
+                                <span class="badge rounded-pill bg-info formcell" data-bs-toggle="modal" data-bs-target="#exampleModalForm" data-id="${data}">
+                                    <i class="bi bi-pencil-square"></i>
+                                </span>
+                                <span class="badge rounded-pill bg-warning" data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="$('#tuserid').val('${row.id}')">
+                                    <i class="bi bi-key"></i>
+                                </span>
+                                <span class="badge rounded-pill bg-danger">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </span>
+                            `;
+                        }
+                    }
+                ];
+
                 $('#fnomor_anggota').on('input', function() {
                     var nomor = $(this).val();
                     $('#fusername').val(nomor);
@@ -193,44 +277,63 @@
                     });
                 });
                 var table = $('#tabelAnggota').DataTable({
-                    ordering: false,"responsive": true,"processing": true,"serverSide": true,
+                    ordering: false,
+                    responsive: false,
+                    scrollX: true,
+                    processing: true,
+                    serverSide: true,
                     ajax: {
                         url: "{{ route('anggota.getdata') }}",
                         type: "GET"
                     },
-                    columns: [
-                        { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-                        { data: 'nomor_anggota', name: 'nomor_anggota' },
-                        { data: 'nik', name: 'nik' },
-                        { data: 'name', name: 'name' },
-                        { data: 'jabatan', name: 'jabatan' },
-                        { data: 'limit_ppob', name: 'limit_ppob' },
-                        { data: 'limit_hutang', name: 'limit_hutang' },
-                        { data: 'email', name: 'email' },
-                        { data: 'nohp', name: 'nohp' },
-                        { 
-                            data: 'idusers', 
-                            name: 'action', 
-                            orderable: false, 
-                            searchable: false,
-                            render: function(data, type, row) {
-                                return `
-                                    <span class="badge rounded-pill bg-info formcell" data-bs-toggle="modal" data-bs-target="#exampleModalForm" data-id="${data}">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </span>
-                                    <span class="badge rounded-pill bg-warning" data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="$('#tuserid').val('${row.id}')">
-                                        <i class="bi bi-key"></i>
-                                    </span>
-                                    <span class="badge rounded-pill bg-danger">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </span>
-                                `;
-                            }
-                        }
-                    ],
+                    columns: dataTableColumns,
                     columnDefs: [
-                        { targets: [9], className: 'text-center' }
+                        { targets: [dataTableColumns.length - 1], className: 'text-center' }
                     ]
+                });
+
+                $('#tabelAnggota tbody').on('focus', '.editable-cell', function() {
+                    $(this).data('last-value', $(this).val());
+                });
+
+                $('#tabelAnggota tbody').on('blur change', '.editable-cell', function() {
+                    const input = $(this);
+                    const value = input.val();
+
+                    if (value === input.data('original') || value === input.data('last-value')) {
+                        return;
+                    }
+
+                    input.removeClass('is-saved is-error').addClass('is-saving');
+                    input.prop('disabled', true);
+
+                    $.ajax({
+                        url: "{{ route('anggota.inline-update') }}",
+                        method: "POST",
+                        data: {
+                            id: input.data('user'),
+                            field: input.data('field'),
+                            value: value,
+                            _token: $('meta[name="csrf-token"]').attr('content')
+                        },
+                        success: function(response) {
+                            input.data('original', response.value ?? '');
+                            input.data('last-value', response.value ?? '');
+                            input.val(response.value ?? '');
+                            input.removeClass('is-saving is-error').addClass('is-saved');
+                            setTimeout(function() {
+                                input.removeClass('is-saved');
+                            }, 900);
+                        },
+                        error: function(xhr) {
+                            input.removeClass('is-saving').addClass('is-error');
+                            const message = xhr.responseJSON?.message ?? 'Data gagal disimpan.';
+                            alert(message);
+                        },
+                        complete: function() {
+                            input.prop('disabled', false);
+                        }
+                    });
                 });
 
                 function clearfrm() {
@@ -271,6 +374,7 @@
                     $('input[name="limit_hutang"]').val(row.limit_hutang);
                     $('input[name="limit_ppob"]').val(row.limit_ppob);
                     $('input[name="email"]').val(row.email);
+                    $('input[name="nohp"]').val(row.nohp);
                     console.log(row.status)
                     if(row.status=='aktif'){
                         $('#flexCheckChecked').prop('checked', true);
