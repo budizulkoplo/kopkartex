@@ -256,7 +256,7 @@ Route::prefix('users')->middleware($menuAccessMiddleware)->namespace('Users')->g
 
 Route::prefix('anggota')->middleware($menuAccessMiddleware)->namespace('Anggota')->group(function () {
     Route::get('/list', [AnggotaController::class, 'index'])->name('anggota.list');
-    Route::get('/getdata', [AnggotaController::class, 'getdata'])->name('anggota.getdata');
+    Route::match(['get', 'post'], '/getdata', [AnggotaController::class, 'getdata'])->name('anggota.getdata');
     Route::post('/password/update', [AnggotaController::class, 'updatePassword'])->name('anggota.updatepassword');
     Route::get('/getcode', [AnggotaController::class, 'getcode'])->name('anggota.getcode');
     Route::post('/store', [AnggotaController::class, 'Store'])->name('anggota.store');

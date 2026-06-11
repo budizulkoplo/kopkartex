@@ -284,7 +284,8 @@
                     serverSide: true,
                     ajax: {
                         url: "{{ route('anggota.getdata') }}",
-                        type: "GET"
+                        type: "POST",
+                        headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')}
                     },
                     columns: dataTableColumns,
                     columnDefs: [
