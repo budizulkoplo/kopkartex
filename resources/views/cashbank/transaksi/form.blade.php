@@ -21,8 +21,16 @@
     @endphp
     <x-slot name="csscustom">
         <style>
-            .cb-compact {
-                font-size: 12px;
+            .cashbank-page .card {
+                border-radius: .5rem;
+                box-shadow: 0 .125rem .5rem rgba(15, 23, 42, .06);
+            }
+            .cashbank-page .card-header {
+                background: #fff;
+                border-bottom: 1px solid #e9ecef;
+            }
+            .cashbank-page .card-body {
+                padding: 1rem;
             }
             .cashbank-title {
                 font-size: 20px;
@@ -37,28 +45,41 @@
             }
             .cb-form-grid {
                 display: grid;
-                grid-template-columns: minmax(0, 1fr) 380px;
-                gap: 16px;
+                grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+                gap: 18px;
                 align-items: start;
             }
             .cb-field {
                 display: grid;
-                grid-template-columns: 120px minmax(0, 1fr);
-                gap: 6px;
+                grid-template-columns: 150px minmax(0, 1fr);
+                gap: 10px;
                 align-items: center;
-                min-height: 29px;
-                margin-bottom: 4px;
+                margin-bottom: 8px;
+                min-height: 36px;
             }
             .cb-field > label {
+                display: block;
                 margin: 0;
+                color: #344054;
+                font-size: .875rem;
                 font-weight: 700;
+                letter-spacing: 0;
+                line-height: 1.25;
                 text-transform: uppercase;
-                white-space: nowrap;
+                white-space: normal;
+            }
+            .cb-field > label:empty {
+                display: none;
             }
             .cb-control-row {
                 display: flex;
-                gap: 4px;
+                gap: 6px;
                 align-items: center;
+                min-width: 0;
+            }
+            .cb-control-row > .form-control,
+            .cb-control-row > .form-select,
+            .cb-control-row > select {
                 min-width: 0;
             }
             .cb-control-row .form-control,
@@ -66,24 +87,32 @@
             .cb-field .form-control,
             .cb-field .form-select,
             .cb-field .btn {
-                height: 26px;
-                min-height: 26px;
-                padding-top: 1px;
-                padding-bottom: 1px;
-                border-radius: 0;
-                font-size: 12px;
-                font-weight: 600;
+                min-height: 34px;
+                padding: .25rem .6rem;
+                border-radius: .25rem;
+                font-size: .95rem;
+                font-weight: 400;
             }
             .cb-side {
-                padding-top: 6px;
+                padding: 12px;
+                border: 1px solid #e5e7eb;
+                border-radius: .5rem;
+                background: #f8fafc;
             }
             .cb-side .cb-field {
-                grid-template-columns: 120px minmax(0, 1fr);
+                grid-template-columns: 126px minmax(0, 1fr);
+                margin-bottom: 8px;
             }
             .cb-select2-sm + .select2-container--bootstrap-5 .select2-selection {
-                min-height: 31px;
-                font-size: 12px;
-                border-radius: 0;
+                min-height: 34px;
+                font-size: .95rem;
+                border-radius: .25rem;
+            }
+            .cb-select2-sm + .select2-container--bootstrap-5 .select2-selection__rendered {
+                line-height: 32px;
+            }
+            .cb-select2-sm + .select2-container--bootstrap-5 .select2-selection__arrow {
+                min-height: 34px;
             }
             #detailTable .select2-container {
                 min-width: 180px;
@@ -97,16 +126,6 @@
             }
             .cb-line-offset {
                 padding-left: 128px;
-            }
-            .cb-compact .form-control,
-            .cb-compact .btn {
-                height: 25px;
-                min-height: 25px;
-                padding-top: 1px;
-                padding-bottom: 1px;
-                border-radius: 0;
-                font-size: 12px;
-                font-weight: 600;
             }
             .cb-code {
                 flex: 0 0 96px;
@@ -122,9 +141,7 @@
             }
             .cb-new {
                 flex: 0 0 auto;
-                min-width: 42px;
-                padding-left: 8px;
-                padding-right: 8px;
+                min-width: 46px;
             }
             .cb-amount {
                 flex: 0 0 145px;
@@ -167,9 +184,107 @@
             .cb-trx {
                 flex: 0 0 165px;
             }
+            #detailTable .detail-note {
+                min-width: 160px;
+            }
+            #cashbankForm .form-control-sm,
+            #cashbankForm .form-select-sm,
+            #cashbankForm select.form-control-sm {
+                min-height: 34px;
+                padding: .25rem .6rem;
+                font-size: .95rem;
+                border-radius: .25rem;
+                font-weight: 400;
+            }
+            #cashbankForm .btn-sm {
+                padding: .25rem .6rem;
+                font-size: .95rem;
+                border-radius: .25rem;
+            }
+            #cashbankForm .table {
+                font-size: .95rem;
+            }
+            #cashbankForm .form-control[readonly] {
+                background-color: #f8f9fa;
+            }
+            #cashbankForm .cb-cyan {
+                background-color: #ecfeff;
+                border-color: #99f6e4;
+                color: #164e63;
+            }
+            #cashbankForm #documentCode {
+                max-width: 130px !important;
+            }
+            #cashbankForm #mainCoaCode,
+            #cashbankForm #supplierCodePreview {
+                max-width: 125px !important;
+            }
+            #cashbankForm input[name="tgl_transaksi"],
+            #cashbankForm #sejumlah {
+                max-width: 180px !important;
+            }
+            #cashbankForm select[name="dibayar_dengan"] {
+                max-width: 120px !important;
+            }
+            #cashbankForm .cb-side .form-control,
+            #cashbankForm .cb-side select {
+                max-width: none !important;
+            }
+            #cashbankForm .cb-side .cb-period {
+                max-width: 150px !important;
+            }
+            .cb-money-group {
+                display: flex;
+                max-width: 220px;
+            }
+            .cb-money-prefix {
+                display: inline-flex;
+                align-items: center;
+                padding: .25rem .6rem;
+                border: 1px solid #ced4da;
+                border-right: 0;
+                border-radius: .25rem 0 0 .25rem;
+                background: #f8fafc;
+                color: #475467;
+                font-weight: 700;
+            }
+            .cb-money-group .form-control {
+                border-top-left-radius: 0 !important;
+                border-bottom-left-radius: 0 !important;
+            }
+            .cashbank-detail-head {
+                margin-top: 14px;
+                padding-top: 12px;
+                border-top: 1px solid #e9ecef;
+            }
+            .cashbank-detail-tools {
+                padding: 10px;
+                border: 1px solid #e9ecef;
+                border-radius: .5rem;
+                background: #fbfdff;
+            }
+            #detailTable {
+                margin-bottom: 0;
+            }
+            #detailTable thead th {
+                background: #f8fafc;
+                color: #344054;
+                font-size: .875rem;
+                vertical-align: middle;
+            }
+            #detailTable td {
+                vertical-align: middle;
+            }
+            .cashbank-actions {
+                padding-top: 16px;
+                border-top: 1px solid #e9ecef;
+            }
             @media (max-width: 992px) {
                 .cb-form-grid {
                     grid-template-columns: 1fr;
+                }
+                .cb-side {
+                    padding: 12px;
                 }
                 .cb-line {
                     flex-wrap: wrap;
@@ -193,23 +308,30 @@
         <div class="container-fluid">
             <div class="d-flex justify-content-between align-items-center">
                 <h3 class="mb-0 cashbank-title">{{ $title }}</h3>
-                <span class="badge bg-dark">{{ $nomor }}</span>
+                <div class="d-flex align-items-center gap-2">
+                    @if($jenis === 'pembayaran_hutang')
+                        <a href="{{ route('cashbank.transactions.hutang.history') }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-clock-history"></i> Riwayat Transaksi
+                        </a>
+                    @endif
+                    <span class="badge bg-dark">{{ $nomor }}</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="app-content">
+    <div class="app-content cashbank-page">
         <div class="container-fluid">
             <form id="cashbankForm">
                 <input type="hidden" name="jenis" value="{{ $jenis }}">
                 <div class="row g-3">
-                    <div class="col-lg-8">
+                    <div class="col-12">
                         <div class="card card-primary card-outline">
                             <div class="card-header py-2">
                                 <strong>Form Transaksi</strong>
                             </div>
                             <div class="card-body">
-                                <div class="cb-compact cb-form-grid">
+                                <div class="cb-form-grid">
                                     <div>
                                         <div class="cb-field">
                                             <label>Unit Usaha</label>
@@ -241,7 +363,7 @@
                                         </div>
 
                                         <div class="cb-field">
-                                            <label></label>
+                                            <label>-</label>
                                             <input type="text" class="form-control form-control-sm" id="documentNamePreview" readonly>
                                         </div>
 
@@ -282,7 +404,11 @@
 
                                         <div class="cb-field">
                                             <label>Sejumlah</label>
-                                            <input type="number" class="form-control form-control-sm text-end" name="sejumlah" id="sejumlah" min="0" step="0.01" required style="max-width: 180px;">
+                                            <div class="cb-money-group">
+                                                <span class="cb-money-prefix">Rp.</span>
+                                                <input type="text" class="form-control form-control-sm text-end money-display" id="sejumlahDisplay" data-hidden="#sejumlah" inputmode="numeric" autocomplete="off" required>
+                                                <input type="hidden" name="sejumlah" id="sejumlah">
+                                            </div>
                                         </div>
 
                                         <div class="cb-field">
@@ -329,12 +455,12 @@
                                     </div>
                                 </div>
 
-                                <div class="d-flex justify-content-between align-items-center mt-3">
-                                    <strong>Nama Akun Transaksi</strong>
+                                <div class="d-flex justify-content-between align-items-center cashbank-detail-head">
+                                    <strong>Detail Pembayaran Hutang</strong>
                                     <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddDetail"><i class="bi bi-plus-lg"></i> Baris</button>
                                 </div>
 
-                                <div class="row g-2 mt-1 align-items-end">
+                                <div class="row g-3 mt-1 align-items-end cashbank-detail-tools">
                                     <div class="col-md-4">
                                         <label class="form-label">Kode Akun Detail</label>
                                         <select class="form-control form-control-sm cb-select2-sm" id="detailCoaPicker">
@@ -350,15 +476,15 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label">Jumlah</label>
-                                        <input type="number" class="form-control form-control-sm text-end" id="detailAmountPicker" min="0" step="0.01">
+                                        <input type="text" class="form-control form-control-sm text-end money-display" id="detailAmountPicker" inputmode="numeric" autocomplete="off">
                                     </div>
                                     <div class="col-md-2">
-                                        <button type="button" class="btn btn-sm btn-info w-100" id="btnLoadSupplierInvoices"><i class="bi bi-search"></i> Ket</button>
+                                        <button type="button" class="btn btn-sm btn-info w-100" id="btnLoadSupplierInvoices"><i class="bi bi-search"></i> Muat Invoice</button>
                                     </div>
                                 </div>
 
-                                <div class="table-responsive mt-2">
-                                    <table class="table table-sm table-bordered align-middle" id="detailTable" style="font-size: small;">
+                                <div class="table-responsive mt-3">
+                                    <table class="table table-bordered align-middle" id="detailTable">
                                         <thead class="table-light">
                                             <tr>
                                                 <th style="width: 23%">Kode Akun</th>
@@ -367,6 +493,7 @@
                                                 <th class="text-end">Sudah Bayar</th>
                                                 <th class="text-end">Jumlah</th>
                                                 <th class="text-end">Sisa</th>
+                                                <th style="width: 18%">Keterangan</th>
                                                 <th style="width: 40px"></th>
                                             </tr>
                                         </thead>
@@ -375,28 +502,16 @@
                                             <tr>
                                                 <th colspan="4" class="text-end">Total Pembayaran</th>
                                                 <th class="text-end" id="detailTotal">0</th>
-                                                <th colspan="2"></th>
+                                                <th colspan="3"></th>
                                             </tr>
                                         </tfoot>
                                     </table>
                                 </div>
 
-                                <div class="d-flex justify-content-end gap-2">
+                                <div class="d-flex justify-content-end gap-2 cashbank-actions">
                                     <button type="button" class="btn btn-sm btn-warning" id="btnClear"><i class="bi bi-x-circle"></i> Batal</button>
                                     <button type="submit" class="btn btn-sm btn-success" id="btnSave"><i class="bi bi-floppy-fill"></i> Simpan & Cetak</button>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-lg-4">
-                        <div class="card card-secondary card-outline">
-                            <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                                <strong>Log Transaksi</strong>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnReloadLog"><i class="bi bi-arrow-clockwise"></i></button>
-                            </div>
-                            <div class="card-body" id="logPanel" style="max-height: 640px; overflow:auto;">
-                                @include('cashbank.transaksi.partials.logs', ['transactions' => $recentLogs])
                             </div>
                         </div>
                     </div>
@@ -515,6 +630,20 @@
                 $(this).data('auto-ref', false);
             });
 
+            $('#cashbankForm').on('keydown', 'input, select, textarea, button', function (e) {
+                if (e.key !== 'Enter' || $(this).is('textarea') || $(this).attr('type') === 'submit') return;
+                e.preventDefault();
+
+                const focusable = $('#cashbankForm')
+                    .find('input, select, textarea, button')
+                    .filter(':visible:not([disabled]):not([readonly])');
+                const currentIndex = focusable.index(this);
+
+                if (currentIndex >= 0 && currentIndex < focusable.length - 1) {
+                    focusable.eq(currentIndex + 1).trigger('focus');
+                }
+            });
+
             function setMainAccount(code = '', name = '') {
                 $('#mainCoa').val('');
                 $('#mainCoaCode').val(code || '');
@@ -527,6 +656,41 @@
 
             function formatNumber(value) {
                 return new Intl.NumberFormat('id-ID').format(Number(value || 0));
+            }
+
+            function parseMoney(value) {
+                const cleaned = String(value || '').replace(/[^\d]/g, '');
+                return cleaned ? Number(cleaned) : 0;
+            }
+
+            function formatMoneyInput(input) {
+                const target = $(input);
+                const value = parseMoney(target.val());
+                target.val(value > 0 ? formatNumber(value) : '');
+
+                const hiddenSelector = target.data('hidden');
+                if (hiddenSelector) {
+                    $(hiddenSelector).val(value > 0 ? value : '');
+                }
+            }
+
+            function setMoney(target, value) {
+                const input = $(target);
+                const number = Number(value || 0);
+                input.val(number > 0 ? formatNumber(number) : '');
+
+                const hiddenSelector = input.data('hidden');
+                if (hiddenSelector) {
+                    $(hiddenSelector).val(number > 0 ? number : '');
+                }
+            }
+
+            function escapeAttr(value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
             }
 
             function optionHtml(selectedId = '') {
@@ -575,20 +739,20 @@
                 $('#detailTable tbody tr').each(function () {
                     const nilai = Number($(this).find('.nilai-invoice').val() || 0);
                     const sudah = Number($(this).find('.sudah-dibayar').val() || 0);
-                    const bayarInput = $(this).find('.jumlah-bayar');
-                    let bayar = Number(bayarInput.val() || 0);
+                    const bayarDisplay = $(this).find('.jumlah-bayar-display');
+                    let bayar = parseMoney(bayarDisplay.val());
                     const maxBayar = Math.max(nilai - sudah, 0);
                     if (bayar > maxBayar && maxBayar > 0) {
                         bayar = maxBayar;
-                        bayarInput.val(maxBayar);
                     }
                     const sisa = Math.max(nilai - sudah - bayar, 0);
                     $(this).find('.sisa').val(sisa);
                     $(this).find('.sisa-label').text(formatNumber(sisa));
+                    setMoney(bayarDisplay, bayar);
                     total += bayar;
                 });
                 $('#detailTotal').text(formatNumber(total));
-                if (total > 0) $('#sejumlah').val(total.toFixed(2));
+                setMoney('#sejumlahDisplay', total);
                 updateRefNota();
             }
 
@@ -613,11 +777,15 @@
                             <input type="hidden" name="detail[${idx}][sudah_dibayar]" class="sudah-dibayar">
                             <div class="text-end sudah-label">0</div>
                         </td>
-                        <td><input type="number" class="form-control form-control-sm text-end jumlah-bayar" name="detail[${idx}][jumlah_bayar]" min="0" step="0.01"></td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm text-end jumlah-bayar-display money-display" data-hidden="#jumlahBayar${idx}" inputmode="numeric" autocomplete="off">
+                            <input type="hidden" class="jumlah-bayar" id="jumlahBayar${idx}" name="detail[${idx}][jumlah_bayar]">
+                        </td>
                         <td>
                             <input type="hidden" name="detail[${idx}][sisa]" class="sisa">
                             <div class="text-end sisa-label">0</div>
                         </td>
+                        <td><input type="text" class="form-control form-control-sm detail-note" name="detail[${idx}][keterangan]" value="${escapeAttr(data.keterangan)}"></td>
                         <td><button type="button" class="btn btn-sm btn-outline-danger btnRemove"><i class="bi bi-trash"></i></button></td>
                     </tr>
                 `);
@@ -633,7 +801,7 @@
                 row.find('.nomor-invoice').val(data.nomor_invoice || data.text);
                 row.find('.nilai-invoice').val(data.nilai_invoice);
                 row.find('.sudah-dibayar').val(data.sudah_dibayar);
-                row.find('.jumlah-bayar').val(data.sisa);
+                setMoney(row.find('.jumlah-bayar-display'), data.jumlah_bayar || data.sisa);
                 row.find('.nilai-label').text(formatNumber(data.nilai_invoice));
                 row.find('.sudah-label').text(formatNumber(data.sudah_dibayar));
                 if (data.supplier_id) $('#supplierId').val(data.supplier_id);
@@ -648,12 +816,11 @@
             }
 
             function bindInvoiceSearch(input) {
-                input.on('keydown', function (e) {
-                    if (e.key !== 'Enter') return;
-                    e.preventDefault();
-
+                input.on('change blur', function () {
                     const row = $(this).closest('tr');
                     const keyword = $(this).val().trim();
+                    if (!keyword || row.find('.nomor-invoice').val() === keyword) return;
+
                     $.get("{{ route("cashbank.transactions.$routeScope.invoices") }}", {
                         supplier_id: $('#supplierId').val(),
                         supplier_code: $('#subAccountCode').val(),
@@ -674,10 +841,7 @@
                     $('#supplierCodePreview').val('');
                 }
             }).on('keydown', function (e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    $('#btnPickSupplier').trigger('click');
-                }
+                if (e.key === 'Enter') e.preventDefault();
             });
 
             function searchSupplierPicker() {
@@ -730,7 +894,13 @@
             });
 
             $('#btnAddDetail').on('click', () => addDetailRow());
-            $('#detailTable').on('input', '.jumlah-bayar', recalc);
+            $('#cashbankForm').on('input', '.money-display', function () {
+                formatMoneyInput(this);
+
+                if ($(this).hasClass('jumlah-bayar-display')) {
+                    recalc();
+                }
+            });
             $('#detailTable').on('click', '.btnRemove', function () { $(this).closest('tr').remove(); recalc(); });
 
             $('#documentCode').on('change', function () {
@@ -754,7 +924,7 @@
                     return;
                 }
 
-                let remainingAmount = Number($('#detailAmountPicker').val() || 0);
+                let remainingAmount = parseMoney($('#detailAmountPicker').val());
                 $.get("{{ route("cashbank.transactions.$routeScope.invoices") }}", {
                     supplier_code: supplierCode,
                     q: ''
@@ -772,12 +942,23 @@
                             if (payAmount <= 0) return;
                         }
 
-                        addDetailRow({
+                        const emptyRow = $('#detailTable tbody tr').filter(function () {
+                            return !$(this).find('.nomor-invoice').val()
+                                && !$(this).find('.invoice-search').val()
+                                && parseMoney($(this).find('.jumlah-bayar-display').val()) <= 0;
+                        }).first();
+                        const targetRow = emptyRow.length ? emptyRow : null;
+                        const data = {
                             ...row,
                             coa_id: $('#detailCoaPicker').val(),
                             sisa: payAmount
-                        });
-                        $('#detailTable tbody tr:last .jumlah-bayar').val(payAmount);
+                        };
+
+                        if (targetRow) {
+                            fillInvoice(targetRow, data);
+                        } else {
+                            addDetailRow(data);
+                        }
                         recalc();
                     });
                 }).fail(xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'));
@@ -785,10 +966,6 @@
 
             $('#btnRefreshNumber').on('click', function () {
                 $.get("{{ route("cashbank.transactions.$routeScope.number") }}", { jenis }).done(number => $('#nomorPreview').val(number));
-            });
-
-            $('#btnReloadLog').on('click', function () {
-                $('#logPanel').load("{{ route("cashbank.transactions.$routeScope.logs") }}?jenis=" + encodeURIComponent(jenis));
             });
 
             $('#documentForm').on('submit', function (e) {
@@ -841,6 +1018,8 @@
                 $('#cashbankForm')[0].reset();
                 $('#detailTable tbody').empty();
                 $('#detailTotal').text('0');
+                setMoney('#sejumlahDisplay', 0);
+                setMoney('#detailAmountPicker', 0);
                 $('#supplierId').val('');
                 $('#supplierSearch').val('');
                 $('#supplierCodePreview').val('');
@@ -851,6 +1030,7 @@
                 $('input[name=tgl_transaksi]').val('{{ date('Y-m-d') }}');
                 $('input[name=periode]').val('{{ date('Ym') }}');
                 syncUnitPreview();
+                if (jenis === 'pembayaran_hutang') addDetailRow();
             });
 
             $('#cashbankForm').on('submit', function (e) {
@@ -868,7 +1048,6 @@
                         Swal.fire({ icon: 'success', title: response.message, timer: 1500, showConfirmButton: false })
                             .then(() => {
                                 window.open(response.nota_url, '_blank');
-                                $('#btnReloadLog').trigger('click');
                                 $('#btnClear').trigger('click');
                                 $('#btnRefreshNumber').trigger('click');
                             });
@@ -884,7 +1063,7 @@
                 $('#documentCode option[value!=""]').first().prop('selected', true);
             }
             syncUnitPreview();
-            $('#documentCode').trigger('change');
+                $('#documentCode').trigger('change');
         </script>
     </x-slot>
 </x-app-layout>

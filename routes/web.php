@@ -330,6 +330,10 @@ Route::prefix('cashbank')->name('cashbank.')->middleware($menuAccessMiddleware)-
     Route::prefix('transaksi')->name('transactions.')->group(function () {
         Route::get('/umum', [CashBankTransactionController::class, 'umum'])->name('umum.index');
         Route::get('/pembayaran-hutang', [CashBankTransactionController::class, 'hutang'])->name('hutang.index');
+        Route::get('/pembayaran-hutang/riwayat', [CashBankTransactionController::class, 'hutangHistory'])->name('hutang.history');
+        Route::get('/pembayaran-hutang/riwayat/{transaction}', [CashBankTransactionController::class, 'show'])->name('hutang.show');
+        Route::put('/pembayaran-hutang/riwayat/{transaction}', [CashBankTransactionController::class, 'update'])->name('hutang.update');
+        Route::delete('/pembayaran-hutang/riwayat/{transaction}', [CashBankTransactionController::class, 'destroy'])->name('hutang.destroy');
 
         foreach ([
             'umum' => 'umum',

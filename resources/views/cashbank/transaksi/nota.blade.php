@@ -71,6 +71,7 @@
                     <th class="text-end">Sudah Dibayar</th>
                     <th class="text-end">Jumlah Bayar</th>
                     <th class="text-end">Sisa</th>
+                    <th>Keterangan</th>
                 </tr>
             </thead>
             <tbody>
@@ -82,6 +83,7 @@
                         <td class="text-end">{{ number_format((float) $detail->sudah_dibayar, 0, ',', '.') }}</td>
                         <td class="text-end">{{ number_format((float) $detail->jumlah_bayar, 0, ',', '.') }}</td>
                         <td class="text-end">{{ number_format((float) $detail->sisa, 0, ',', '.') }}</td>
+                        <td>{{ $detail->keterangan ?: '-' }}</td>
                     </tr>
                 @empty
                     <tr>
@@ -89,6 +91,7 @@
                         <td colspan="3">{{ $transaction->guna_membayar ?? 'Transaksi umum' }}</td>
                         <td class="text-end">{{ number_format((float) $transaction->sejumlah, 0, ',', '.') }}</td>
                         <td class="text-end">0</td>
+                        <td>-</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -96,7 +99,7 @@
                 <tr>
                     <th colspan="4" class="text-end">Total</th>
                     <th class="text-end">{{ number_format((float) $transaction->sejumlah, 0, ',', '.') }}</th>
-                    <th></th>
+                    <th colspan="2"></th>
                 </tr>
             </tfoot>
         </table>
