@@ -496,9 +496,10 @@
                         'Angs ke-1': row.ANGSUR1_formatted === '-' ? 0 : row.ANGSUR1_formatted.replace(/[^0-9-]/g, ''),
                         'Angs ke-2': row.ANGSUR2_formatted === '-' ? 0 : row.ANGSUR2_formatted.replace(/[^0-9-]/g, ''),
                         Jenis: row.JENIS,
+                        Unit: row.UNIT,
                         'No. Badge': row.NO_BADGE,
                         Kel: row.KEL,
-                        Status: row.STATUS_text
+                        Status: row.STATUS
                     }));
 
                     const worksheet = XLSX.utils.json_to_sheet(data);

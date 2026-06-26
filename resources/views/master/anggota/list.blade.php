@@ -22,6 +22,7 @@
                                 </div>
                             </div>
                             <div class="card-tools"> 
+                                <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#importAnggotaModal"><i class="bi bi-arrow-repeat"></i> Update Data</button>
                                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModalForm" id="btnadd"><i class="bi bi-file-earmark-plus"></i> Pendaftaran Anggota</button>
                             </div>
                         </div>
@@ -72,6 +73,28 @@
                 </div>
             </form>
         </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="importAnggotaModal" tabindex="-1" aria-labelledby="importAnggotaModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="frmImportAnggota" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="importAnggotaModalLabel">Update Data Anggota</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <label for="fimport_anggota" class="form-label">File Excel</label>
+                        <input type="file" class="form-control form-control-sm" id="fimport_anggota" name="file" accept=".xlsx,.xls,.csv" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-success" id="btnImportAnggota"><i class="bi bi-upload"></i> Import</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
     
@@ -291,6 +314,49 @@
                     columnDefs: [
                         { targets: [dataTableColumns.length - 1], className: 'text-center' }
                     ]
+                });
+
+                function showImportMessage(title, text, icon) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire(title, text, icon);
+                    } else {
+                        alert(text);
+                    }
+                }
+
+                $('#frmImportAnggota').on('submit', function(e) {
+                    e.preventDefault();
+
+                    const form = this;
+                    const formData = new FormData(form);
+                    const submitButton = $('#btnImportAnggota');
+
+                    $.ajax({
+                        url: "{{ route('anggota.import') }}",
+                        method: "POST",
+                        data: formData,
+                        headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')},
+                        contentType: false,
+                        processData: false,
+                        beforeSend: function() {
+                            submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Import');
+                            loader($('#frmImportAnggota'), true);
+                        },
+                        success: function(response) {
+                            table.ajax.reload(null, false);
+                            $('#importAnggotaModal').modal('hide');
+                            form.reset();
+                            showImportMessage('Berhasil', response.message ?? 'Import selesai.', 'success');
+                        },
+                        error: function(xhr) {
+                            const message = xhr.responseJSON?.message ?? 'Import gagal.';
+                            showImportMessage('Error', message, 'error');
+                        },
+                        complete: function() {
+                            submitButton.prop('disabled', false).html('<i class="bi bi-upload"></i> Import');
+                            loader($('#frmImportAnggota'), false);
+                        }
+                    });
                 });
 
                 $('#tabelAnggota tbody').on('focus', '.editable-cell', function() {

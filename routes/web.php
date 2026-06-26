@@ -260,6 +260,7 @@ Route::prefix('anggota')->middleware($menuAccessMiddleware)->namespace('Anggota'
     Route::post('/password/update', [AnggotaController::class, 'updatePassword'])->name('anggota.updatepassword');
     Route::get('/getcode', [AnggotaController::class, 'getcode'])->name('anggota.getcode');
     Route::post('/store', [AnggotaController::class, 'Store'])->name('anggota.store');
+    Route::post('/import', [AnggotaController::class, 'importExcel'])->name('anggota.import');
     Route::post('/inline-update', [AnggotaController::class, 'inlineUpdate'])->name('anggota.inline-update');
 });
 

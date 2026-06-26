@@ -1774,8 +1774,8 @@ public function generatePinbrg(Request $request)
                 DB::raw('COALESCE(SUM(CASE WHEN pc.cicilan = 2 THEN pc.total_cicilan ELSE 0 END), 0) as ANGSUR2'),
                 DB::raw("CASE WHEN pc.kategori = 0 THEN '2' WHEN pc.kategori = 1 THEN '1' ELSE '1' END as JENIS"),
                 DB::raw("COALESCE(MIN(CASE WHEN pc.status_bayar = '0' THEN pc.cicilan END), 0) as ANGS_KE"),
-                'u.id as UNIT',
-                DB::raw("'1' as STATUS"),
+                'usr.unit as UNIT',
+                'usr.status_lama as STATUS',
                 'usr.nik as NO_BADGE',
                 DB::raw("CASE WHEN pc.kategori = 0 THEN 'BP' WHEN pc.kategori = 1 THEN 'NB' ELSE 'NB' END as KEL"),
                 DB::raw("'2' as jenis_penjualan")
@@ -1791,6 +1791,8 @@ public function generatePinbrg(Request $request)
                 'u.nama_unit',
                 'usr.nomor_anggota',
                 'usr.nik',
+                'usr.unit',
+                'usr.status_lama',
                 'p.nomor_invoice',
                 'p.tanggal',
                 'p.grandtotal',
@@ -1817,8 +1819,8 @@ public function generatePinbrg(Request $request)
                 DB::raw('COALESCE(SUM(CASE WHEN tbc.cicilan = 2 THEN tbc.total_cicilan ELSE 0 END), 0) as ANGSUR2'),
                 DB::raw("CASE WHEN tbc.kategori = 0 THEN '2' WHEN tbc.kategori = 1 THEN '1' ELSE '1' END as JENIS"),
                 DB::raw("COALESCE(MIN(CASE WHEN tbc.status = 'hutang' THEN tbc.cicilan END), 0) as ANGS_KE"),
-                DB::raw('5 as UNIT'),
-                DB::raw("'1' as STATUS"),
+                'usr.unit as UNIT',
+                'usr.status_lama as STATUS',
                 'usr.nik as NO_BADGE',
                 DB::raw("CASE WHEN tbc.kategori = 0 THEN 'BP' WHEN tbc.kategori = 1 THEN 'NB' ELSE 'NB' END as KEL"),
                 DB::raw("'2' as jenis_penjualan")
@@ -1831,6 +1833,8 @@ public function generatePinbrg(Request $request)
                 'tb.id',
                 'usr.nomor_anggota',
                 'usr.nik',
+                'usr.unit',
+                'usr.status_lama',
                 'tb.nomor_invoice',
                 'tb.tanggal',
                 'tb.grandtotal',
@@ -1905,7 +1909,7 @@ public function exportPinbrgDbf(Request $request)
     try {
         $period = $request->input('period', date('Y-m'));
         
-        $data = Pinbrg::where('period', $period)->get();
+        $data = $this->buildPinbrgQuery($period)->get();
         
         if ($data->isEmpty()) {
             return response()->json([
@@ -1999,8 +2003,8 @@ private function createDbfFileNavicat($filePath, $data)
             floatval($row->ANGSUR2 ?? 0),
             $this->formatDbfField($row->JENIS ?? '', 5),
             intval($row->ANGS_KE ?? 0),
-            $this->formatDbfField($row->UNIT ?? '', 10),
-            $this->formatDbfField($row->STATUS ?? '1', 5),
+            $this->formatDbfField($row->export_unit ?? $row->UNIT ?? '', 10),
+            $this->formatDbfField($row->export_status ?? $row->STATUS ?? '', 5),
             $this->formatDbfField($row->NO_BADGE ?? '', 15),
             $this->formatDbfField($row->KEL ?? '', 5),
             $this->formatDbfField($row->jenis_penjualan ?? '2', 10),
@@ -2035,17 +2039,25 @@ private function formatDbfField($value, $maxLength)
 private function buildPinbrgQuery(string $period, string $search = '')
 {
     return Pinbrg::query()
+        ->leftJoin('users as usr_pinbrg', 'usr_pinbrg.nomor_anggota', '=', 'pinbrg.NO_AGT')
+        ->select(
+            'pinbrg.*',
+            DB::raw('COALESCE(usr_pinbrg.unit, pinbrg.UNIT) as export_unit'),
+            DB::raw('COALESCE(usr_pinbrg.status_lama, pinbrg.STATUS) as export_status')
+        )
         ->when($period !== '', function ($query) use ($period) {
-            $query->where('period', $period);
+            $query->where('pinbrg.period', $period);
         })
         ->when($search !== '', function ($query) use ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('NO_AGT', 'like', "%{$search}%")
-                    ->orWhere('NOPIN', 'like', "%{$search}%")
-                    ->orWhere('NO_PIN', 'like', "%{$search}%")
-                    ->orWhere('NO_BADGE', 'like', "%{$search}%")
-                    ->orWhere('unit_usaha', 'like', "%{$search}%")
-                    ->orWhere('lokasi', 'like', "%{$search}%");
+                $q->where('pinbrg.NO_AGT', 'like', "%{$search}%")
+                    ->orWhere('pinbrg.NOPIN', 'like', "%{$search}%")
+                    ->orWhere('pinbrg.NO_PIN', 'like', "%{$search}%")
+                    ->orWhere('pinbrg.NO_BADGE', 'like', "%{$search}%")
+                    ->orWhere('pinbrg.unit_usaha', 'like', "%{$search}%")
+                    ->orWhere('pinbrg.lokasi', 'like', "%{$search}%")
+                    ->orWhere('usr_pinbrg.unit', 'like', "%{$search}%")
+                    ->orWhere('usr_pinbrg.status_lama', 'like', "%{$search}%");
             });
         });
 }
@@ -2073,6 +2085,8 @@ private function resolvePinbrgSearch(Request $request): string
 private function transformPinbrgRow($row): array
 {
     $statusActive = (string) $row->STATUS === '1';
+    $exportUnit = $row->export_unit ?? $row->UNIT ?? '';
+    $exportStatus = $row->export_status ?? $row->STATUS ?? '';
 
     return [
         'period' => $row->period,
@@ -2090,10 +2104,12 @@ private function transformPinbrgRow($row): array
         'ANGSUR1_formatted' => $row->ANGSUR1 > 0 ? 'Rp ' . number_format($row->ANGSUR1, 0, ',', '.') : '-',
         'ANGSUR2_formatted' => $row->ANGSUR2 > 0 ? 'Rp ' . number_format($row->ANGSUR2, 0, ',', '.') : '-',
         'JENIS' => $row->JENIS,
+        'UNIT' => $exportUnit,
         'NO_BADGE' => $row->NO_BADGE,
         'KEL' => $row->KEL,
+        'STATUS' => $exportStatus,
         'STATUS_badge' => '<span class="badge ' . ($statusActive ? 'bg-success' : 'bg-warning') . '">' . ($statusActive ? 'Aktif' : 'Non-Aktif') . '</span>',
-        'STATUS_text' => $statusActive ? 'Aktif' : 'Non-Aktif',
+        'STATUS_text' => $exportStatus,
     ];
 }
 

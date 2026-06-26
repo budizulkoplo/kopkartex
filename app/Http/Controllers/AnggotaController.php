@@ -4,12 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\Unit;
 use App\Models\User;
+use DateTimeInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Yajra\DataTables\Facades\DataTables;
@@ -143,6 +149,27 @@ class AnggotaController extends Controller
         'ket' => ['label' => 'KET', 'type' => 'string', 'max' => 35],
     ];
 
+    private const EXCEL_COLUMN_ALIASES = [
+        'NO_AGT' => 'nomor_anggota',
+        'NAMA' => 'name',
+        'NAMA_AGT' => 'name',
+        'SALARY' => 'gaji',
+        'STATUS' => 'status_lama',
+        'TOT_SHU' => 'tot_sjhu',
+        'NO_HP' => 'nohp',
+        'NOHP' => 'nohp',
+    ];
+
+    private const EXCLUDED_IMPORT_COLUMNS = [
+        'id',
+        'password',
+        'remember_token',
+        'email_verified_at',
+        'created_at',
+        'updated_at',
+        'deleted_at',
+    ];
+
     public function index(Request $request): View
     {
         return view('master.anggota.list', [
@@ -270,6 +297,114 @@ class AnggotaController extends Controller
             ->make(true);
     }
 
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:20480'],
+        ]);
+
+        $reader = IOFactory::createReaderForFile($request->file('file')->getRealPath());
+        $reader->setReadDataOnly(true);
+
+        $spreadsheet = $reader->load($request->file('file')->getRealPath());
+        $sheet = $spreadsheet->getActiveSheet();
+        $highestRow = $sheet->getHighestDataRow();
+        $highestColumnIndex = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
+        $headerRow = $this->detectImportHeaderRow($sheet, $highestRow, $highestColumnIndex);
+
+        if (! $headerRow) {
+            return response()->json([
+                'message' => 'Kolom NO_AGT tidak ditemukan pada file Excel.',
+            ], 422);
+        }
+
+        $headers = $this->readImportRow($sheet, $headerRow, $highestColumnIndex);
+        [$columnMap, $keyColumnIndex] = $this->buildImportColumnMap($headers);
+
+        if (! $keyColumnIndex) {
+            return response()->json([
+                'message' => 'Kolom NO_AGT tidak bisa dipetakan ke nomor_anggota.',
+            ], 422);
+        }
+
+        $inserted = 0;
+        $updated = 0;
+        $skipped = 0;
+        $roleAnggota = Role::where('name', 'anggota')->first();
+
+        DB::beginTransaction();
+
+        try {
+            for ($rowNumber = $headerRow + 1; $rowNumber <= $highestRow; $rowNumber++) {
+                $nomorAnggota = $this->normalizeMemberNumber(
+                    $sheet->getCell(Coordinate::stringFromColumnIndex($keyColumnIndex) . $rowNumber)->getCalculatedValue()
+                );
+
+                if ($nomorAnggota === '') {
+                    $skipped++;
+                    continue;
+                }
+
+                $payload = ['nomor_anggota' => $nomorAnggota];
+
+                foreach ($columnMap as $columnIndex => $field) {
+                    $cellValue = $sheet->getCell(Coordinate::stringFromColumnIndex($columnIndex) . $rowNumber)->getCalculatedValue();
+                    $value = $this->normalizeImportValue($cellValue, $field);
+
+                    if ($field === 'email' && ($value === null || $value === '')) {
+                        continue;
+                    }
+
+                    $payload[$field] = $value;
+                }
+
+                $user = User::withTrashed()->where('nomor_anggota', $nomorAnggota)->first();
+                $isNewUser = ! $user;
+
+                if ($isNewUser) {
+                    $user = new User();
+                    $payload['username'] = $payload['username'] ?? $nomorAnggota;
+                    $payload['name'] = $payload['name'] ?? $nomorAnggota;
+                    $payload['email'] = $payload['email'] ?? $this->defaultImportEmail($nomorAnggota);
+                    $payload['password'] = Hash::make('12345678');
+                    $payload['ui'] = $payload['ui'] ?? 'user';
+                    $payload['status'] = $payload['status'] ?? 'aktif';
+                } elseif (method_exists($user, 'trashed') && $user->trashed()) {
+                    $user->restore();
+                }
+
+                foreach ($payload as $field => $value) {
+                    $user->{$field} = $value;
+                }
+
+                $user->save();
+
+                if ($roleAnggota && ! $user->hasRole('anggota')) {
+                    $user->assignRole($roleAnggota);
+                }
+
+                $isNewUser ? $inserted++ : $updated++;
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Import gagal: ' . $e->getMessage(),
+            ], 500);
+        } finally {
+            $spreadsheet->disconnectWorksheets();
+        }
+
+        return response()->json([
+            'message' => "Import selesai. Insert: {$inserted}, Update: {$updated}, Lewati: {$skipped}.",
+            'inserted' => $inserted,
+            'updated' => $updated,
+            'skipped' => $skipped,
+        ]);
+    }
+
     public function inlineUpdate(Request $request)
     {
         $editableColumns = self::BASE_INLINE_COLUMNS + self::LEGACY_INLINE_COLUMNS;
@@ -316,6 +451,166 @@ class AnggotaController extends Controller
             'field' => $payload['field'],
             'value' => $user->{$payload['field']},
         ]);
+    }
+
+    private function detectImportHeaderRow(Worksheet $sheet, int $highestRow, int $highestColumnIndex): ?int
+    {
+        $maxRow = min($highestRow, 20);
+
+        for ($rowNumber = 1; $rowNumber <= $maxRow; $rowNumber++) {
+            $headers = $this->readImportRow($sheet, $rowNumber, $highestColumnIndex);
+
+            foreach ($headers as $header) {
+                if ($this->normalizeImportHeader($header) === $this->normalizeImportHeader('NO_AGT')) {
+                    return $rowNumber;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function readImportRow(Worksheet $sheet, int $rowNumber, int $highestColumnIndex): array
+    {
+        $row = [];
+
+        for ($columnIndex = 1; $columnIndex <= $highestColumnIndex; $columnIndex++) {
+            $row[$columnIndex] = trim((string) $sheet->getCell(Coordinate::stringFromColumnIndex($columnIndex) . $rowNumber)->getCalculatedValue());
+        }
+
+        return $row;
+    }
+
+    private function buildImportColumnMap(array $headers): array
+    {
+        $dbColumns = array_values(array_diff(Schema::getColumnListing('users'), self::EXCLUDED_IMPORT_COLUMNS));
+        $dbColumnsByHeader = [];
+
+        foreach ($dbColumns as $column) {
+            $dbColumnsByHeader[$this->normalizeImportHeader($column)] = $column;
+        }
+
+        $labelsByHeader = [];
+
+        foreach (self::BASE_INLINE_COLUMNS + self::LEGACY_INLINE_COLUMNS as $field => $meta) {
+            $labelsByHeader[$this->normalizeImportHeader($meta['label'])] = $field;
+        }
+
+        $aliasesByHeader = [];
+
+        foreach (self::EXCEL_COLUMN_ALIASES as $header => $field) {
+            $aliasesByHeader[$this->normalizeImportHeader($header)] = $field;
+        }
+
+        $columnMap = [];
+        $keyColumnIndex = null;
+        $usedFields = [];
+
+        foreach ($headers as $columnIndex => $header) {
+            $normalizedHeader = $this->normalizeImportHeader($header);
+
+            if ($normalizedHeader === '') {
+                continue;
+            }
+
+            $field = $aliasesByHeader[$normalizedHeader]
+                ?? $dbColumnsByHeader[$normalizedHeader]
+                ?? $labelsByHeader[$normalizedHeader]
+                ?? null;
+
+            if (! $field || ! in_array($field, $dbColumns, true)) {
+                continue;
+            }
+
+            if (in_array($field, $usedFields, true)) {
+                continue;
+            }
+
+            $columnMap[$columnIndex] = $field;
+            $usedFields[] = $field;
+
+            if ($field === 'nomor_anggota') {
+                $keyColumnIndex = $columnIndex;
+            }
+        }
+
+        return [$columnMap, $keyColumnIndex];
+    }
+
+    private function normalizeImportHeader(?string $header): string
+    {
+        $header = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header);
+
+        return strtoupper(preg_replace('/[^A-Z0-9]/i', '', trim($header)));
+    }
+
+    private function normalizeImportValue(mixed $value, string $field): mixed
+    {
+        if ($value instanceof DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        if ($value === '' || $value === null) {
+            return $this->isNumericImportField($field) ? 0 : null;
+        }
+
+        $columnMeta = (self::BASE_INLINE_COLUMNS + self::LEGACY_INLINE_COLUMNS)[$field] ?? null;
+
+        if (($columnMeta['type'] ?? null) === 'date') {
+            if (is_numeric($value)) {
+                return ExcelDate::excelToDateTimeObject((float) $value)->format('Y-m-d');
+            }
+
+            $timestamp = strtotime((string) $value);
+
+            return $timestamp ? date('Y-m-d', $timestamp) : null;
+        }
+
+        if (($columnMeta['type'] ?? null) === 'numeric' || $this->isNumericImportField($field)) {
+            $numericValue = str_replace([',', ' '], '', (string) $value);
+
+            return is_numeric($numericValue) ? $numericValue : 0;
+        }
+
+        return $this->stringifyImportValue($value);
+    }
+
+    private function isNumericImportField(string $field): bool
+    {
+        $numericFields = [
+            'gaji',
+            'limit_ppob',
+            'limit_hutang',
+        ];
+
+        foreach (self::LEGACY_INLINE_COLUMNS as $legacyField => $meta) {
+            if (($meta['type'] ?? null) === 'numeric') {
+                $numericFields[] = $legacyField;
+            }
+        }
+
+        return in_array($field, $numericFields, true);
+    }
+
+    private function normalizeMemberNumber(mixed $value): string
+    {
+        return $this->stringifyImportValue($value);
+    }
+
+    private function stringifyImportValue(mixed $value): string
+    {
+        if (is_float($value)) {
+            return rtrim(rtrim(sprintf('%.10F', $value), '0'), '.');
+        }
+
+        return trim((string) $value);
+    }
+
+    private function defaultImportEmail(string $nomorAnggota): string
+    {
+        $safeNomor = preg_replace('/[^A-Za-z0-9._-]/', '', $nomorAnggota) ?: uniqid('anggota');
+
+        return strtolower($safeNomor) . '@anggota.local';
     }
 
 }
