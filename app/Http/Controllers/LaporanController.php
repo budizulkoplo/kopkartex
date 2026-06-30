@@ -18,11 +18,75 @@ use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Log;
 
 class LaporanController extends Controller
 {
+    public function cashbankLedger(Request $request)
+    {
+        $filters = $this->cashbankReportFilters($request);
+        $rows = collect();
+        $openingBalance = 0;
+
+        if ($filters['unit_usaha']) {
+            $openingBalance = $this->cashbankLedgerRows($filters, true)->sum(fn ($row) => $row->debit - $row->kredit);
+            $runningBalance = $openingBalance;
+            $rows = $this->cashbankLedgerRows($filters)->map(function ($row) use (&$runningBalance) {
+                $runningBalance += $row->debit - $row->kredit;
+                $row->saldo = $runningBalance;
+
+                return $row;
+            });
+        }
+
+        return view('laporan.cashbank.ledger', $this->cashbankReportOptions() + [
+            'filters' => $filters,
+            'rows' => $rows,
+            'openingBalance' => $openingBalance,
+            'totals' => [
+                'debit' => $rows->sum('debit'),
+                'kredit' => $rows->sum('kredit'),
+                'saldo' => $openingBalance + $rows->sum('debit') - $rows->sum('kredit'),
+            ],
+        ]);
+    }
+
+    public function cashbankSummaryBankDetail(Request $request)
+    {
+        $filters = [
+            'bank_id' => $request->input('bank_id'),
+            'tanggal_awal' => $request->input('tanggal_awal', now()->startOfMonth()->toDateString()),
+            'tanggal_akhir' => $request->input('tanggal_akhir', now()->toDateString()),
+        ];
+
+        $openingBalance = 0;
+        $rows = collect();
+
+        if ($filters['bank_id']) {
+            $openingBalance = $this->cashbankBankRows($filters, true)->sum(fn ($row) => $row->debit - $row->kredit);
+            $runningBalance = $openingBalance;
+            $rows = $this->cashbankBankRows($filters)->map(function ($row) use (&$runningBalance) {
+                $runningBalance += $row->debit - $row->kredit;
+                $row->saldo = $runningBalance;
+
+                return $row;
+            });
+        }
+
+        return view('laporan.cashbank.summary_bank_detail', $this->cashbankReportOptions() + [
+            'filters' => $filters,
+            'rows' => $rows,
+            'openingBalance' => $openingBalance,
+            'totals' => [
+                'debit' => $rows->sum('debit'),
+                'kredit' => $rows->sum('kredit'),
+                'saldo' => $openingBalance + $rows->sum('debit') - $rows->sum('kredit'),
+            ],
+        ]);
+    }
+
     public function penerimaanLaporan(Request $request)
     {
         // default bulan berjalan
@@ -2720,6 +2784,169 @@ private function downloadHtmlTableAsExcel(string $filename, string $title, array
         echo '</html>';
         
         exit;
+    }
+
+    private function cashbankReportFilters(Request $request): array
+    {
+        return [
+            'unit_usaha' => $request->input('unit_usaha'),
+            'bank_id' => $request->input('bank_id'),
+            'coa_id' => $request->input('coa_id'),
+            'supplier_id' => $request->input('supplier_id'),
+            'anggota_id' => $request->input('anggota_id'),
+            'tanggal_awal' => $request->input('tanggal_awal', now()->startOfMonth()->toDateString()),
+            'tanggal_akhir' => $request->input('tanggal_akhir', now()->toDateString()),
+        ];
+    }
+
+    private function cashbankReportOptions(): array
+    {
+        return [
+            'unitUsahaOptions' => DB::table('unit')
+                ->select('unit_usaha', 'nama_unit_usaha')
+                ->whereNull('deleted_at')
+                ->whereNotNull('unit_usaha')
+                ->whereNotNull('nama_unit_usaha')
+                ->distinct()
+                ->orderBy('unit_usaha')
+                ->get(),
+            'bankOptions' => DB::table('cashbank_banks')
+                ->whereNull('deleted_at')
+                ->where('is_active', true)
+                ->orderBy('kode_akun')
+                ->get(['id', 'kode_akun', 'nama_akun', 'nama_bank']),
+            'coaOptions' => DB::table('cashbank_coas')
+                ->whereNull('deleted_at')
+                ->where('is_active', true)
+                ->when(
+                    Schema::hasColumn('cashbank_coas', 'att5') && DB::table('cashbank_coas')->where('att5', 'D')->exists(),
+                    fn ($query) => $query->where('att5', 'D')
+                )
+                ->orderBy('kode_akun')
+                ->get(['id', 'kode_akun', 'nama_akun']),
+            'supplierOptions' => DB::table('suppliers')
+                ->whereNull('deleted_at')
+                ->orderBy('nama_supplier')
+                ->get(['id', 'kode_supplier', 'nama_supplier']),
+            'memberOptions' => DB::table('users')
+                ->whereNull('deleted_at')
+                ->whereNotNull('nomor_anggota')
+                ->orderBy('nomor_anggota')
+                ->get(['id', 'nomor_anggota', 'name']),
+        ];
+    }
+
+    private function cashbankLedgerRows(array $filters, bool $beforePeriod = false)
+    {
+        $query = $this->cashbankRowsQuery()
+            ->when($beforePeriod, fn ($query) => $query->where('cb.tgl_transaksi', '<', $filters['tanggal_awal']))
+            ->when(! $beforePeriod, fn ($query) => $query->whereBetween('cb.tgl_transaksi', [$filters['tanggal_awal'], $filters['tanggal_akhir']]));
+
+        $this->applyCashbankFilters($query, $filters, true);
+
+        return $query
+            ->orderBy('cb.tgl_transaksi')
+            ->orderBy('cb.nomor_transaksi')
+            ->orderBy('cbd.id')
+            ->get();
+    }
+
+    private function cashbankBankRows(array $filters, bool $beforePeriod = false)
+    {
+        $query = $this->cashbankRowsQuery()
+            ->when($beforePeriod, fn ($query) => $query->where('cb.tgl_transaksi', '<', $filters['tanggal_awal']))
+            ->when(! $beforePeriod, fn ($query) => $query->whereBetween('cb.tgl_transaksi', [$filters['tanggal_awal'], $filters['tanggal_akhir']]))
+            ->when($filters['bank_id'], fn ($query) => $query->where('cb.bank_id', $filters['bank_id']));
+
+        return $query
+            ->orderBy('bank.kode_akun')
+            ->orderBy('cb.tgl_transaksi')
+            ->orderBy('cb.nomor_transaksi')
+            ->orderBy('cbd.id')
+            ->get();
+    }
+
+    private function cashbankRowsQuery()
+    {
+        $unitBusiness = DB::table('unit')
+            ->select('unit_usaha', DB::raw('MAX(nama_unit_usaha) as nama_unit_usaha'))
+            ->whereNull('deleted_at')
+            ->whereNotNull('unit_usaha')
+            ->groupBy('unit_usaha');
+
+        return DB::table('cashbank_transactions as cb')
+            ->leftJoin('cashbank_transaction_details as cbd', 'cbd.transaction_id', '=', 'cb.id')
+            ->leftJoin('cashbank_document_codes as doc', 'doc.id', '=', 'cb.document_code_id')
+            ->leftJoin('cashbank_banks as bank', 'bank.id', '=', 'cb.bank_id')
+            ->leftJoin('cashbank_coas as detail_coa', 'detail_coa.id', '=', 'cbd.coa_id')
+            ->leftJoin('cashbank_coas as trx_coa', 'trx_coa.id', '=', 'cb.coa_id')
+            ->leftJoin('suppliers as sup', 'sup.id', '=', 'cb.supplier_id')
+            ->leftJoin('unit as unit_direct', 'unit_direct.id', '=', 'cb.unit_id')
+            ->leftJoinSub($unitBusiness, 'unit_business', 'unit_business.unit_usaha', '=', 'cb.unit_id')
+            ->whereNull('cb.deleted_at')
+            ->where('cb.status', 'posted')
+            ->select([
+                'cb.tgl_transaksi',
+                'cb.nomor_transaksi',
+                'cb.dibayar_kepada',
+                'cb.guna_membayar',
+                'cb.no_ref_nota',
+                'doc.kode as kode_dokumen',
+                'doc.nama as nama_dokumen',
+                'doc.transaction_type',
+                'bank.kode_akun as bank_kode',
+                'bank.nama_akun as bank_nama',
+                'bank.nama_bank',
+                DB::raw('COALESCE(detail_coa.kode_akun, trx_coa.kode_akun) as coa_kode'),
+                DB::raw('COALESCE(detail_coa.nama_akun, trx_coa.nama_akun) as coa_nama'),
+                'sup.kode_supplier',
+                'sup.nama_supplier',
+                DB::raw('COALESCE(unit_business.nama_unit_usaha, unit_direct.nama_unit_usaha, unit_direct.nama_unit, "-") as nama_unit_usaha'),
+                DB::raw('COALESCE(cbd.nomor_invoice, cb.no_ref_nota, "") as nomor_ref'),
+                DB::raw('COALESCE(cbd.keterangan, cb.guna_membayar, "") as keterangan_detail'),
+                DB::raw('COALESCE(NULLIF(cbd.jumlah_bayar, 0), cb.sejumlah, 0) as nominal'),
+                DB::raw("CASE WHEN COALESCE(doc.transaction_type, 'payment') = 'receipt' THEN COALESCE(NULLIF(cbd.jumlah_bayar, 0), cb.sejumlah, 0) ELSE 0 END as debit"),
+                DB::raw("CASE WHEN COALESCE(doc.transaction_type, 'payment') = 'payment' THEN COALESCE(NULLIF(cbd.jumlah_bayar, 0), cb.sejumlah, 0) ELSE 0 END as kredit"),
+            ]);
+    }
+
+    private function applyCashbankFilters($query, array $filters, bool $includeUnit): void
+    {
+        if ($includeUnit && $filters['unit_usaha']) {
+            $unitIds = DB::table('unit')
+                ->whereNull('deleted_at')
+                ->where('unit_usaha', $filters['unit_usaha'])
+                ->pluck('id')
+                ->push((int) $filters['unit_usaha'])
+                ->unique()
+                ->values()
+                ->all();
+
+            $query->whereIn('cb.unit_id', $unitIds);
+        }
+
+        $query
+            ->when($filters['bank_id'], fn ($query) => $query->where('cb.bank_id', $filters['bank_id']))
+            ->when($filters['coa_id'], function ($query) use ($filters): void {
+                $query->where(function ($query) use ($filters): void {
+                    $query->where('cbd.coa_id', $filters['coa_id'])
+                        ->orWhere(function ($query) use ($filters): void {
+                            $query->whereNull('cbd.coa_id')->where('cb.coa_id', $filters['coa_id']);
+                        });
+                });
+            })
+            ->when($filters['supplier_id'], fn ($query) => $query->where('cb.supplier_id', $filters['supplier_id']))
+            ->when($filters['anggota_id'], function ($query) use ($filters): void {
+                $member = DB::table('users')->where('id', $filters['anggota_id'])->first(['nomor_anggota', 'name']);
+                if (! $member) {
+                    return;
+                }
+
+                $query->where(function ($query) use ($member): void {
+                    $query->where('cb.dibayar_kepada', 'like', '%'.$member->nomor_anggota.'%')
+                        ->orWhere('cb.dibayar_kepada', 'like', '%'.$member->name.'%');
+                });
+            });
     }
 
 }

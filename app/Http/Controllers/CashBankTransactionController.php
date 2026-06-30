@@ -551,7 +551,17 @@ class CashBankTransactionController extends Controller
             'creator',
         ])->where('nomor_transaksi', $nomor)->firstOrFail();
 
-        return view('cashbank.transaksi.nota', compact('transaction'));
+        $unitUsahaName = DB::table('unit')
+            ->whereNull('deleted_at')
+            ->where('unit_usaha', $transaction->unit_id)
+            ->value('nama_unit_usaha')
+            ?: DB::table('unit')
+                ->whereNull('deleted_at')
+                ->where('id', $transaction->unit_id)
+                ->value('nama_unit_usaha')
+            ?: ($transaction->unit->nama_unit ?? '-');
+
+        return view('cashbank.transaksi.nota', compact('transaction', 'unitUsahaName'));
     }
 
     private function genCode(string $jenis): string

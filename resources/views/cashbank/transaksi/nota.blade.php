@@ -30,7 +30,7 @@
         <table class="table table-sm table-borderless mb-3">
             <tr>
                 <td style="width: 150px">Unit Usaha</td>
-                <td>: {{ $transaction->unit->nama_unit ?? '-' }}</td>
+                <td>: {{ $unitUsahaName ?? '-' }}</td>
                 <td style="width: 130px">Kode Dokumen</td>
                 <td>: {{ $transaction->documentCode->kode ?? '-' }}</td>
             </tr>

@@ -446,6 +446,9 @@ Route::prefix('laporan')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/modal-awal', [LaporanController::class, 'modalAwal'])->name('laporan.modalawal');
     Route::get('/modal-awal/data', [LaporanController::class, 'modalAwalData'])->name('laporan.modalawal.data');
     Route::get('/modal-awal/export', [LaporanController::class, 'modalAwalExport'])->name('laporan.modalawal.export');
+
+    Route::get('/cashbank/ledger', [LaporanController::class, 'cashbankLedger'])->name('laporan.cashbank.ledger');
+    Route::get('/cashbank/summary-bank-detail', [LaporanController::class, 'cashbankSummaryBankDetail'])->name('laporan.cashbank.summary-bank-detail');
 });
 
 Route::middleware(['auth'])->prefix('mobile/belanja')->name('mobile.belanja.')->group(function () {
