@@ -40,7 +40,7 @@ class CashBankTransactionController extends Controller
             'nomor' => $this->genCode($jenis),
             'units' => $this->unitOptions(),
             'documents' => CashBankDocumentCode::with('bank')->where('is_active', true)->orderBy('kode')->get(),
-            'coas' => CashBankCoa::where('is_active', true)->orderBy('kode_akun')->get(),
+            'coas' => $this->transactionCoaOptions(),
             'banks' => $this->bankOptions(),
         ]);
     }
@@ -74,7 +74,7 @@ class CashBankTransactionController extends Controller
             'keyword' => $keyword,
             'units' => $this->unitOptions(),
             'documents' => CashBankDocumentCode::with('bank')->where('is_active', true)->orderBy('kode')->get(),
-            'coas' => CashBankCoa::where('is_active', true)->orderBy('kode_akun')->get(),
+            'coas' => $this->transactionCoaOptions(),
             'banks' => $this->bankOptions(),
         ]);
     }
@@ -380,10 +380,21 @@ class CashBankTransactionController extends Controller
         $validated = $request->validate([
             'kode_akun' => ['required', 'string', 'max:50', 'unique:cashbank_coas,kode_akun'],
             'nama_akun' => ['required', 'string', 'max:150'],
-            'tipe' => ['required', Rule::in(['kas', 'bank', 'hutang', 'biaya', 'pendapatan', 'lainnya'])],
+            'tipe' => ['required', 'string', 'max:100'],
+            'att1' => ['nullable', 'string', 'max:50'],
+            'att2' => ['nullable', 'string', 'max:50'],
+            'att3' => ['nullable', 'string', 'max:50'],
+            'att4' => ['nullable', 'string', 'max:50'],
+            'att5' => ['nullable', Rule::in(['H', 'D'])],
         ]);
 
-        $coa = CashBankCoa::create($validated + ['is_active' => true]);
+        foreach (['att4', 'att5'] as $column) {
+            if (! empty($validated[$column])) {
+                $validated[$column] = strtoupper($validated[$column]);
+            }
+        }
+
+        $coa = CashBankCoa::create($this->filterCoaPayload($validated + ['is_active' => true]));
 
         return response()->json(['success' => true, 'data' => $coa]);
     }
@@ -588,6 +599,27 @@ class CashBankTransactionController extends Controller
             ->orderBy('kode_akun')
             ->orderBy('nama_bank')
             ->get();
+    }
+
+    private function transactionCoaOptions()
+    {
+        $hasDetailMarker = Schema::hasColumn('cashbank_coas', 'att5')
+            && CashBankCoa::where('is_active', true)->where('att5', 'D')->exists();
+
+        return CashBankCoa::query()
+            ->where('is_active', true)
+            ->when($hasDetailMarker, fn ($query) => $query->where('att5', 'D'))
+            ->orderBy('kode_akun')
+            ->get();
+    }
+
+    private function filterCoaPayload(array $payload): array
+    {
+        return collect($payload)
+            ->only(collect(['kode_akun', 'nama_akun', 'tipe', 'att1', 'att2', 'att3', 'att4', 'att5', 'keterangan', 'is_active'])
+                ->filter(fn ($column) => in_array($column, ['kode_akun', 'nama_akun', 'tipe', 'keterangan', 'is_active'], true) || Schema::hasColumn('cashbank_coas', $column))
+                ->all())
+            ->all();
     }
 
     private function unitOptions()

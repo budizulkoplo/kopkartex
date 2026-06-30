@@ -15,6 +15,11 @@ class CashBankCoa extends Model
         'kode_akun',
         'nama_akun',
         'tipe',
+        'att1',
+        'att2',
+        'att3',
+        'att4',
+        'att5',
         'keterangan',
         'is_active',
     ];

@@ -66,6 +66,7 @@ class CashBankMasterController extends Controller
     {
         return DataTables::of(CashBankCoa::query())
             ->addIndexColumn()
+            ->addColumn('jenis_akun', fn ($row) => strtoupper((string) $row->att5) === 'H' ? 'Header' : (strtoupper((string) $row->att5) === 'D' ? 'Detail' : '-'))
             ->make(true);
     }
 
@@ -75,20 +76,43 @@ class CashBankMasterController extends Controller
         $validated = $request->validate([
             'kode_akun' => ['required', 'string', 'max:50', Rule::unique('cashbank_coas', 'kode_akun')->ignore($id)],
             'nama_akun' => ['required', 'string', 'max:150'],
-            'tipe' => ['required', Rule::in(['kas', 'bank', 'hutang', 'biaya', 'pendapatan', 'lainnya'])],
+            'tipe' => ['required', 'string', 'max:100'],
+            'att1' => ['nullable', 'string', 'max:50'],
+            'att2' => ['nullable', 'string', 'max:50'],
+            'att3' => ['nullable', 'string', 'max:50'],
+            'att4' => ['nullable', 'string', 'max:50'],
+            'att5' => ['nullable', Rule::in(['H', 'D'])],
             'keterangan' => ['nullable', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
+        foreach (['att4', 'att5'] as $column) {
+            if (! empty($validated[$column])) {
+                $validated[$column] = strtoupper($validated[$column]);
+            }
+        }
+
         $validated['is_active'] = $request->boolean('is_active', true);
-        $record = CashBankCoa::updateOrCreate(['id' => $id], $validated);
+        $record = CashBankCoa::updateOrCreate(['id' => $id], $this->filterCoaPayload($validated));
 
         return response()->json(['success' => true, 'data' => $record]);
     }
 
     public function deleteCoa(Request $request)
     {
-        CashBankCoa::findOrFail($request->id)->delete();
+        $coa = CashBankCoa::findOrFail($request->id);
+        $hasChildren = CashBankCoa::where('id', '!=', $coa->id)
+            ->where('kode_akun', 'like', $coa->kode_akun.'%')
+            ->exists();
+
+        if (strtoupper((string) $coa->att5) === 'H' && $hasChildren) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun header masih memiliki akun detail/anak, tidak bisa dihapus.',
+            ], 422);
+        }
+
+        $coa->delete();
 
         return response()->json(['success' => true]);
     }
@@ -175,5 +199,14 @@ class CashBankMasterController extends Controller
         }
 
         return CashBankCoa::where('kode_akun', $kodeAkun)->value('att4') ?: '-';
+    }
+
+    private function filterCoaPayload(array $payload): array
+    {
+        return collect($payload)
+            ->only(collect(['kode_akun', 'nama_akun', 'tipe', 'att1', 'att2', 'att3', 'att4', 'att5', 'keterangan', 'is_active'])
+                ->filter(fn ($column) => in_array($column, ['kode_akun', 'nama_akun', 'tipe', 'keterangan', 'is_active'], true) || Schema::hasColumn('cashbank_coas', $column))
+                ->all())
+            ->all();
     }
 }

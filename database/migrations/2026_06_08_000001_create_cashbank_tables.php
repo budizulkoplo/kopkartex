@@ -29,7 +29,12 @@ return new class extends Migration
                 $table->id();
                 $table->string('kode_akun', 50)->unique();
                 $table->string('nama_akun', 150);
-                $table->enum('tipe', ['kas', 'bank', 'hutang', 'biaya', 'pendapatan', 'lainnya'])->default('lainnya');
+                $table->string('tipe', 100)->default('lainnya');
+                $table->string('att1', 50)->nullable();
+                $table->string('att2', 50)->nullable();
+                $table->string('att3', 50)->nullable();
+                $table->string('att4', 50)->nullable();
+                $table->string('att5', 50)->nullable();
                 $table->text('keterangan')->nullable();
                 $table->boolean('is_active')->default(true);
                 $table->timestamps();

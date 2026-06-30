@@ -21,7 +21,10 @@ return new class extends Migration
             ['kode_akun' => '110103'],
             [
                 'nama_akun' => 'Kas CV, Mandiri',
-                'tipe' => 'kas',
+                'tipe' => 'AKTIVA LANCAR',
+                'att3' => '1',
+                'att4' => 'KAS',
+                'att5' => 'D',
                 'is_active' => true,
                 'deleted_at' => null,
                 'updated_at' => now(),
@@ -33,7 +36,8 @@ return new class extends Migration
             ['kode_akun' => '420105'],
             [
                 'nama_akun' => 'Pembelian Toko',
-                'tipe' => 'biaya',
+                'tipe' => 'BIAYA',
+                'att5' => 'D',
                 'is_active' => true,
                 'deleted_at' => null,
                 'updated_at' => now(),

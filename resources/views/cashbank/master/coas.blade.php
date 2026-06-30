@@ -22,7 +22,11 @@
                                 <th>ID</th>
                                 <th>Kode Akun</th>
                                 <th>Nama Akun</th>
-                                <th>Tipe</th>
+                                <th>Kelompok</th>
+                                <th>Jenis</th>
+                                <th>Kas/Bank</th>
+                                <th>Subledger</th>
+                                <th>Level</th>
                                 <th>Keterangan</th>
                                 <th>Status</th>
                                 <th>Aksi</th>
@@ -53,23 +57,68 @@
                             <input type="text" name="nama_akun" class="form-control form-control-sm" required>
                         </div>
                         <div class="mb-2">
-                            <label class="form-label">Tipe</label>
-                            <select name="tipe" class="form-control form-control-sm" required>
-                                <option value="kas">Kas</option>
-                                <option value="bank">Bank</option>
-                                <option value="hutang">Hutang</option>
-                                <option value="biaya">Biaya</option>
-                                <option value="pendapatan">Pendapatan</option>
-                                <option value="lainnya">Lainnya</option>
+                            <label class="form-label">Kelompok Laporan</label>
+                            <input type="text" name="tipe" class="form-control form-control-sm" list="coaTipeList" placeholder="AKTIVA LANCAR" required>
+                            <datalist id="coaTipeList">
+                                <option value="AKTIVA">
+                                <option value="AKTIVA LANCAR">
+                                <option value="AKTIVA TETAP">
+                                <option value="KEWAJIBAN LANCAR">
+                                <option value="HUTANG">
+                                <option value="PENDAPATAN">
+                                <option value="BIAYA">
+                            </datalist>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Jenis Akun</label>
+                            <select name="att5" class="form-control form-control-sm">
+                                <option value="D">Detail - bisa dipakai transaksi</option>
+                                <option value="H">Header - kelompok/induk</option>
                             </select>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">Level</label>
+                                <input type="text" name="att3" class="form-control form-control-sm" placeholder="1">
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">Kas/Bank</label>
+                                <select name="att4" class="form-control form-control-sm">
+                                    <option value="">-</option>
+                                    <option value="KAS">KAS</option>
+                                    <option value="BANK">BANK</option>
+                                    <option value="CASH">CASH</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">Aktif</label>
+                                <div class="form-check mt-1">
+                                    <input class="form-check-input" type="checkbox" name="is_active" value="1" id="isActive" checked>
+                                    <label class="form-check-label" for="isActive">Ya</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Kode Referensi</label>
+                                <input type="text" name="att1" class="form-control form-control-sm" list="coaAtt1List" placeholder="no_agt / supcode">
+                                <datalist id="coaAtt1List">
+                                    <option value="no_agt">
+                                    <option value="supcode">
+                                </datalist>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Master Referensi</label>
+                                <input type="text" name="att2" class="form-control form-control-sm" list="coaAtt2List" placeholder="manggota / msupplier">
+                                <datalist id="coaAtt2List">
+                                    <option value="manggota">
+                                    <option value="msupplier">
+                                </datalist>
+                            </div>
                         </div>
                         <div class="mb-2">
                             <label class="form-label">Keterangan</label>
                             <textarea name="keterangan" class="form-control form-control-sm" rows="2"></textarea>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="isActive" checked>
-                            <label class="form-check-label" for="isActive">Aktif</label>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -92,6 +141,10 @@
                     { data: 'kode_akun' },
                     { data: 'nama_akun' },
                     { data: 'tipe' },
+                    { data: 'jenis_akun', render: (data, type, row) => row.att5 === 'H' ? '<span class="badge bg-secondary">Header</span>' : (row.att5 === 'D' ? '<span class="badge bg-success">Detail</span>' : '-') },
+                    { data: 'att4', render: data => data ? `<span class="badge bg-info text-dark">${data}</span>` : '-' },
+                    { data: null, render: row => [row.att1, row.att2].filter(Boolean).join(' / ') || '-' },
+                    { data: 'att3', render: data => data || '-' },
                     { data: 'keterangan' },
                     { data: 'is_active', render: data => data ? '<span class="badge bg-success">Aktif</span>' : '<span class="badge bg-secondary">Nonaktif</span>' },
                     { data: null, orderable: false, searchable: false, render: () => '<span class="badge rounded-pill bg-warning editcell"><i class="bi bi-pencil-square"></i></span> <span class="badge rounded-pill bg-danger delcell"><i class="bi bi-trash3-fill"></i></span>' }
@@ -121,6 +174,11 @@
                 $('[name=kode_akun]').val(row.kode_akun);
                 $('[name=nama_akun]').val(row.nama_akun);
                 $('[name=tipe]').val(row.tipe);
+                $('[name=att1]').val(row.att1);
+                $('[name=att2]').val(row.att2);
+                $('[name=att3]').val(row.att3);
+                $('[name=att4]').val(row.att4);
+                $('[name=att5]').val(row.att5 || 'D');
                 $('[name=keterangan]').val(row.keterangan);
                 $('#isActive').prop('checked', !!row.is_active);
                 $('#formModal').modal('show');
@@ -132,7 +190,8 @@
                     .then(result => {
                         if (!result.isConfirmed) return;
                         $.ajax({ url: "{{ route('cashbank.coas.delete') }}", method: 'DELETE', data: { id: row.id } })
-                            .done(() => { table.ajax.reload(); Swal.fire('Terhapus', 'COA dihapus.', 'success'); });
+                            .done(() => { table.ajax.reload(); Swal.fire('Terhapus', 'COA dihapus.', 'success'); })
+                            .fail(xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'));
                     });
             });
         </script>

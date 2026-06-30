@@ -540,13 +540,16 @@
                     <div class="modal-body">
                         <input class="form-control form-control-sm mb-2" name="kode_akun" placeholder="Kode akun" required>
                         <input class="form-control form-control-sm mb-2" name="nama_akun" placeholder="Nama akun" required>
-                        <select class="form-control form-control-sm" name="tipe" required>
-                            <option value="kas">Kas</option>
-                            <option value="bank">Bank</option>
-                            <option value="hutang">Hutang</option>
-                            <option value="biaya">Biaya</option>
-                            <option value="pendapatan">Pendapatan</option>
-                            <option value="lainnya">Lainnya</option>
+                        <input class="form-control form-control-sm mb-2" name="tipe" placeholder="Kelompok laporan" value="BIAYA" required>
+                        <select class="form-control form-control-sm mb-2" name="att5">
+                            <option value="D">Detail - bisa dipakai transaksi</option>
+                            <option value="H">Header - kelompok/induk</option>
+                        </select>
+                        <select class="form-control form-control-sm" name="att4">
+                            <option value="">Kas/Bank: -</option>
+                            <option value="KAS">KAS</option>
+                            <option value="BANK">BANK</option>
+                            <option value="CASH">CASH</option>
                         </select>
                     </div>
                     <div class="modal-footer"><button class="btn btn-primary btn-sm"><i class="bi bi-save"></i> Simpan</button></div>
@@ -1066,15 +1069,17 @@
                 $.post("{{ route("cashbank.transactions.$routeScope.quick-coa") }}", $(this).serialize())
                     .done(({ data }) => {
                         const label = `${data.kode_akun} - ${data.nama_akun}`;
-                        coaOptions.push({ id: data.id, label });
-                        coaLookup[data.id] = { code: data.kode_akun, name: data.nama_akun };
-                        $('#detailTable tbody .detail-coa-select').each(function () {
-                            const select = $(this);
-                            select.append(`<option value="${data.id}">${label}</option>`);
-                            if (select.data('select2')) {
-                                select.trigger('change.select2');
-                            }
-                        });
+                        if ((data.att5 || 'D') === 'D') {
+                            coaOptions.push({ id: data.id, label });
+                            coaLookup[data.id] = { code: data.kode_akun, name: data.nama_akun };
+                            $('#detailTable tbody .detail-coa-select').each(function () {
+                                const select = $(this);
+                                select.append(`<option value="${data.id}">${label}</option>`);
+                                if (select.data('select2')) {
+                                    select.trigger('change.select2');
+                                }
+                            });
+                        }
                         $('#coaModal').modal('hide');
                         this.reset();
                     })
