@@ -314,6 +314,7 @@ class CashBankTransactionController extends Controller
     {
         $transaction->details()->delete();
         $totalDetail = 0;
+        $detailCount = 0;
 
         foreach ($validated['detail'] ?? [] as $row) {
                 $jumlahBayar = (float) ($row['jumlah_bayar'] ?? 0);
@@ -321,10 +322,15 @@ class CashBankTransactionController extends Controller
                     continue;
                 }
 
+                if (empty($row['coa_id'])) {
+                    throw new Exception('Kode akun detail wajib diisi untuk setiap baris pembayaran.');
+                }
+
+                $detailCount++;
                 $totalDetail += $jumlahBayar;
                 CashBankTransactionDetail::create([
                     'transaction_id' => $transaction->id,
-                    'coa_id' => $row['coa_id'] ?? $validated['coa_id'] ?? $transaction->coa_id,
+                    'coa_id' => $row['coa_id'],
                     'penerimaan_id' => $row['penerimaan_id'] ?? null,
                     'nomor_invoice' => $row['nomor_invoice'] ?? null,
                     'nilai_invoice' => $row['nilai_invoice'] ?? 0,
@@ -334,6 +340,10 @@ class CashBankTransactionController extends Controller
                     'keterangan' => $row['keterangan'] ?? null,
                 ]);
             }
+
+        if ($detailCount === 0) {
+            throw new Exception('Detail pembayaran wajib diisi minimal satu baris.');
+        }
 
         if ($totalDetail > 0 && abs($totalDetail - (float) $validated['sejumlah']) > 0.01) {
             throw new Exception('Total detail pembayaran harus sama dengan nominal sejumlah.');

@@ -492,8 +492,8 @@
 
                                 <div class="d-flex justify-content-end gap-2 cashbank-actions">
                                     <button type="button" class="btn btn-sm btn-warning" id="btnClear"><i class="bi bi-x-circle"></i> Batal</button>
-                                    <button type="submit" class="btn btn-sm btn-success" id="btnSave" data-print="0"><i class="bi bi-floppy-fill"></i> Simpan</button>
-                                    <button type="submit" class="btn btn-sm btn-primary" id="btnSavePrint" data-print="1"><i class="bi bi-printer"></i> Simpan & Cetak</button>
+                                    <button type="submit" class="btn btn-sm btn-success" id="btnSave"><i class="bi bi-floppy-fill"></i> Simpan</button>
+                                    <button type="button" class="btn btn-sm btn-primary" id="btnPrint" disabled><i class="bi bi-printer"></i> Cetak</button>
                                 </div>
                             </div>
                         </div>
@@ -647,7 +647,6 @@
             const coaLookup = @json($coaLookupForJs);
             const bankLookup = @json($bankLookupForJs);
             let detailIndex = 0;
-            let shouldPrintAfterSave = true;
             let lastSavedNotaUrl = '';
             let lastSavedNomor = '';
             let formDirty = true;
@@ -657,12 +656,42 @@
 
             function markFormDirty() {
                 formDirty = true;
+                $('#btnPrint').prop('disabled', true);
             }
 
             function rememberSavedTransaction(response) {
                 lastSavedNotaUrl = response.nota_url || '';
                 lastSavedNomor = response.nomor || $('#nomorPreview').val();
                 formDirty = false;
+                $('#btnPrint').prop('disabled', !lastSavedNotaUrl);
+            }
+
+            function validateDetailCoa() {
+                const rows = $('#detailTable tbody tr');
+                if (!rows.length) {
+                    Swal.fire('Perhatian', 'Tambahkan minimal satu baris detail pembayaran.', 'warning');
+                    return false;
+                }
+
+                let invalidSelect = null;
+                rows.each(function () {
+                    const row = $(this);
+                    const amount = parseMoney(row.find('.jumlah-bayar-display').val());
+                    const coaSelect = row.find('.detail-coa-select');
+
+                    if (amount > 0 && !coaSelect.val()) {
+                        invalidSelect = coaSelect;
+                        return false;
+                    }
+                });
+
+                if (invalidSelect) {
+                    Swal.fire('Perhatian', 'Kode akun detail wajib diisi untuk setiap baris yang memiliki jumlah bayar.', 'warning')
+                        .then(() => invalidSelect.trigger('focus'));
+                    return false;
+                }
+
+                return true;
             }
 
             $('#cashbankForm').on('keydown', 'input, select, textarea, button', function (e) {
@@ -1066,13 +1095,13 @@
                 $.get("{{ route("cashbank.transactions.$routeScope.number") }}", { jenis }).done(number => $('#nomorPreview').val(number));
             });
 
-            $('#btnSave, #btnSavePrint').on('click', function () {
-                shouldPrintAfterSave = $(this).data('print') === 1;
-
-                if (shouldPrintAfterSave && lastSavedNotaUrl && !formDirty) {
-                    window.open(lastSavedNotaUrl, '_blank');
-                    return false;
+            $('#btnPrint').on('click', function () {
+                if (!lastSavedNotaUrl) {
+                    Swal.fire('Info', 'Simpan transaksi terlebih dahulu sebelum mencetak nota.', 'info');
+                    return;
                 }
+
+                window.open(lastSavedNotaUrl, '_blank');
             });
 
             $('#documentForm').on('submit', function (e) {
@@ -1127,6 +1156,7 @@
                 lastSavedNotaUrl = '';
                 lastSavedNomor = '';
                 formDirty = true;
+                $('#btnPrint').prop('disabled', true);
                 $('#cashbankForm')[0].reset();
                 $('#detailTable tbody').empty();
                 $('#detailTotal').text('0');
@@ -1150,11 +1180,11 @@
                 e.preventDefault();
 
                 if (lastSavedNotaUrl && !formDirty) {
-                    if (shouldPrintAfterSave) {
-                        window.open(lastSavedNotaUrl, '_blank');
-                    } else {
-                        Swal.fire('Info', 'Transaksi sudah tersimpan. Klik Simpan & Cetak untuk mencetak nota.', 'info');
-                    }
+                    Swal.fire('Info', 'Transaksi sudah tersimpan. Klik Cetak untuk mencetak nota.', 'info');
+                    return;
+                }
+
+                if (!validateDetailCoa()) {
                     return;
                 }
 
@@ -1162,20 +1192,14 @@
                     url: "{{ route("cashbank.transactions.$routeScope.store") }}",
                     method: 'POST',
                     data: $(this).serialize(),
-                    beforeSend: () => $('#btnSave, #btnSavePrint').prop('disabled', true),
+                    beforeSend: () => $('#btnSave').prop('disabled', true),
                     success: response => {
                         rememberSavedTransaction(response);
                         Swal.fire({ icon: 'success', title: response.message, timer: 1500, showConfirmButton: false })
-                            .then(() => {
-                                if (shouldPrintAfterSave) {
-                                    window.open(response.nota_url, '_blank');
-                                    $('#btnClear').trigger('click');
-                                    $('#btnRefreshNumber').trigger('click');
-                                }
-                            });
+                            .then(() => {});
                     },
                     error: xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'),
-                    complete: () => $('#btnSave, #btnSavePrint').prop('disabled', false)
+                    complete: () => $('#btnSave').prop('disabled', false)
                 });
             });
 
