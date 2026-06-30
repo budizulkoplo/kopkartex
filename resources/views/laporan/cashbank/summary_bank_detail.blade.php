@@ -14,7 +14,7 @@
                     <form method="GET" action="{{ route('laporan.cashbank.summary-bank-detail') }}" class="row g-2 align-items-end">
                         <div class="col-md-4">
                             <label class="form-label">Akun Kas/Bank</label>
-                            <select name="bank_id" class="form-control form-control-sm" required>
+                            <select name="bank_id" class="form-control form-control-sm cashbank-filter-select" data-placeholder="Pilih Akun Kas/Bank" required>
                                 <option value="">Pilih Akun Kas/Bank</option>
                                 @foreach($bankOptions as $bank)
                                     <option value="{{ $bank->id }}" @selected((string) $filters['bank_id'] === (string) $bank->id)>
@@ -99,4 +99,19 @@
             </div>
         </div>
     </div>
+
+    <x-slot name="jscustom">
+        <script>
+            $(function () {
+                $('.cashbank-filter-select').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%',
+                    allowClear: true,
+                    placeholder: function () {
+                        return $(this).data('placeholder') || 'Pilih';
+                    }
+                });
+            });
+        </script>
+    </x-slot>
 </x-app-layout>

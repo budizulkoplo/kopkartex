@@ -14,7 +14,7 @@
                     <form method="GET" action="{{ route('laporan.cashbank.ledger') }}" class="row g-2 align-items-end">
                         <div class="col-md-3">
                             <label class="form-label">Unit Usaha</label>
-                            <select name="unit_usaha" class="form-control form-control-sm" required>
+                            <select name="unit_usaha" class="form-control form-control-sm cashbank-filter-select" data-placeholder="Pilih Unit Usaha" required>
                                 <option value="">Pilih Unit Usaha</option>
                                 @foreach($unitUsahaOptions as $unit)
                                     <option value="{{ $unit->unit_usaha }}" @selected((string) $filters['unit_usaha'] === (string) $unit->unit_usaha)>
@@ -25,7 +25,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Akun Kas/Bank</label>
-                            <select name="bank_id" class="form-control form-control-sm">
+                            <select name="bank_id" class="form-control form-control-sm cashbank-filter-select" data-placeholder="Semua Akun Kas/Bank">
                                 <option value="">Semua</option>
                                 @foreach($bankOptions as $bank)
                                     <option value="{{ $bank->id }}" @selected((string) $filters['bank_id'] === (string) $bank->id)>
@@ -36,7 +36,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">COA</label>
-                            <select name="coa_id" class="form-control form-control-sm">
+                            <select name="coa_id" class="form-control form-control-sm cashbank-filter-select" data-placeholder="Semua COA">
                                 <option value="">Semua</option>
                                 @foreach($coaOptions as $coa)
                                     <option value="{{ $coa->id }}" @selected((string) $filters['coa_id'] === (string) $coa->id)>
@@ -47,7 +47,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Supplier</label>
-                            <select name="supplier_id" class="form-control form-control-sm">
+                            <select name="supplier_id" class="form-control form-control-sm cashbank-filter-select" data-placeholder="Semua Supplier">
                                 <option value="">Semua</option>
                                 @foreach($supplierOptions as $supplier)
                                     <option value="{{ $supplier->id }}" @selected((string) $filters['supplier_id'] === (string) $supplier->id)>
@@ -58,7 +58,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Anggota</label>
-                            <select name="anggota_id" class="form-control form-control-sm">
+                            <select name="anggota_id" class="form-control form-control-sm cashbank-filter-select" data-placeholder="Semua Anggota">
                                 <option value="">Semua</option>
                                 @foreach($memberOptions as $member)
                                     <option value="{{ $member->id }}" @selected((string) $filters['anggota_id'] === (string) $member->id)>
@@ -145,4 +145,19 @@
             </div>
         </div>
     </div>
+
+    <x-slot name="jscustom">
+        <script>
+            $(function () {
+                $('.cashbank-filter-select').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%',
+                    allowClear: true,
+                    placeholder: function () {
+                        return $(this).data('placeholder') || 'Pilih';
+                    }
+                });
+            });
+        </script>
+    </x-slot>
 </x-app-layout>
