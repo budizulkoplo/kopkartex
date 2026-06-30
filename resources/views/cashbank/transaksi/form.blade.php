@@ -648,9 +648,22 @@
             const bankLookup = @json($bankLookupForJs);
             let detailIndex = 0;
             let shouldPrintAfterSave = true;
+            let lastSavedNotaUrl = '';
+            let lastSavedNomor = '';
+            let formDirty = true;
             $('#noRefNota').data('auto-ref', true).on('input', function () {
                 $(this).data('auto-ref', false);
             });
+
+            function markFormDirty() {
+                formDirty = true;
+            }
+
+            function rememberSavedTransaction(response) {
+                lastSavedNotaUrl = response.nota_url || '';
+                lastSavedNomor = response.nomor || $('#nomorPreview').val();
+                formDirty = false;
+            }
 
             $('#cashbankForm').on('keydown', 'input, select, textarea, button', function (e) {
                 if (e.key !== 'Enter' || $(this).is('textarea') || $(this).attr('type') === 'submit') return;
@@ -664,6 +677,10 @@
                 if (currentIndex >= 0 && currentIndex < focusable.length - 1) {
                     focusable.eq(currentIndex + 1).trigger('focus');
                 }
+            });
+
+            $('#cashbankForm').on('input change', 'input, select, textarea', function () {
+                markFormDirty();
             });
 
             function setMainAccount(code = '', name = '') {
@@ -749,6 +766,7 @@
             }
 
             function selectSupplier(data) {
+                markFormDirty();
                 $('#supplierId').val(data.id || '');
                 $('#supplierCodePreview').val(data.kode_supplier || '');
                 $('#supplierSearch').val(data.text || data.nama_supplier || '');
@@ -756,6 +774,7 @@
             }
 
             function selectMember(data) {
+                markFormDirty();
                 $('#memberCodePreview').val(data.nomor_anggota || '');
                 $('#memberSearch').val(data.text || data.name || '');
                 $('#paidToPreview').val([data.nomor_anggota, data.text || data.name].filter(Boolean).join(' - '));
@@ -786,6 +805,7 @@
             }
 
             function addDetailRow(data = {}) {
+                markFormDirty();
                 const idx = detailIndex++;
                 const selectedCoa = data.coa_id || $('#mainCoa').val();
                 const row = $(`
@@ -828,6 +848,7 @@
             }
 
             function fillInvoice(row, data) {
+                markFormDirty();
                 row.find('.invoice-search').val(data.nomor_invoice || data.text);
                 row.find('.penerimaan-id').val(data.id);
                 setMoney(row.find('.nilai-invoice-display'), data.nilai_invoice);
@@ -986,7 +1007,7 @@
                     recalc();
                 }
             });
-            $('#detailTable').on('click', '.btnRemove', function () { $(this).closest('tr').remove(); recalc(); });
+            $('#detailTable').on('click', '.btnRemove', function () { markFormDirty(); $(this).closest('tr').remove(); recalc(); });
 
             $('#documentCode').on('change', function () {
                 const selected = $(this).find(':selected');
@@ -1047,6 +1068,11 @@
 
             $('#btnSave, #btnSavePrint').on('click', function () {
                 shouldPrintAfterSave = $(this).data('print') === 1;
+
+                if (shouldPrintAfterSave && lastSavedNotaUrl && !formDirty) {
+                    window.open(lastSavedNotaUrl, '_blank');
+                    return false;
+                }
             });
 
             $('#documentForm').on('submit', function (e) {
@@ -1098,6 +1124,9 @@
             });
 
             $('#btnClear').on('click', function () {
+                lastSavedNotaUrl = '';
+                lastSavedNomor = '';
+                formDirty = true;
                 $('#cashbankForm')[0].reset();
                 $('#detailTable tbody').empty();
                 $('#detailTotal').text('0');
@@ -1119,19 +1148,30 @@
 
             $('#cashbankForm').on('submit', function (e) {
                 e.preventDefault();
+
+                if (lastSavedNotaUrl && !formDirty) {
+                    if (shouldPrintAfterSave) {
+                        window.open(lastSavedNotaUrl, '_blank');
+                    } else {
+                        Swal.fire('Info', 'Transaksi sudah tersimpan. Klik Simpan & Cetak untuk mencetak nota.', 'info');
+                    }
+                    return;
+                }
+
                 $.ajax({
                     url: "{{ route("cashbank.transactions.$routeScope.store") }}",
                     method: 'POST',
                     data: $(this).serialize(),
                     beforeSend: () => $('#btnSave, #btnSavePrint').prop('disabled', true),
                     success: response => {
+                        rememberSavedTransaction(response);
                         Swal.fire({ icon: 'success', title: response.message, timer: 1500, showConfirmButton: false })
                             .then(() => {
                                 if (shouldPrintAfterSave) {
                                     window.open(response.nota_url, '_blank');
+                                    $('#btnClear').trigger('click');
+                                    $('#btnRefreshNumber').trigger('click');
                                 }
-                                $('#btnClear').trigger('click');
-                                $('#btnRefreshNumber').trigger('click');
                             });
                     },
                     error: xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'),
