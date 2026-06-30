@@ -16,6 +16,7 @@ return new class extends Migration
                 $table->string('kode', 30)->unique();
                 $table->string('nama', 100);
                 $table->string('prefix', 20)->nullable();
+                $table->enum('transaction_type', ['payment', 'receipt'])->default('payment');
                 $table->text('keterangan')->nullable();
                 $table->boolean('is_active')->default(true);
                 $table->timestamps();
@@ -174,8 +175,8 @@ return new class extends Migration
             ['Kode Dokumen', 'cashbank.document-codes.index', $masterId, 1, 'bi bi-file-earmark-text'],
             ['Kode Akun COA', 'cashbank.coas.index', $masterId, 2, 'bi bi-diagram-3'],
             ['Bank', 'cashbank.banks.index', $masterId, 3, 'bi bi-bank'],
-            ['Cash Bank Umum', 'cashbank.transactions.umum.index', $transaksiId, 1, 'bi bi-receipt'],
-            ['Cash Bank Pembayaran Hutang', 'cashbank.transactions.hutang.index', $transaksiId, 2, 'bi bi-credit-card-2-front'],
+            ['Cash Bank Pembayaran Umum', 'cashbank.transactions.umum.index', $transaksiId, 1, 'bi bi-receipt'],
+            ['Cashbank Pembayaran Supplier', 'cashbank.transactions.hutang.index', $transaksiId, 2, 'bi bi-credit-card-2-front'],
         ] as [$name, $link, $parentId, $seq, $icon]) {
             DB::table('menus')->updateOrInsert(
                 ['link' => $link],

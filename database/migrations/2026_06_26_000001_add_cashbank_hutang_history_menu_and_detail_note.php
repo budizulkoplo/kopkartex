@@ -25,7 +25,7 @@ return new class extends Migration
         DB::table('menus')->updateOrInsert(
             ['link' => 'cashbank.transactions.hutang.history'],
             [
-                'name' => 'Riwayat Pembayaran Hutang',
+                'name' => 'Riwayat Pembayaran Supplier',
                 'parent_id' => $parentId,
                 'role' => $rootRole,
                 'seq' => 3,

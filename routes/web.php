@@ -347,6 +347,7 @@ Route::prefix('cashbank')->name('cashbank.')->middleware($menuAccessMiddleware)-
                 Route::post('/quick-coa', [CashBankTransactionController::class, 'quickCoa'])->name('quick-coa');
                 Route::post('/quick-supplier', [CashBankTransactionController::class, 'quickSupplier'])->name('quick-supplier');
                 Route::get('/suppliers', [CashBankTransactionController::class, 'suppliers'])->name('suppliers');
+                Route::get('/members', [CashBankTransactionController::class, 'members'])->name('members');
                 Route::get('/invoices', [CashBankTransactionController::class, 'invoiceSearch'])->name('invoices');
                 Route::get('/logs', [CashBankTransactionController::class, 'logs'])->name('logs');
                 Route::get('/nota/{nomor}', [CashBankTransactionController::class, 'nota'])->name('nota');

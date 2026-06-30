@@ -117,7 +117,7 @@
                     <input type="hidden" name="jenis" value="pembayaran_hutang">
                     <input type="hidden" name="supplier_id" id="editSupplierId">
                     <div class="modal-header">
-                        <h5 class="modal-title">Edit Pembayaran Hutang <span id="editNomor" class="text-muted"></span></h5>
+                        <h5 class="modal-title">Edit Pembayaran Supplier <span id="editNomor" class="text-muted"></span></h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
@@ -178,14 +178,8 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">No Cash/Cek/Giro</label>
-                                <input type="text" class="form-control form-control-sm" name="no_cash_cek_giro" id="editGiroNo">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Tanggal Giro/Cek</label>
-                                <input type="date" class="form-control form-control-sm" name="tgl_giro_cek" id="editGiroDate">
-                            </div>
+                            <input type="hidden" name="no_cash_cek_giro" id="editGiroNo">
+                            <input type="hidden" name="tgl_giro_cek" id="editGiroDate">
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center mt-3">

@@ -23,6 +23,7 @@
                                 <th>Kode</th>
                                 <th>Nama</th>
                                 <th>Prefix</th>
+                                <th>Transaksi</th>
                                 <th>ID Akun Bank</th>
                                 <th>Akun Bank</th>
                                 <th>Keterangan</th>
@@ -57,6 +58,13 @@
                         <div class="mb-2">
                             <label class="form-label">Prefix Nomor</label>
                             <input type="text" name="prefix" class="form-control form-control-sm" placeholder="CBU">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Transaksi</label>
+                            <select name="transaction_type" class="form-control form-control-sm" required>
+                                <option value="payment">Payment - Kredit</option>
+                                <option value="receipt">Receipt - Debet</option>
+                            </select>
                         </div>
                         <div class="mb-2">
                             <label class="form-label">Bank</label>
@@ -96,6 +104,7 @@
                     { data: 'kode' },
                     { data: 'nama' },
                     { data: 'prefix' },
+                    { data: 'transaction_type', render: data => data === 'receipt' ? 'Receipt - Debet' : 'Payment - Kredit' },
                     { data: 'bank_label' },
                     { data: 'account_label' },
                     { data: 'keterangan' },
@@ -127,6 +136,7 @@
                 $('[name=kode]').val(row.kode);
                 $('[name=nama]').val(row.nama);
                 $('[name=prefix]').val(row.prefix);
+                $('[name=transaction_type]').val(row.transaction_type || 'payment');
                 $('[name=bank_id]').val(row.bank_id);
                 $('[name=keterangan]').val(row.keterangan);
                 $('#isActive').prop('checked', !!row.is_active);

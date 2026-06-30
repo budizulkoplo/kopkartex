@@ -10,6 +10,7 @@ use App\Models\CashBankTransactionDetail;
 use App\Models\Penerimaan;
 use App\Models\Supplier;
 use App\Models\Unit;
+use App\Models\User;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -35,12 +36,12 @@ class CashBankTransactionController extends Controller
     {
         return view('cashbank.transaksi.form', [
             'jenis' => $jenis,
-            'title' => $jenis === 'pembayaran_hutang' ? 'Cash Bank Pembayaran Hutang' : 'Cash Bank Umum',
+            'title' => $jenis === 'pembayaran_hutang' ? 'Cashbank Pembayaran Supplier' : 'Cash Bank Pembayaran Umum',
             'nomor' => $this->genCode($jenis),
             'units' => $this->unitOptions(),
             'documents' => CashBankDocumentCode::with('bank')->where('is_active', true)->orderBy('kode')->get(),
             'coas' => CashBankCoa::where('is_active', true)->orderBy('kode_akun')->get(),
-            'banks' => CashBankBank::where('is_active', true)->orderBy('nama_bank')->get(),
+            'banks' => $this->bankOptions(),
         ]);
     }
 
@@ -66,7 +67,7 @@ class CashBankTransactionController extends Controller
             ->withQueryString();
 
         return view('cashbank.transaksi.riwayat-hutang', [
-            'title' => 'Riwayat Pembayaran Hutang',
+            'title' => 'Riwayat Pembayaran Supplier',
             'transactions' => $transactions,
             'tanggal_awal' => $start,
             'tanggal_akhir' => $end,
@@ -74,7 +75,7 @@ class CashBankTransactionController extends Controller
             'units' => $this->unitOptions(),
             'documents' => CashBankDocumentCode::with('bank')->where('is_active', true)->orderBy('kode')->get(),
             'coas' => CashBankCoa::where('is_active', true)->orderBy('kode_akun')->get(),
-            'banks' => CashBankBank::where('is_active', true)->orderBy('nama_bank')->get(),
+            'banks' => $this->bankOptions(),
         ]);
     }
 
@@ -305,9 +306,7 @@ class CashBankTransactionController extends Controller
                 'sejumlah' => $validated['sejumlah'],
                 'dibayar_dengan' => $validated['dibayar_dengan'],
                 'no_cash_cek_giro' => $validated['no_cash_cek_giro'] ?? null,
-                'tgl_giro_cek' => ! empty($validated['tgl_giro_cek'])
-                    ? Carbon::parse($validated['tgl_giro_cek'])->format('Y-m-d')
-                    : null,
+                'tgl_giro_cek' => null,
         ];
     }
 
@@ -368,6 +367,7 @@ class CashBankTransactionController extends Controller
             'nama' => ['required', 'string', 'max:100'],
             'prefix' => ['nullable', 'string', 'max:20'],
             'bank_id' => ['nullable', 'exists:cashbank_banks,id'],
+            'transaction_type' => ['nullable', Rule::in(['payment', 'receipt'])],
         ]);
 
         $document = CashBankDocumentCode::create($validated + ['is_active' => true]);
@@ -430,6 +430,27 @@ class CashBankTransactionController extends Controller
                 'telp' => $supplier->telp,
                 'kontak_person' => $supplier->kontak_person,
                 'email' => $supplier->email,
+            ]);
+    }
+
+    public function members(Request $request)
+    {
+        $q = trim((string) $request->input('q', ''));
+
+        return User::query()
+            ->whereNull('deleted_at')
+            ->whereNotNull('nomor_anggota')
+            ->where(function ($query) use ($q): void {
+                $query->where('nomor_anggota', 'like', "%{$q}%")
+                    ->orWhere('name', 'like', "%{$q}%");
+            })
+            ->orderBy('nomor_anggota')
+            ->limit(20)
+            ->get(['id', 'nomor_anggota', 'name'])
+            ->map(fn ($member) => [
+                'id' => $member->id,
+                'nomor_anggota' => $member->nomor_anggota,
+                'text' => $member->name,
             ]);
     }
 
@@ -531,6 +552,35 @@ class CashBankTransactionController extends Controller
             ->count();
 
         return $prefix . '-' . date('ymd') . str_pad($total + 1, 3, '0', STR_PAD_LEFT);
+    }
+
+    private function bankOptions()
+    {
+        if (Schema::hasColumn('cashbank_coas', 'att4')) {
+            CashBankCoa::query()
+                ->where('is_active', true)
+                ->whereIn(DB::raw('UPPER(att4)'), ['KAS', 'BANK'])
+                ->orderBy('kode_akun')
+                ->get()
+                ->each(function (CashBankCoa $coa): void {
+                    CashBankBank::updateOrCreate(
+                        ['kode_bank' => $coa->kode_akun],
+                        [
+                            'nama_bank' => $coa->nama_akun,
+                            'kode_akun' => $coa->kode_akun,
+                            'nama_akun' => $coa->nama_akun,
+                            'nama_rekening' => $coa->nama_akun,
+                            'coa_id' => null,
+                            'is_active' => true,
+                        ]
+                    );
+                });
+        }
+
+        return CashBankBank::where('is_active', true)
+            ->orderBy('kode_akun')
+            ->orderBy('nama_bank')
+            ->get();
     }
 
     private function unitOptions()

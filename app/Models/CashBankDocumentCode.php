@@ -17,6 +17,7 @@ class CashBankDocumentCode extends Model
         'prefix',
         'bank_id',
         'coa_id',
+        'transaction_type',
         'keterangan',
         'is_active',
     ];

@@ -257,12 +257,6 @@
                 padding-top: 12px;
                 border-top: 1px solid #e9ecef;
             }
-            .cashbank-detail-tools {
-                padding: 10px;
-                border: 1px solid #e9ecef;
-                border-radius: .5rem;
-                background: #fbfdff;
-            }
             #detailTable {
                 margin-bottom: 0;
             }
@@ -352,6 +346,7 @@
                                                         <option value="{{ $document->id }}"
                                                             data-name="{{ $document->nama }}"
                                                             data-bank-id="{{ $document->bank_id }}"
+                                                            data-transaction-type="{{ $document->transaction_type ?? 'payment' }}"
                                                             data-account-code="{{ $document->bank?->kode_akun ?? '' }}"
                                                             data-account-name="{{ $document->bank?->nama_akun ?? '' }}">
                                                             {{ $document->kode }}
@@ -376,16 +371,28 @@
                                             </div>
                                         </div>
 
-                                        <div class="cb-field">
-                                            <label>Bayar Supplier</label>
-                                            <div class="cb-control-row">
-                                                <input type="text" class="form-control form-control-sm cb-cyan fw-semibold" id="supplierCodePreview" readonly style="max-width: 120px;">
-                                                <input type="text" class="form-control form-control-sm cb-cyan fw-semibold" id="supplierSearch" autocomplete="off">
-                                                <input type="hidden" name="supplier_id" id="supplierId">
-                                                <button type="button" class="btn btn-sm btn-outline-info cb-new" id="btnPickSupplier">Ambil</button>
-                                                <button type="button" class="btn btn-sm btn-outline-primary cb-new" data-bs-toggle="modal" data-bs-target="#supplierModal"><i class="bi bi-plus-lg"></i></button>
+                                        @if($jenis === 'pembayaran_hutang')
+                                            <div class="cb-field">
+                                                <label>Bayar Supplier</label>
+                                                <div class="cb-control-row">
+                                                    <input type="text" class="form-control form-control-sm cb-cyan fw-semibold" id="supplierCodePreview" readonly style="max-width: 120px;">
+                                                    <input type="text" class="form-control form-control-sm cb-cyan fw-semibold" id="supplierSearch" autocomplete="off">
+                                                    <input type="hidden" name="supplier_id" id="supplierId">
+                                                    <button type="button" class="btn btn-sm btn-outline-info cb-new" id="btnPickSupplier">Ambil</button>
+                                                    <button type="button" class="btn btn-sm btn-info cb-new" id="btnLoadSupplierInvoices"><i class="bi bi-search"></i> Muat Invoice</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-primary cb-new" data-bs-toggle="modal" data-bs-target="#supplierModal"><i class="bi bi-plus-lg"></i></button>
+                                                </div>
                                             </div>
-                                        </div>
+                                        @else
+                                            <div class="cb-field">
+                                                <label>Bayar Anggota</label>
+                                                <div class="cb-control-row">
+                                                    <input type="text" class="form-control form-control-sm cb-cyan fw-semibold" id="memberCodePreview" readonly style="max-width: 120px;">
+                                                    <input type="text" class="form-control form-control-sm cb-cyan fw-semibold" id="memberSearch" autocomplete="off">
+                                                    <button type="button" class="btn btn-sm btn-outline-info cb-new" id="btnPickMember">Ambil</button>
+                                                </div>
+                                            </div>
+                                        @endif
 
                                         <div class="cb-field">
                                             <label>Tgl Transaksi</label>
@@ -440,47 +447,22 @@
                                                 <button type="button" class="btn btn-sm btn-outline-secondary cb-new" id="btnRefreshNumber"><i class="bi bi-arrow-clockwise"></i></button>
                                             </div>
                                         </div>
-                                        <div class="cb-field">
-                                            <label>No Ref / No Nota</label>
-                                            <textarea class="form-control form-control-sm" name="no_ref_nota" id="noRefNota" rows="3" style="height: 70px;"></textarea>
-                                        </div>
-                                        <div class="cb-field">
-                                            <label>No Cash/Cek/Giro</label>
-                                            <input type="text" class="form-control form-control-sm" name="no_cash_cek_giro">
-                                        </div>
-                                        <div class="cb-field">
-                                            <label>Tgl Giro/Cek</label>
-                                            <input type="date" class="form-control form-control-sm" name="tgl_giro_cek">
-                                        </div>
+                                        @if($jenis === 'pembayaran_hutang')
+                                            <div class="cb-field">
+                                                <label>No Ref / No Nota</label>
+                                                <textarea class="form-control form-control-sm" name="no_ref_nota" id="noRefNota" rows="3" style="height: 70px;"></textarea>
+                                            </div>
+                                        @else
+                                            <input type="hidden" name="no_ref_nota" id="noRefNota">
+                                        @endif
+                                        <input type="hidden" name="no_cash_cek_giro">
+                                        <input type="hidden" name="tgl_giro_cek">
                                     </div>
                                 </div>
 
                                 <div class="d-flex justify-content-between align-items-center cashbank-detail-head">
-                                    <strong>Detail Pembayaran Hutang</strong>
+                                    <strong>Detail Pembayaran</strong>
                                     <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddDetail"><i class="bi bi-plus-lg"></i> Baris</button>
-                                </div>
-
-                                <div class="row g-3 mt-1 align-items-end cashbank-detail-tools">
-                                    <div class="col-md-4">
-                                        <label class="form-label">Kode Akun Detail</label>
-                                        <select class="form-control form-control-sm cb-select2-sm" id="detailCoaPicker">
-                                            <option value="">Pilih COA</option>
-                                            @foreach($coas as $coa)
-                                                <option value="{{ $coa->id }}">{{ $coa->kode_akun }} - {{ $coa->nama_akun }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Sub Akun</label>
-                                        <input type="text" class="form-control form-control-sm" id="subAccountCode" placeholder="Kode supplier">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Jumlah</label>
-                                        <input type="text" class="form-control form-control-sm text-end money-display" id="detailAmountPicker" inputmode="numeric" autocomplete="off">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <button type="button" class="btn btn-sm btn-info w-100" id="btnLoadSupplierInvoices"><i class="bi bi-search"></i> Muat Invoice</button>
-                                    </div>
                                 </div>
 
                                 <div class="table-responsive mt-3">
@@ -510,7 +492,8 @@
 
                                 <div class="d-flex justify-content-end gap-2 cashbank-actions">
                                     <button type="button" class="btn btn-sm btn-warning" id="btnClear"><i class="bi bi-x-circle"></i> Batal</button>
-                                    <button type="submit" class="btn btn-sm btn-success" id="btnSave"><i class="bi bi-floppy-fill"></i> Simpan & Cetak</button>
+                                    <button type="submit" class="btn btn-sm btn-success" id="btnSave" data-print="0"><i class="bi bi-floppy-fill"></i> Simpan</button>
+                                    <button type="submit" class="btn btn-sm btn-primary" id="btnSavePrint" data-print="1"><i class="bi bi-printer"></i> Simpan & Cetak</button>
                                 </div>
                             </div>
                         </div>
@@ -529,6 +512,10 @@
                         <input class="form-control form-control-sm mb-2" name="kode" placeholder="Kode" required>
                         <input class="form-control form-control-sm mb-2" name="nama" placeholder="Nama dokumen" required>
                         <input class="form-control form-control-sm mb-2" name="prefix" placeholder="Prefix nomor">
+                        <select class="form-control form-control-sm mb-2" name="transaction_type" required>
+                            <option value="payment">Payment - Kredit</option>
+                            <option value="receipt">Receipt - Debet</option>
+                        </select>
                         <select class="form-control form-control-sm" name="bank_id">
                             <option value="">Pilih Bank</option>
                             @foreach($banks as $bank)
@@ -619,6 +606,37 @@
         </div>
     </div>
 
+    <div class="modal fade" id="memberPickModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ambil Anggota</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" class="form-control" id="memberPickKeyword" placeholder="Cari no / nama anggota">
+                        <button type="button" class="btn btn-primary" id="btnMemberPickSearch"><i class="bi bi-search"></i> Cari</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped" id="memberPickTable" style="font-size: small;">
+                            <thead>
+                                <tr>
+                                    <th>No Anggota</th>
+                                    <th>Nama</th>
+                                    <th style="width: 70px">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="3" class="text-muted">Ketik kata kunci lalu cari.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <x-slot name="jscustom">
         <script>
             const jenis = @json($jenis);
@@ -626,6 +644,7 @@
             const coaLookup = @json($coaLookupForJs);
             const bankLookup = @json($bankLookupForJs);
             let detailIndex = 0;
+            let shouldPrintAfterSave = true;
             $('#noRefNota').data('auto-ref', true).on('input', function () {
                 $(this).data('auto-ref', false);
             });
@@ -731,7 +750,12 @@
                 $('#supplierCodePreview').val(data.kode_supplier || '');
                 $('#supplierSearch').val(data.text || data.nama_supplier || '');
                 $('#paidToPreview').val(data.text || data.nama_supplier || '');
-                $('#subAccountCode').val(data.kode_supplier || '');
+            }
+
+            function selectMember(data) {
+                $('#memberCodePreview').val(data.nomor_anggota || '');
+                $('#memberSearch').val(data.text || data.name || '');
+                $('#paidToPreview').val([data.nomor_anggota, data.text || data.name].filter(Boolean).join(' - '));
             }
 
             function recalc() {
@@ -752,30 +776,31 @@
                     total += bayar;
                 });
                 $('#detailTotal').text(formatNumber(total));
-                setMoney('#sejumlahDisplay', total);
+                if (total > 0) {
+                    setMoney('#sejumlahDisplay', total);
+                }
                 updateRefNota();
             }
 
             function addDetailRow(data = {}) {
                 const idx = detailIndex++;
-                const selectedCoa = data.coa_id || $('#detailCoaPicker').val() || $('#mainCoa').val();
+                const selectedCoa = data.coa_id || $('#mainCoa').val();
                 const row = $(`
                     <tr>
                         <td>
                             <select class="form-control form-control-sm detail-coa-select cb-select2-sm" name="detail[${idx}][coa_id]">${optionHtml(selectedCoa)}</select>
                         </td>
                         <td>
-                            <input type="text" class="form-control form-control-sm invoice-search" autocomplete="off" placeholder="Cari invoice">
+                            <input type="text" class="form-control form-control-sm invoice-search nomor-invoice" name="detail[${idx}][nomor_invoice]" autocomplete="off" placeholder="No invoice / ref">
                             <input type="hidden" name="detail[${idx}][penerimaan_id]" class="penerimaan-id">
-                            <input type="hidden" name="detail[${idx}][nomor_invoice]" class="nomor-invoice">
                         </td>
                         <td>
-                            <input type="hidden" name="detail[${idx}][nilai_invoice]" class="nilai-invoice">
-                            <div class="text-end nilai-label">0</div>
+                            <input type="text" class="form-control form-control-sm text-end nilai-invoice-display money-display" data-hidden="#nilaiInvoice${idx}" inputmode="numeric" autocomplete="off">
+                            <input type="hidden" name="detail[${idx}][nilai_invoice]" class="nilai-invoice" id="nilaiInvoice${idx}">
                         </td>
                         <td>
-                            <input type="hidden" name="detail[${idx}][sudah_dibayar]" class="sudah-dibayar">
-                            <div class="text-end sudah-label">0</div>
+                            <input type="text" class="form-control form-control-sm text-end sudah-dibayar-display money-display" data-hidden="#sudahDibayar${idx}" inputmode="numeric" autocomplete="off">
+                            <input type="hidden" name="detail[${idx}][sudah_dibayar]" class="sudah-dibayar" id="sudahDibayar${idx}">
                         </td>
                         <td>
                             <input type="text" class="form-control form-control-sm text-end jumlah-bayar-display money-display" data-hidden="#jumlahBayar${idx}" inputmode="numeric" autocomplete="off">
@@ -793,17 +818,18 @@
                 initCoaSelect2(row.find('.detail-coa-select'));
                 bindInvoiceSearch(row.find('.invoice-search'));
                 if (data.nomor_invoice) fillInvoice(row, data);
+                if (data.nilai_invoice) setMoney(row.find('.nilai-invoice-display'), data.nilai_invoice);
+                if (data.sudah_dibayar) setMoney(row.find('.sudah-dibayar-display'), data.sudah_dibayar);
+                if (data.jumlah_bayar) setMoney(row.find('.jumlah-bayar-display'), data.jumlah_bayar);
+                recalc();
             }
 
             function fillInvoice(row, data) {
                 row.find('.invoice-search').val(data.nomor_invoice || data.text);
                 row.find('.penerimaan-id').val(data.id);
-                row.find('.nomor-invoice').val(data.nomor_invoice || data.text);
-                row.find('.nilai-invoice').val(data.nilai_invoice);
-                row.find('.sudah-dibayar').val(data.sudah_dibayar);
+                setMoney(row.find('.nilai-invoice-display'), data.nilai_invoice);
+                setMoney(row.find('.sudah-dibayar-display'), data.sudah_dibayar);
                 setMoney(row.find('.jumlah-bayar-display'), data.jumlah_bayar || data.sisa);
-                row.find('.nilai-label').text(formatNumber(data.nilai_invoice));
-                row.find('.sudah-label').text(formatNumber(data.sudah_dibayar));
                 if (data.supplier_id) $('#supplierId').val(data.supplier_id);
                 if (data.nama_supplier) {
                     selectSupplier({
@@ -816,6 +842,8 @@
             }
 
             function bindInvoiceSearch(input) {
+                if (jenis !== 'pembayaran_hutang') return;
+
                 input.on('change blur', function () {
                     const row = $(this).closest('tr');
                     const keyword = $(this).val().trim();
@@ -823,7 +851,7 @@
 
                     $.get("{{ route("cashbank.transactions.$routeScope.invoices") }}", {
                         supplier_id: $('#supplierId').val(),
-                        supplier_code: $('#subAccountCode').val(),
+                        supplier_code: $('#supplierCodePreview').val(),
                         q: keyword
                     }).done(function (rows) {
                         if (!rows.length) {
@@ -893,11 +921,65 @@
                 $('#supplierPickModal').modal('hide');
             });
 
+            $('#memberSearch').on('input', function () {
+                if (!$(this).val()) {
+                    $('#memberCodePreview').val('');
+                }
+                if (jenis === 'umum') {
+                    $('#paidToPreview').val($(this).val());
+                }
+            }).on('keydown', function (e) {
+                if (e.key === 'Enter') e.preventDefault();
+            });
+
+            function searchMemberPicker() {
+                const keyword = $('#memberPickKeyword').val();
+                const tbody = $('#memberPickTable tbody');
+                tbody.html('<tr><td colspan="3" class="text-muted">Memuat...</td></tr>');
+
+                $.get("{{ route("cashbank.transactions.$routeScope.members") }}", { q: keyword })
+                    .done(function (rows) {
+                        if (!rows.length) {
+                            tbody.html('<tr><td colspan="3" class="text-muted">Anggota tidak ditemukan.</td></tr>');
+                            return;
+                        }
+
+                        tbody.html(rows.map(row => `
+                            <tr>
+                                <td>${row.nomor_anggota || ''}</td>
+                                <td>${row.text || ''}</td>
+                                <td><button type="button" class="btn btn-sm btn-primary pick-member" data-code="${row.nomor_anggota || ''}" data-name="${row.text || ''}">Pilih</button></td>
+                            </tr>
+                        `).join(''));
+                    })
+                    .fail(xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'));
+            }
+
+            $('#btnPickMember').on('click', function () {
+                $('#memberPickKeyword').val($('#memberSearch').val());
+                $('#memberPickModal').modal('show');
+                searchMemberPicker();
+            });
+            $('#btnMemberPickSearch').on('click', searchMemberPicker);
+            $('#memberPickKeyword').on('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchMemberPicker();
+                }
+            });
+            $('#memberPickTable').on('click', '.pick-member', function () {
+                selectMember({
+                    nomor_anggota: $(this).data('code'),
+                    text: $(this).data('name')
+                });
+                $('#memberPickModal').modal('hide');
+            });
+
             $('#btnAddDetail').on('click', () => addDetailRow());
             $('#cashbankForm').on('input', '.money-display', function () {
                 formatMoneyInput(this);
 
-                if ($(this).hasClass('jumlah-bayar-display')) {
+                if ($(this).hasClass('jumlah-bayar-display') || $(this).hasClass('nilai-invoice-display') || $(this).hasClass('sudah-dibayar-display')) {
                     recalc();
                 }
             });
@@ -918,13 +1000,12 @@
             $('[name=unit_id]').on('change', syncUnitPreview);
 
             $('#btnLoadSupplierInvoices').on('click', function () {
-                const supplierCode = $('#subAccountCode').val().trim();
+                const supplierCode = $('#supplierCodePreview').val().trim();
                 if (!supplierCode) {
-                    Swal.fire('Perhatian', 'Isi kode supplier pada sub akun.', 'warning');
+                    Swal.fire('Perhatian', 'Pilih supplier terlebih dahulu.', 'warning');
                     return;
                 }
 
-                let remainingAmount = parseMoney($('#detailAmountPicker').val());
                 $.get("{{ route("cashbank.transactions.$routeScope.invoices") }}", {
                     supplier_code: supplierCode,
                     q: ''
@@ -935,13 +1016,6 @@
                     }
 
                     rows.forEach(row => {
-                        let payAmount = row.sisa;
-                        if (remainingAmount > 0) {
-                            payAmount = Math.min(row.sisa, remainingAmount);
-                            remainingAmount -= payAmount;
-                            if (payAmount <= 0) return;
-                        }
-
                         const emptyRow = $('#detailTable tbody tr').filter(function () {
                             return !$(this).find('.nomor-invoice').val()
                                 && !$(this).find('.invoice-search').val()
@@ -950,8 +1024,8 @@
                         const targetRow = emptyRow.length ? emptyRow : null;
                         const data = {
                             ...row,
-                            coa_id: $('#detailCoaPicker').val(),
-                            sisa: payAmount
+                            coa_id: $('#mainCoa').val(),
+                            sisa: row.sisa
                         };
 
                         if (targetRow) {
@@ -968,12 +1042,16 @@
                 $.get("{{ route("cashbank.transactions.$routeScope.number") }}", { jenis }).done(number => $('#nomorPreview').val(number));
             });
 
+            $('#btnSave, #btnSavePrint').on('click', function () {
+                shouldPrintAfterSave = $(this).data('print') === 1;
+            });
+
             $('#documentForm').on('submit', function (e) {
                 e.preventDefault();
                 $.post("{{ route("cashbank.transactions.$routeScope.quick-document") }}", $(this).serialize())
                     .done(({ data }) => {
                         const bank = bankLookup[data.bank_id] || {};
-                        $('#documentCode').append(`<option value="${data.id}" data-name="${data.nama}" data-bank-id="${data.bank_id || ''}" data-account-code="${bank.account_code || ''}" data-account-name="${bank.account_name || ''}" selected>${data.kode}</option>`);
+                        $('#documentCode').append(`<option value="${data.id}" data-name="${data.nama}" data-bank-id="${data.bank_id || ''}" data-transaction-type="${data.transaction_type || 'payment'}" data-account-code="${bank.account_code || ''}" data-account-name="${bank.account_name || ''}" selected>${data.kode}</option>`);
                         $('#documentNamePreview').val(data.nama);
                         if (data.bank_id) $('[name=bank_id]').val(data.bank_id);
                         setMainAccount(bank.account_code, bank.account_name);
@@ -990,7 +1068,7 @@
                         const label = `${data.kode_akun} - ${data.nama_akun}`;
                         coaOptions.push({ id: data.id, label });
                         coaLookup[data.id] = { code: data.kode_akun, name: data.nama_akun };
-                        $('#detailCoaPicker, #detailTable tbody .detail-coa-select').each(function () {
+                        $('#detailTable tbody .detail-coa-select').each(function () {
                             const select = $(this);
                             select.append(`<option value="${data.id}">${label}</option>`);
                             if (select.data('select2')) {
@@ -1019,10 +1097,11 @@
                 $('#detailTable tbody').empty();
                 $('#detailTotal').text('0');
                 setMoney('#sejumlahDisplay', 0);
-                setMoney('#detailAmountPicker', 0);
                 $('#supplierId').val('');
                 $('#supplierSearch').val('');
                 $('#supplierCodePreview').val('');
+                $('#memberCodePreview').val('');
+                $('#memberSearch').val('');
                 $('#paidToPreview').val('');
                 $('#documentNamePreview').val('');
                 setMainAccount('', '');
@@ -1030,35 +1109,32 @@
                 $('input[name=tgl_transaksi]').val('{{ date('Y-m-d') }}');
                 $('input[name=periode]').val('{{ date('Ym') }}');
                 syncUnitPreview();
-                if (jenis === 'pembayaran_hutang') addDetailRow();
+                addDetailRow();
             });
 
             $('#cashbankForm').on('submit', function (e) {
                 e.preventDefault();
-                if (jenis === 'pembayaran_hutang' && $('#detailTable tbody tr').length === 0) {
-                    Swal.fire('Perhatian', 'Tambahkan invoice hutang yang akan dibayar.', 'warning');
-                    return;
-                }
                 $.ajax({
                     url: "{{ route("cashbank.transactions.$routeScope.store") }}",
                     method: 'POST',
                     data: $(this).serialize(),
-                    beforeSend: () => $('#btnSave').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Menyimpan...'),
+                    beforeSend: () => $('#btnSave, #btnSavePrint').prop('disabled', true),
                     success: response => {
                         Swal.fire({ icon: 'success', title: response.message, timer: 1500, showConfirmButton: false })
                             .then(() => {
-                                window.open(response.nota_url, '_blank');
+                                if (shouldPrintAfterSave) {
+                                    window.open(response.nota_url, '_blank');
+                                }
                                 $('#btnClear').trigger('click');
                                 $('#btnRefreshNumber').trigger('click');
                             });
                     },
                     error: xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'),
-                    complete: () => $('#btnSave').prop('disabled', false).html('<i class="bi bi-floppy-fill"></i> Simpan & Cetak')
+                    complete: () => $('#btnSave, #btnSavePrint').prop('disabled', false)
                 });
             });
 
-            if (jenis === 'pembayaran_hutang') addDetailRow();
-            initCoaSelect2($('#detailCoaPicker'));
+            addDetailRow();
             if (!$('#documentCode').val() && $('#documentCode option[value!=""]').length === 1) {
                 $('#documentCode option[value!=""]').first().prop('selected', true);
             }

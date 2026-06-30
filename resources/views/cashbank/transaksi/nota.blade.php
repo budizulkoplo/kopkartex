@@ -18,7 +18,7 @@
         <div class="d-flex justify-content-between align-items-start border-bottom pb-2 mb-3">
             <div>
                 <h4 class="mb-0">NOTA CASH BANK</h4>
-                <div>{{ $transaction->jenis === 'pembayaran_hutang' ? 'Pembayaran Hutang' : 'Umum' }}</div>
+                <div>{{ $transaction->jenis === 'pembayaran_hutang' ? 'Pembayaran Supplier' : 'Pembayaran Umum' }}</div>
             </div>
             <div class="text-end">
                 <strong>{{ $transaction->nomor_transaksi }}</strong><br>
@@ -49,12 +49,8 @@
             <tr>
                 <td>No Ref / No Nota</td>
                 <td>: {{ $transaction->no_ref_nota ?? '-' }}</td>
-                <td>No Cash/Cek/Giro</td>
-                <td>: {{ $transaction->no_cash_cek_giro ?? '-' }}</td>
-            </tr>
-            <tr>
-                <td>Tgl Giro/Cek</td>
-                <td colspan="3">: {{ $transaction->tgl_giro_cek ? $transaction->tgl_giro_cek->format('d-m-Y') : '-' }}</td>
+                <td>Jenis Dokumen</td>
+                <td>: {{ ($transaction->documentCode->transaction_type ?? 'payment') === 'receipt' ? 'Receipt - Debet' : 'Payment - Kredit' }}</td>
             </tr>
             <tr>
                 <td>Guna Membayar</td>

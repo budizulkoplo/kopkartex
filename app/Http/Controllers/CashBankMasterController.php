@@ -6,6 +6,8 @@ use App\Models\CashBankBank;
 use App\Models\CashBankCoa;
 use App\Models\CashBankDocumentCode;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -14,7 +16,7 @@ class CashBankMasterController extends Controller
     public function documentCodes()
     {
         return view('cashbank.master.document-codes', [
-            'banks' => CashBankBank::where('is_active', true)->orderBy('kode_bank')->get(),
+            'banks' => $this->bankOptions(),
         ]);
     }
 
@@ -35,6 +37,7 @@ class CashBankMasterController extends Controller
             'nama' => ['required', 'string', 'max:100'],
             'prefix' => ['nullable', 'string', 'max:20'],
             'bank_id' => ['nullable', 'exists:cashbank_banks,id'],
+            'transaction_type' => ['required', Rule::in(['payment', 'receipt'])],
             'keterangan' => ['nullable', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);
@@ -130,5 +133,31 @@ class CashBankMasterController extends Controller
         CashBankBank::findOrFail($request->id)->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    private function bankOptions()
+    {
+        if (Schema::hasColumn('cashbank_coas', 'att4')) {
+            CashBankCoa::query()
+                ->where('is_active', true)
+                ->whereIn(DB::raw('UPPER(att4)'), ['KAS', 'BANK'])
+                ->orderBy('kode_akun')
+                ->get()
+                ->each(function (CashBankCoa $coa): void {
+                    CashBankBank::updateOrCreate(
+                        ['kode_bank' => $coa->kode_akun],
+                        [
+                            'nama_bank' => $coa->nama_akun,
+                            'kode_akun' => $coa->kode_akun,
+                            'nama_akun' => $coa->nama_akun,
+                            'nama_rekening' => $coa->nama_akun,
+                            'coa_id' => null,
+                            'is_active' => true,
+                        ]
+                    );
+                });
+        }
+
+        return CashBankBank::where('is_active', true)->orderBy('kode_akun')->get();
     }
 }
