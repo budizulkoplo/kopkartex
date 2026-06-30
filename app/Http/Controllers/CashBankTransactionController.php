@@ -557,12 +557,13 @@ class CashBankTransactionController extends Controller
     private function bankOptions()
     {
         if (Schema::hasColumn('cashbank_coas', 'att4')) {
-            CashBankCoa::query()
+            $cashBankCoas = CashBankCoa::query()
                 ->where('is_active', true)
                 ->whereIn(DB::raw('UPPER(att4)'), ['KAS', 'BANK'])
                 ->orderBy('kode_akun')
-                ->get()
-                ->each(function (CashBankCoa $coa): void {
+                ->get();
+
+            $cashBankCoas->each(function (CashBankCoa $coa): void {
                     CashBankBank::updateOrCreate(
                         ['kode_bank' => $coa->kode_akun],
                         [
@@ -575,6 +576,12 @@ class CashBankTransactionController extends Controller
                         ]
                     );
                 });
+
+            return CashBankBank::where('is_active', true)
+                ->whereIn('kode_akun', $cashBankCoas->pluck('kode_akun')->filter()->values())
+                ->orderBy('kode_akun')
+                ->orderBy('nama_bank')
+                ->get();
         }
 
         return CashBankBank::where('is_active', true)

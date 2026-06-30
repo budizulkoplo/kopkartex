@@ -102,8 +102,9 @@ class CashBankMasterController extends Controller
 
     public function bankData()
     {
-        return DataTables::of(CashBankBank::query())
+        return DataTables::of($this->bankOptions())
             ->addIndexColumn()
+            ->addColumn('att4', fn ($row) => $this->cashBankCoaAtt4($row->kode_akun))
             ->make(true);
     }
 
@@ -138,12 +139,13 @@ class CashBankMasterController extends Controller
     private function bankOptions()
     {
         if (Schema::hasColumn('cashbank_coas', 'att4')) {
-            CashBankCoa::query()
+            $cashBankCoas = CashBankCoa::query()
                 ->where('is_active', true)
                 ->whereIn(DB::raw('UPPER(att4)'), ['KAS', 'BANK'])
                 ->orderBy('kode_akun')
-                ->get()
-                ->each(function (CashBankCoa $coa): void {
+                ->get();
+
+            $cashBankCoas->each(function (CashBankCoa $coa): void {
                     CashBankBank::updateOrCreate(
                         ['kode_bank' => $coa->kode_akun],
                         [
@@ -156,8 +158,22 @@ class CashBankMasterController extends Controller
                         ]
                     );
                 });
+
+            return CashBankBank::where('is_active', true)
+                ->whereIn('kode_akun', $cashBankCoas->pluck('kode_akun')->filter()->values())
+                ->orderBy('kode_akun')
+                ->get();
         }
 
         return CashBankBank::where('is_active', true)->orderBy('kode_akun')->get();
+    }
+
+    private function cashBankCoaAtt4(?string $kodeAkun): string
+    {
+        if (! $kodeAkun || ! Schema::hasColumn('cashbank_coas', 'att4')) {
+            return '-';
+        }
+
+        return CashBankCoa::where('kode_akun', $kodeAkun)->value('att4') ?: '-';
     }
 }
