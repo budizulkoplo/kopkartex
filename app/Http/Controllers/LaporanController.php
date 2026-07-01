@@ -108,6 +108,7 @@ class LaporanController extends Controller
     public function penerimaanData(Request $request)
     {
         $bulan = $request->get('bulan', now()->format('Y-m'));
+        $metodeBayar = $request->get('metode_bayar', 'all');
         $start = \Carbon\Carbon::parse($bulan . '-01')->startOfMonth();
         $end   = \Carbon\Carbon::parse($bulan . '-01')->endOfMonth();
 
@@ -122,6 +123,7 @@ class LaporanController extends Controller
                 'p.tgl_penerimaan',
                 'p.nomor_invoice',
                 'p.nama_supplier',
+                'p.metode_bayar',
                 'b.kode_barang',
                 'b.nama_barang',
                 'd.jumlah',
@@ -130,6 +132,9 @@ class LaporanController extends Controller
             )
             ->whereNull('p.deleted_at')
             ->whereBetween('p.tgl_penerimaan', [$start, $end])
+            ->when(in_array($metodeBayar, ['cash', 'tempo'], true), function ($query) use ($metodeBayar) {
+                $query->where('p.metode_bayar', $metodeBayar);
+            })
             ->orderBy('p.tgl_penerimaan')
             ->orderBy('p.nomor_invoice')
             ->get();
