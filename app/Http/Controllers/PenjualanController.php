@@ -91,7 +91,14 @@ class PenjualanController extends Controller
     {
         $today  = now()->toDateString();          
         $date   = now()->format('ymd');            
-        $prefix = 'INV-'. auth()->user()->unit->id .'-' . $date;
+        $user = Auth::user();
+        $unitId = $user?->unit?->id ?? $user?->unit_kerja;
+
+        if (!$unitId) {
+            throw new Exception('User belum memiliki unit kerja, tidak bisa membuat invoice.');
+        }
+
+        $prefix = 'INV-' . $unitId . '-' . $date;
 
         $lastInvoice = Penjualan::withTrashed()
             ->whereDate('created_at', $today)

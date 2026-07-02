@@ -998,8 +998,13 @@ class LaporanController extends Controller
         $status = $request->input('status', 'all');
 
         // Ambil unit user yang login
-        $userUnitId = auth()->user()->unit->id;
-        $userUnitName = auth()->user()->unit->nama_unit;
+        $user = auth()->user();
+        $userUnitId = $user?->unit?->id ?? $user?->unit_kerja;
+        $userUnitName = $user?->unit?->nama_unit ?? optional(\App\Models\Unit::find($userUnitId))->nama_unit;
+
+        if (!$userUnitId) {
+            abort(403, 'User belum memiliki unit kerja.');
+        }
         
         // Buat array untuk dropdown
         $units = [$userUnitId => $userUnitName];
