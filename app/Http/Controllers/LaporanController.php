@@ -102,6 +102,7 @@ class LaporanController extends Controller
             'bulan' => $bulan,
             'start' => $start->toDateString(),
             'end'   => $end->toDateString(),
+            'defaultUnitId' => Auth::user()->unit_kerja ?? 'all',
             'units' => Unit::query()
                 ->whereNull('deleted_at')
                 ->orderBy('nama_unit')
