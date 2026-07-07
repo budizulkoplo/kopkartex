@@ -38,7 +38,6 @@ return new class extends Migration
         }
 
         Schema::table('penerimaan', function (Blueprint $table) {
-            $table->dropIndex(['unit_id']);
             $table->dropColumn('unit_id');
         });
     }
