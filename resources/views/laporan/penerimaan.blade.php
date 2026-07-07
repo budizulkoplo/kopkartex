@@ -222,8 +222,8 @@
                                 background: #fff;
                                 color: #000;
                                 font-family: Arial, sans-serif;
-                                font-size: 8px;
-                                line-height: 1.18;
+                                font-size: 9px;
+                                line-height: 1.12;
                             }
                             @page { size: A4 portrait; margin: 7mm; }
                             @media print { body { padding: 0; } }
@@ -235,12 +235,12 @@
                             }
                             .header h1 {
                                 margin: 0 0 2px;
-                                font-size: 13px;
+                                font-size: 14px;
                                 line-height: 1.1;
                             }
                             .header p {
                                 margin: 1px 0;
-                                font-size: 8px;
+                                font-size: 9px;
                             }
                             table {
                                 width: 100%;
@@ -249,18 +249,18 @@
                             }
                             th, td {
                                 border: 1px solid #000;
-                                padding: 2px 3px;
+                                padding: 1px 2px;
                                 vertical-align: top;
                                 overflow-wrap: anywhere;
                             }
                             th {
                                 background: #f1f1f1 !important;
-                                font-size: 8px;
+                                font-size: 8.8px;
                                 font-weight: 700;
                                 -webkit-print-color-adjust: exact;
                                 print-color-adjust: exact;
                             }
-                            td { font-size: 7.5px; }
+                            td { font-size: 8.5px; }
                             .text-center { text-align: center; }
                             .text-right { text-align: right; }
                             .bold { font-weight: 700; }
@@ -284,7 +284,7 @@
                             .footer {
                                 margin-top: 4px;
                                 text-align: right;
-                                font-size: 7px;
+                                font-size: 8px;
                             }
                             th:nth-child(1), td:nth-child(1) { width: 4%; }
                             th:nth-child(2), td:nth-child(2) { width: 9%; }
