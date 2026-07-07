@@ -26,6 +26,7 @@ class Penerimaan extends Model
         'tgl_tempo',
         'status_bayar',
         'grandtotal',
+        'unit_id',
         'created_at',
         'updated_at',
         'deleted_at'
@@ -53,6 +54,11 @@ class Penerimaan extends Model
     public function supplier()
     {
         return $this->belongsTo(Supplier::class, 'idsupplier', 'id');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_id', 'id');
     }
 
     public function getEffectiveGrandtotalAttribute(): float

@@ -102,6 +102,10 @@ class LaporanController extends Controller
             'bulan' => $bulan,
             'start' => $start->toDateString(),
             'end'   => $end->toDateString(),
+            'units' => Unit::query()
+                ->whereNull('deleted_at')
+                ->orderBy('nama_unit')
+                ->get(['id', 'nama_unit']),
         ]);
     }
 
@@ -109,6 +113,7 @@ class LaporanController extends Controller
     {
         $bulan = $request->get('bulan', now()->format('Y-m'));
         $metodeBayar = $request->get('metode_bayar', 'all');
+        $unitId = $request->get('unit_id', 'all');
         $start = \Carbon\Carbon::parse($bulan . '-01')->startOfMonth();
         $end   = \Carbon\Carbon::parse($bulan . '-01')->endOfMonth();
 
@@ -119,9 +124,15 @@ class LaporanController extends Controller
         $data = DB::table('penerimaan as p')
             ->join('penerimaan_detail as d', 'p.idpenerimaan', '=', 'd.idpenerimaan')
             ->join('barang as b', 'd.barang_id', '=', 'b.id')
+            ->leftJoin('users as usr', 'usr.id', '=', 'p.user_id')
+            ->leftJoin('unit as u', function ($join) {
+                $join->on('u.id', '=', DB::raw('COALESCE(p.unit_id, usr.unit_kerja)'));
+            })
             ->select(
                 'p.tgl_penerimaan',
                 'p.nomor_invoice',
+                DB::raw('COALESCE(p.unit_id, usr.unit_kerja) as unit_id'),
+                DB::raw('COALESCE(u.nama_unit, "-") as nama_unit'),
                 'p.nama_supplier',
                 'p.metode_bayar',
                 'b.kode_barang',
@@ -135,6 +146,10 @@ class LaporanController extends Controller
             ->when(in_array($metodeBayar, ['cash', 'tempo'], true), function ($query) use ($metodeBayar) {
                 $query->where('p.metode_bayar', $metodeBayar);
             })
+            ->when($unitId !== 'all' && $unitId !== null && $unitId !== '', function ($query) use ($unitId) {
+                $query->whereRaw('COALESCE(p.unit_id, usr.unit_kerja) = ?', [$unitId]);
+            })
+            ->orderBy('nama_unit')
             ->orderBy('p.tgl_penerimaan')
             ->orderBy('p.nomor_invoice')
             ->get();

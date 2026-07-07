@@ -51,6 +51,24 @@ class PenerimaanController extends Controller
         return $parsed->format('Y-m-d H:i:s');
     }
 
+    private function currentUnitId(): ?int
+    {
+        $unitId = Auth::user()->unit_kerja ?? null;
+
+        return $unitId !== null && $unitId !== '' ? (int) $unitId : null;
+    }
+
+    private function penerimaanUnitId(Penerimaan $penerimaan): int
+    {
+        $unitId = $penerimaan->unit_id ?: $this->currentUnitId();
+
+        if (! $unitId) {
+            throw new Exception('Unit penerimaan tidak ditemukan untuk user ini.');
+        }
+
+        return (int) $unitId;
+    }
+
     // Method untuk mendapatkan invoice baru
     public function getInvoice()
     {
@@ -97,6 +115,11 @@ class PenerimaanController extends Controller
         try {
             $kartuStok = app(KartuStokService::class);
             $formattedDate = $this->parseTransactionDate($request->date);
+            $unitId = $this->currentUnitId();
+
+            if (! $unitId) {
+                throw new Exception('Unit penerimaan tidak ditemukan untuk user ini.');
+            }
             
             // Validasi supplier
             if (!$request->supplier_id) {
@@ -138,6 +161,7 @@ class PenerimaanController extends Controller
             $hdr->nama_supplier = $supplier->nama_supplier;
             $hdr->note = $request->note;
             $hdr->user_id = auth()->user()->id;
+            $hdr->unit_id = $unitId;
             $hdr->metode_bayar = $request->metode_bayar;
             $hdr->tgl_tempo = $tglTempo;
             $hdr->status_bayar = $statusBayar;
@@ -201,7 +225,7 @@ class PenerimaanController extends Controller
                 $kartuStok->masuk([
                     'tanggal' => $hdr->tgl_penerimaan,
                     'barang_id' => $barangId,
-                    'unit_id' => Auth::user()->unit_kerja,
+                    'unit_id' => $unitId,
                     'qty' => $quantities[$index],
                     'harga_pokok' => $hargaBeliArr[$index] ?? 0,
                     'jenis_transaksi' => 'penerimaan',
@@ -417,6 +441,7 @@ class PenerimaanController extends Controller
             $kartuStok = app(KartuStokService::class);
             $penerimaanId = $validated['penerimaan_id'];
             $penerimaan = Penerimaan::findOrFail($penerimaanId);
+            $unitId = $this->penerimaanUnitId($penerimaan);
 
             if ($validated['metode_bayar'] === 'tempo' && empty($validated['tgl_tempo'])) {
                 throw new Exception('Tanggal tempo wajib diisi jika metode bayar tempo.');
@@ -455,7 +480,7 @@ class PenerimaanController extends Controller
                 if (($item['action'] ?? null) === 'delete') {
                     $stok = DB::table('stok_unit')
                         ->where('barang_id', $detail->barang_id)
-                        ->where('unit_id', Auth::user()->unit_kerja)
+                        ->where('unit_id', $unitId)
                         ->lockForUpdate()
                         ->value('stok');
 
@@ -466,7 +491,7 @@ class PenerimaanController extends Controller
                     $kartuStok->keluar([
                         'tanggal' => now(),
                         'barang_id' => $detail->barang_id,
-                        'unit_id' => Auth::user()->unit_kerja,
+                        'unit_id' => $unitId,
                         'qty' => $oldQty,
                         'harga_pokok' => $detail->harga_beli,
                         'jenis_transaksi' => 'revisi',
@@ -499,7 +524,7 @@ class PenerimaanController extends Controller
                 if ($selisih != 0.0) {
                     $stok = DB::table('stok_unit')
                         ->where('barang_id', $detail->barang_id)
-                        ->where('unit_id', Auth::user()->unit_kerja)
+                        ->where('unit_id', $unitId)
                         ->lockForUpdate()
                         ->value('stok');
 
@@ -510,7 +535,7 @@ class PenerimaanController extends Controller
                     $payload = [
                         'tanggal' => now(),
                         'barang_id' => $detail->barang_id,
-                        'unit_id' => Auth::user()->unit_kerja,
+                        'unit_id' => $unitId,
                         'qty' => abs($selisih),
                         'harga_pokok' => $newHargaBeli,
                         'jenis_transaksi' => 'revisi',
@@ -589,13 +614,14 @@ class PenerimaanController extends Controller
         try {
             $kartuStok = app(KartuStokService::class);
             $penerimaan = Penerimaan::with('details')->findOrFail($id);
+            $unitId = $this->penerimaanUnitId($penerimaan);
             
             // Kembalikan semua stok
             foreach ($penerimaan->details as $detail) {
                 $kartuStok->keluar([
                     'tanggal' => now(),
                     'barang_id' => $detail->barang_id,
-                    'unit_id' => Auth::user()->unit_kerja,
+                    'unit_id' => $unitId,
                     'qty' => $detail->jumlah,
                     'harga_pokok' => $detail->harga_beli,
                     'jenis_transaksi' => 'pembatalan',

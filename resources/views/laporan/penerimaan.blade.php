@@ -8,6 +8,13 @@
                     <h3 class="mb-0">Laporan Penerimaan Barang</h3>
                 </div>
                 <div class="col-sm-6 text-end">
+                    <select id="unit_id" class="form-select form-select-sm d-inline-block w-auto me-2"
+                            onchange="reloadTable()">
+                        <option value="all">Semua Unit</option>
+                        @foreach ($units as $unit)
+                            <option value="{{ $unit->id }}">{{ $unit->nama_unit }}</option>
+                        @endforeach
+                    </select>
                     <select id="metode_bayar" class="form-select form-select-sm d-inline-block w-auto me-2"
                             onchange="reloadTable()">
                         <option value="all">Semua Pembayaran</option>
@@ -29,6 +36,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Tanggal</th>
+                                <th>Unit</th>
                                 <th>No Invoice</th>
                                 <th>Supplier</th>
                                 <th>Pembayaran</th>
@@ -42,13 +50,13 @@
                         <tbody></tbody>
                         <tfoot>
                             <tr class="table-primary fw-bold">
-                                <td colspan="6" class="text-end">TOTAL PAGE</td>
+                                <td colspan="7" class="text-end">TOTAL PAGE</td>
                                 <td id="page-total-jumlah" class="text-end">0</td>
                                 <td></td>
                                 <td id="page-total-subtotal" class="text-end">Rp 0</td>
                             </tr>
                             <tr class="table-success fw-bold">
-                                <td colspan="6" class="text-end">TOTAL SEMUA DATA</td>
+                                <td colspan="7" class="text-end">TOTAL SEMUA DATA</td>
                                 <td id="all-total-jumlah" class="text-end">0</td>
                                 <td></td>
                                 <td id="all-total-subtotal" class="text-end">Rp 0</td>
@@ -161,18 +169,25 @@
 
                 data.forEach(function(row) {
                     const invoice = row.nomor_invoice || '-';
+                    const groupKey = `${row.unit_id || '-'}|${invoice}`;
 
-                    if (!invoiceGroups[invoice]) {
-                        invoiceGroups[invoice] = { jumlah: 0, subtotal: 0, rows: [] };
-                        invoiceOrder.push(invoice);
+                    if (!invoiceGroups[groupKey]) {
+                        invoiceGroups[groupKey] = {
+                            invoice: invoice,
+                            unit: row.nama_unit || '-',
+                            jumlah: 0,
+                            subtotal: 0,
+                            rows: []
+                        };
+                        invoiceOrder.push(groupKey);
                     }
 
                     const jumlah = cleanNumber(row.jumlah);
                     const subtotal = cleanNumber(row.subtotal);
 
-                    invoiceGroups[invoice].jumlah += jumlah;
-                    invoiceGroups[invoice].subtotal += subtotal;
-                    invoiceGroups[invoice].rows.push(row);
+                    invoiceGroups[groupKey].jumlah += jumlah;
+                    invoiceGroups[groupKey].subtotal += subtotal;
+                    invoiceGroups[groupKey].rows.push(row);
                     grandJumlah += jumlah;
                     grandSubtotal += subtotal;
                 });
@@ -277,6 +292,7 @@
                                 <tr>
                                     <th class="text-center">No</th>
                                     <th>Tanggal</th>
+                                    <th>Unit</th>
                                     <th>No Invoice</th>
                                     <th>Supplier</th>
                                     <th>Pembayaran</th>
@@ -288,8 +304,8 @@
                                 </tr>
                             </thead>`;
 
-                invoiceOrder.forEach(function(invoice) {
-                    const group = invoiceGroups[invoice];
+                invoiceOrder.forEach(function(groupKey) {
+                    const group = invoiceGroups[groupKey];
                     printHTML += '<tbody class="invoice-group">';
 
                     group.rows.forEach(function(row) {
@@ -297,6 +313,7 @@
                             <tr>
                                 <td class="text-center">${rowNumber++}</td>
                                 <td>${escapeHtml(row.tgl_penerimaan)}</td>
+                                <td>${escapeHtml(row.nama_unit)}</td>
                                 <td>${escapeHtml(row.nomor_invoice)}</td>
                                 <td>${escapeHtml(row.nama_supplier)}</td>
                                 <td>${escapeHtml(formatMetodeBayar(row.metode_bayar))}</td>
@@ -310,7 +327,7 @@
 
                     printHTML += `
                             <tr class="invoice-total">
-                                <td colspan="7" class="text-right bold">Total Invoice: ${escapeHtml(invoice)}</td>
+                                <td colspan="8" class="text-right bold">Total ${escapeHtml(group.unit)} / Invoice: ${escapeHtml(group.invoice)}</td>
                                 <td class="text-right bold">${formatQty(group.jumlah)}</td>
                                 <td></td>
                                 <td class="text-right bold">${formatNumber(group.subtotal)}</td>
@@ -321,7 +338,7 @@
                 printHTML += `
                             <tfoot>
                                 <tr class="grand-total">
-                                    <td colspan="7" class="text-right">TOTAL SEMUA DATA (${data.length.toLocaleString('id-ID')} baris / ${invoiceOrder.length.toLocaleString('id-ID')} invoice)</td>
+                                    <td colspan="8" class="text-right">TOTAL SEMUA DATA (${data.length.toLocaleString('id-ID')} baris / ${invoiceOrder.length.toLocaleString('id-ID')} invoice)</td>
                                     <td class="text-right">${formatQty(grandJumlah)}</td>
                                     <td></td>
                                     <td class="text-right">${formatNumber(grandSubtotal)}</td>
@@ -355,12 +372,14 @@
                     type: "GET",
                     data: function(d) {
                         d.bulan = $('#bulan').val();
+                        d.unit_id = $('#unit_id').val();
                         d.metode_bayar = $('#metode_bayar').val();
                     },
                     dataSrc: "data"
                 },
                 columns: [
                     { data: "tgl_penerimaan" },
+                    { data: "nama_unit" },
                     { data: "nomor_invoice" },
                     { data: "nama_supplier" },
                     {
@@ -394,7 +413,7 @@
                     },
                 ],
                 rowGroup: {
-                    dataSrc: ["tgl_penerimaan", "nomor_invoice", "nama_supplier", "metode_bayar"]
+                    dataSrc: ["nama_unit", "tgl_penerimaan", "nomor_invoice", "nama_supplier", "metode_bayar"]
                 },
                 drawCallback: function(settings) {
                     var api = this.api();
@@ -409,7 +428,7 @@
                     $(rows).find('td').removeAttr('rowspan').removeClass('align-middle');
 
                     data.each(function(row, i) {
-                        var invoice = row.nomor_invoice || '-';
+                        var invoice = (row.unit_id || '-') + '|' + (row.nomor_invoice || '-');
                         var jumlah = cleanNumber(row.jumlah);
                         var subtotal = cleanNumber(row.subtotal);
 
@@ -430,7 +449,7 @@
                     });
 
                     api.rows({ search: 'applied' }).data().each(function(row) {
-                        allInvoiceGroups[row.nomor_invoice || '-'] = true;
+                        allInvoiceGroups[(row.unit_id || '-') + '|' + (row.nomor_invoice || '-')] = true;
                     });
 
                     for (var invoice in invoiceGroups) {
@@ -441,9 +460,11 @@
                             $(rows).eq(group.firstRowIndex).find('td:eq(1)').attr('rowspan', group.count).addClass('align-middle');
                             $(rows).eq(group.firstRowIndex).find('td:eq(2)').attr('rowspan', group.count).addClass('align-middle');
                             $(rows).eq(group.firstRowIndex).find('td:eq(3)').attr('rowspan', group.count).addClass('align-middle');
+                            $(rows).eq(group.firstRowIndex).find('td:eq(4)').attr('rowspan', group.count).addClass('align-middle');
 
                             for (var rowIndex = group.firstRowIndex + 1; rowIndex < group.firstRowIndex + group.count; rowIndex++) {
-                                if ($(rows).eq(rowIndex).find('td').length > 6) {
+                                if ($(rows).eq(rowIndex).find('td').length > 7) {
+                                    $(rows).eq(rowIndex).find('td:eq(0)').remove();
                                     $(rows).eq(rowIndex).find('td:eq(0)').remove();
                                     $(rows).eq(rowIndex).find('td:eq(0)').remove();
                                     $(rows).eq(rowIndex).find('td:eq(0)').remove();
@@ -455,12 +476,13 @@
 
                     for (var i = invoiceStarts.length - 1; i >= 0; i--) {
                         var startIndex = invoiceStarts[i];
-                        var invoiceNumber = data[startIndex].nomor_invoice || '-';
-                        var invoiceGroup = invoiceGroups[invoiceNumber];
+                        var row = data[startIndex];
+                        var invoiceKey = (row.unit_id || '-') + '|' + (row.nomor_invoice || '-');
+                        var invoiceGroup = invoiceGroups[invoiceKey];
 
                         $(rows).eq(startIndex + invoiceGroup.count - 1).after(
                             `<tr class="fw-bold bg-light invoice-total-row">
-                                <td colspan="6" class="text-end">Total Invoice: ${escapeHtml(invoiceNumber)}</td>
+                                <td colspan="7" class="text-end">Total ${escapeHtml(row.nama_unit || '-')} / Invoice: ${escapeHtml(row.nomor_invoice || '-')}</td>
                                 <td class="text-end">${formatQty(invoiceGroup.jumlah)}</td>
                                 <td></td>
                                 <td class="text-end">${formatRupiah(invoiceGroup.subtotal)}</td>
