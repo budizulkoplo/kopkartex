@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use App\Models\Satuan;
 use App\Models\Kategori;
+use App\Models\Unit;
 use Illuminate\Support\Facades\Auth;
 use App\Services\KartuStokService;
 
@@ -317,19 +318,26 @@ class PenerimaanController extends Controller
     {
         $tanggalAwal = $request->tanggal_awal ?? date('Y-m-d');
         $tanggalAkhir = $request->tanggal_akhir ?? date('Y-m-d');
+        $unitId = $request->input('unit_id', Auth::user()->unit_kerja ?? 'all');
         $perPage = (int) $request->input('per_page', 25);
         $allowedPerPage = [10, 25, 50, 100];
         if (!in_array($perPage, $allowedPerPage, true)) {
             $perPage = 25;
         }
 
-        $query = Penerimaan::with(['details.barang', 'user', 'supplier'])
-            ->whereDate('tgl_penerimaan', '>=', $tanggalAwal)
-            ->whereDate('tgl_penerimaan', '<=', $tanggalAkhir)
-            ->orderBy('tgl_penerimaan', 'desc');
+        $query = Penerimaan::with(['details.barang', 'user', 'supplier', 'unit'])
+            ->leftJoin('users as penerimaan_user', 'penerimaan_user.id', '=', 'penerimaan.user_id')
+            ->select('penerimaan.*')
+            ->whereDate('penerimaan.tgl_penerimaan', '>=', $tanggalAwal)
+            ->whereDate('penerimaan.tgl_penerimaan', '<=', $tanggalAkhir)
+            ->when($unitId !== 'all' && $unitId !== null && $unitId !== '', function ($query) use ($unitId) {
+                $query->whereRaw('COALESCE(penerimaan.unit_id, penerimaan_user.unit_kerja) = ?', [$unitId]);
+            })
+            ->orderBy('penerimaan.tgl_penerimaan', 'desc')
+            ->orderBy('penerimaan.nomor_invoice', 'desc');
 
         if($request->supplier){
-            $query->where('nama_supplier', 'LIKE', "%{$request->supplier}%");
+            $query->where('penerimaan.nama_supplier', 'LIKE', "%{$request->supplier}%");
         }
 
         $penerimaan = $query->paginate($perPage)->withQueryString();
@@ -343,6 +351,11 @@ class PenerimaanController extends Controller
             'tanggal_awal' => $tanggalAwal,
             'tanggal_akhir' => $tanggalAkhir,
             'supplier' => $request->supplier ?? '',
+            'unit_id' => $unitId,
+            'units' => Unit::query()
+                ->whereNull('deleted_at')
+                ->orderBy('nama_unit')
+                ->get(['id', 'nama_unit']),
             'per_page' => $perPage,
         ]);
     }

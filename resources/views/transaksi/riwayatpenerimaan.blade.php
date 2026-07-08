@@ -11,6 +11,14 @@
                     <form method="GET" action="{{ route('penerimaan.riwayat') }}" class="row g-2 align-items-center justify-content-end">
                         <input type="hidden" name="per_page" value="{{ $per_page ?? 25 }}">
                         <div class="col-auto">
+                            <select name="unit_id" class="form-select form-select-sm">
+                                <option value="all" @selected(($unit_id ?? 'all') === 'all')>Semua Unit</option>
+                                @foreach($units as $unit)
+                                    <option value="{{ $unit->id }}" @selected((string)($unit_id ?? 'all') === (string)$unit->id)>{{ $unit->nama_unit }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-auto">
                             <input type="date" name="tanggal_awal" class="form-control form-control-sm" value="{{ $tanggal_awal }}">
                         </div>
                         <div class="col-auto">
@@ -40,6 +48,9 @@
                     <h5 class="card-title mb-0">Data Penerimaan</h5>
                     <div class="card-tools">
                         @if($penerimaan->count() > 0)
+                            <span class="badge bg-primary">
+                                Unit: {{ ($unit_id ?? 'all') === 'all' ? 'Semua Unit' : ($units->firstWhere('id', (int) $unit_id)?->nama_unit ?? '-') }}
+                            </span>
                             <span class="badge bg-info">
                                 Total: Rp {{ number_format($penerimaan->sum('grandtotal'), 0, ',', '.') }}
                             </span>
@@ -57,6 +68,7 @@
                                 <input type="hidden" name="tanggal_awal" value="{{ $tanggal_awal }}">
                                 <input type="hidden" name="tanggal_akhir" value="{{ $tanggal_akhir }}">
                                 <input type="hidden" name="supplier" value="{{ $supplier }}">
+                                <input type="hidden" name="unit_id" value="{{ $unit_id ?? 'all' }}">
                                 <label class="d-flex align-items-center gap-2 mb-0">
                                     <span>Tampilkan</span>
                                     <select name="per_page" class="form-select form-select-sm" onchange="this.form.submit()">
