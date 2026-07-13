@@ -470,6 +470,9 @@
             let supplierList = [];
             let rowCounter = 0;
             let globalPpnPersen = 0;
+            const draftKey = 'kopkartex:penerimaan:draft:{{ auth()->id() }}';
+            let suppressDraftSave = false;
+            let draftSaveTimer = null;
 
             function numbering(){
                 $('#tbterima tbody tr').each(function(index) {
@@ -519,6 +522,7 @@
                 $('#subtotal-ppn').text(formatCurrency(grandPpn));
                 $('#grandtotal').text(formatCurrency(grandTotal));
                 $('#grandtotal-ppn').text(formatCurrency(grandPpn));
+                scheduleDraftSave();
             }
 
             function formatCurrency(amount) {
@@ -526,6 +530,135 @@
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 }).format(amount);
+            }
+
+            function collectDraftData() {
+                const items = [];
+                $('#tbterima tbody tr').each(function() {
+                    items.push({
+                        id: $(this).find('input[name="barang_id[]"]').val(),
+                        code: $(this).find('input[name="kode_barang[]"]').val(),
+                        text: $(this).find('input[name="nama_barang[]"]').val(),
+                        qty: $(this).find('input[name="qty[]"]').val(),
+                        harga_beli: $(this).find('input[name="harga_beli[]"]').val(),
+                        harga_jual: $(this).find('input[name="harga_jual[]"]').val(),
+                        ppn_persen: $(this).find('input[name="ppn_persen[]"]').val(),
+                        satuan: $(this).find('input[name="satuan[]"]').val(),
+                        kategori: $(this).find('input[name="kategori[]"]').val(),
+                        type: $(this).find('input[name="type_barang[]"]').val()
+                    });
+                });
+
+                return {
+                    saved_at: new Date().toISOString(),
+                    date: $('input[name="date"]').val(),
+                    supplier: $('#supplier-search').val(),
+                    supplier_id: $('#supplier_id').val(),
+                    kode_supplier: $('#kode_supplier').val(),
+                    metode_bayar: $('#metode_bayar').val(),
+                    tgl_tempo: $('input[name="tgl_tempo"]').val(),
+                    persen_ppn: $('#persen-ppn').val(),
+                    note: $('textarea[name="note"]').val(),
+                    items: items
+                };
+            }
+
+            function hasDraftContent(draft) {
+                return !!(
+                    draft &&
+                    (
+                        (draft.items && draft.items.length > 0) ||
+                        draft.supplier ||
+                        draft.note ||
+                        draft.metode_bayar === 'tempo'
+                    )
+                );
+            }
+
+            function saveDraftNow() {
+                if (suppressDraftSave) {
+                    return;
+                }
+
+                const draft = collectDraftData();
+                if (hasDraftContent(draft)) {
+                    localStorage.setItem(draftKey, JSON.stringify(draft));
+                } else {
+                    localStorage.removeItem(draftKey);
+                }
+            }
+
+            function scheduleDraftSave() {
+                if (suppressDraftSave) {
+                    return;
+                }
+
+                clearTimeout(draftSaveTimer);
+                draftSaveTimer = setTimeout(saveDraftNow, 250);
+            }
+
+            function clearDraft() {
+                localStorage.removeItem(draftKey);
+            }
+
+            function restoreDraftIfAny() {
+                const rawDraft = localStorage.getItem(draftKey);
+                if (!rawDraft) {
+                    return;
+                }
+
+                let draft = null;
+                try {
+                    draft = JSON.parse(rawDraft);
+                } catch (error) {
+                    clearDraft();
+                    return;
+                }
+
+                if (!hasDraftContent(draft)) {
+                    clearDraft();
+                    return;
+                }
+
+                suppressDraftSave = true;
+
+                $('input[name="date"]').val(draft.date || $('input[name="date"]').val());
+                $('#supplier-search').val(draft.supplier || '');
+                $('#supplier_id').val(draft.supplier_id || '');
+                $('#kode_supplier').val(draft.kode_supplier || '');
+                $('#metode_bayar').val(draft.metode_bayar || 'cash').trigger('change');
+                $('input[name="tgl_tempo"]').val(draft.tgl_tempo || '');
+                $('#persen-ppn').val(draft.persen_ppn || '0');
+                $('textarea[name="note"]').val(draft.note || '');
+                globalPpnPersen = parseFloat(draft.persen_ppn) || 0;
+
+                $('#tbterima tbody').empty();
+                rowCounter = 0;
+                (draft.items || []).forEach(function(item) {
+                    addRow({
+                        id: item.id,
+                        code: item.code,
+                        text: item.text,
+                        harga_beli: item.harga_beli,
+                        harga_jual: item.harga_jual,
+                        qty: item.qty,
+                        ppn_persen: item.ppn_persen,
+                        satuan: item.satuan,
+                        kategori: item.kategori,
+                        type: item.type
+                    }, parseFloat(item.ppn_persen) || 0);
+                });
+
+                suppressDraftSave = false;
+                updateTotals();
+
+                Swal.fire({
+                    position: 'top-end',
+                    icon: 'info',
+                    title: 'Draft penerimaan dipulihkan',
+                    showConfirmButton: false,
+                    timer: 1800
+                });
             }
 
             function addRow(datarow, ppnPersen = null){
@@ -539,7 +672,7 @@
                         // Update quantity jika barang sudah ada
                         const qtyInput = $(this).find('input[name="qty[]"]');
                         const currentQty = parseFloat(qtyInput.val()) || 0;
-                        qtyInput.val(currentQty + 1);
+                        qtyInput.val(currentQty + (parseFloat(datarow.qty) || 1));
                         
                         // Update harga jika berbeda
                         const hargaBeliInput = $(this).find('input[name="harga_beli[]"]');
@@ -553,6 +686,7 @@
                         }
                         
                         updateTotals();
+                        scheduleDraftSave();
                         
                         // Auto-clear dan focus ke barcode setelah update
                         clearAndFocusBarcode();
@@ -563,7 +697,8 @@
                 if(!existingRow){
                     rowCounter++;
                     const usePpnPersen = ppnPersen !== null ? ppnPersen : globalPpnPersen;
-                    const calculation = calculatePpn(datarow.harga_beli || 0, 1, usePpnPersen);
+                    const rowQty = parseFloat(datarow.qty) || 1;
+                    const calculation = calculatePpn(datarow.harga_beli || 0, rowQty, usePpnPersen);
                     
                     const typeBadge = datarow.type ? `<span class="type-badge">${datarow.type}</span>` : '';
                     
@@ -583,7 +718,7 @@
                             ${typeBadge}
                         </td>
                         <td>
-                            <input type="number" value="1" class="form-control form-control-sm qty" min="0.001" step="0.001" name="qty[]" style="width: 90px;" required>
+                            <input type="number" value="${rowQty}" class="form-control form-control-sm qty" min="0.001" step="0.001" name="qty[]" style="width: 90px;" required>
                         </td>
                         <td>
                             <input type="number" value="${datarow.harga_beli || 0}" step="0.01" class="form-control form-control-sm harga_beli" name="harga_beli[]" style="width: 100px;" required>
@@ -613,6 +748,7 @@
                     $('#tbterima tbody').append(str);
                     updateTotals();
                     updateTableAlert();
+                    scheduleDraftSave();
                     
                     // Auto-clear dan focus ke barcode setelah menambah row baru
                     clearAndFocusBarcode();
@@ -637,12 +773,14 @@
                 });
                 
                 updateTotals();
+                scheduleDraftSave();
             }
 
             function removeRow(rowId) {
                 $(`#row-${rowId}`).remove();
                 numbering();
                 updateTotals();
+                scheduleDraftSave();
                 
                 // Auto-focus ke barcode setelah hapus
                 setTimeout(() => {
@@ -663,15 +801,16 @@
                         cancelButtonText: 'Batal'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            doClearForm();
+                            doClearForm(true);
                         }
                     });
                 } else {
-                    doClearForm();
+                    doClearForm(true);
                 }
             }
 
-            function doClearForm(){
+            function doClearForm(clearSavedDraft = false){
+                suppressDraftSave = true;
                 // Reset header form
                 $('input[name="invoice"]').val('');
                 $('#supplier-search').val('');
@@ -688,6 +827,11 @@
                 $('#tbterima tbody').empty();
                 updateTotals();
                 updateTableAlert();
+                suppressDraftSave = false;
+
+                if (clearSavedDraft) {
+                    clearDraft();
+                }
                 
                 // Generate new invoice
                 generateNewInvoice();
@@ -833,6 +977,7 @@
                     $('#supplier-search').val(suggestion.text);
                     $('#supplier_id').val(suggestion.id);
                     $('#kode_supplier').val(suggestion.kode_supplier || '');
+                    scheduleDraftSave();
                 });
 
                 // Submit form tambah supplier
@@ -861,6 +1006,7 @@
                                 $('#supplier-search').val(response.supplier.text);
                                 $('#supplier_id').val(response.supplier.id);
                                 $('#kode_supplier').val(response.supplier.kode_supplier);
+                                scheduleDraftSave();
                                 
                                 // Reload daftar supplier
                                 loadSuppliers();
@@ -1095,9 +1241,19 @@
                     language: 'id'
                 });
 
+                restoreDraftIfAny();
+
                 // Update totals on change Qty / Harga Beli / Harga Jual / PPN
                 $('#tbterima').on('input', '.qty, .harga_beli, .harga-jual-input, .ppn-persen', function() {
                     updateTotals();
+                });
+
+                $('#frmterima').on('input change', 'input, select, textarea', function() {
+                    scheduleDraftSave();
+                });
+
+                $(window).on('beforeunload', function() {
+                    saveDraftNow();
                 });
 
                 // Validasi harga jual harus lebih tinggi dari harga beli
@@ -1187,7 +1343,7 @@
                         if (hargaJual < hargaBeli) {
                             hargaJualWarning = true;
                             const namaBarang = $(this).closest('tr').find('input[name="nama_barang[]"]').val();
-                            warningMessage += `• ${namaBarang}: Jual (${formatCurrency(hargaJual)}) < Beli (${formatCurrency(hargaBeli)})\n`;
+                            warningMessage += `- ${namaBarang}: Jual (${formatCurrency(hargaJual)}) < Beli (${formatCurrency(hargaBeli)})\n`;
                         }
                     });
                     
@@ -1235,11 +1391,14 @@
                         url: '{{ route('penerimaan.store') }}',
                         data: $.param(formData),
                         dataType: 'json',
+                        timeout: 120000,
                         beforeSend: function() {
+                            saveDraftNow();
                             $('#btn-simpan').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Menyimpan...');
                         },
                         success: function(response) {
                             if (response.success) {
+                                clearDraft();
                                 Swal.fire({
                                     position: "top-end", 
                                     icon: "success", 
@@ -1250,7 +1409,7 @@
                                     // Redirect ke nota
                                     const notaUrl = '{{ route("penerimaan.nota", ":invoice") }}'.replace(':invoice', response.invoice);
                                     window.open(notaUrl, '_blank');
-                                    clearform();
+                                    doClearForm(true);
                                 });
                             } else {
                                 Swal.fire({
@@ -1264,6 +1423,10 @@
                             let errorMsg = "Terjadi kesalahan saat menyimpan!";
                             if (xhr.responseJSON && xhr.responseJSON.message) {
                                 errorMsg = xhr.responseJSON.message;
+                            } else if (xhr.status === 419) {
+                                errorMsg = "Session atau token halaman sudah kedaluwarsa. Data masih tersimpan sebagai draft, silakan refresh halaman lalu simpan lagi.";
+                            } else if (xhr.statusText === 'timeout') {
+                                errorMsg = "Server terlalu lama merespons. Data masih tersimpan sebagai draft, periksa riwayat penerimaan sebelum klik Simpan lagi.";
                             }
                             Swal.fire({
                                 icon: "error", 
@@ -1323,6 +1486,7 @@
                 // Apply PPN global ketika diubah
                 $('#persen-ppn').on('change', function() {
                     globalPpnPersen = parseFloat($(this).val()) || 0;
+                    scheduleDraftSave();
                 });
 
                 // Reset supplier saat input dikosongkan
@@ -1330,6 +1494,7 @@
                     if (!$(this).val().trim()) {
                         $('#supplier_id').val('');
                         $('#kode_supplier').val('');
+                        scheduleDraftSave();
                     }
                 });
 

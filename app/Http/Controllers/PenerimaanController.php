@@ -16,6 +16,7 @@ use App\Models\Satuan;
 use App\Models\Kategori;
 use App\Models\Unit;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use App\Services\KartuStokService;
 
 class PenerimaanController extends Controller
@@ -34,11 +35,25 @@ class PenerimaanController extends Controller
     }
 
     // Fungsi generate kode invoice otomatis
-    private function genCode()
+    private function genCode(bool $lockRows = false)
     {
-        $total = Penerimaan::withTrashed()->whereDate('created_at', date("Y-m-d"))->count();
-        $nomorUrut = $total + 1;
-        return 'RCV-' . date("ymd") . str_pad($nomorUrut, 3, '0', STR_PAD_LEFT);
+        $prefix = 'RCV-' . date('ymd');
+        $query = Penerimaan::withTrashed()
+            ->where('nomor_invoice', 'LIKE', $prefix . '%')
+            ->orderByDesc('nomor_invoice');
+
+        if ($lockRows) {
+            $query->lockForUpdate();
+        }
+
+        $lastInvoice = $query->value('nomor_invoice');
+        $lastNumber = 0;
+
+        if ($lastInvoice && preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/', $lastInvoice, $matches)) {
+            $lastNumber = (int) $matches[1];
+        }
+
+        return $prefix . str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
     }
 
     private function parseTransactionDate($date): string
@@ -112,19 +127,59 @@ class PenerimaanController extends Controller
 
     public function store(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'date' => 'required|date',
+            'supplier_id' => 'required|exists:supplier,id',
+            'metode_bayar' => 'required|in:cash,tempo',
+            'tgl_tempo' => 'nullable|required_if:metode_bayar,tempo|date',
+            'note' => 'nullable|string',
+            'barang_id' => 'required|array|min:1',
+            'barang_id.*' => 'required|integer|exists:barang,id',
+            'qty' => 'required|array|min:1',
+            'qty.*' => 'required|numeric|min:0.001',
+            'harga_beli' => 'required|array|min:1',
+            'harga_beli.*' => 'required|numeric|min:0',
+            'harga_jual' => 'required|array|min:1',
+            'harga_jual.*' => 'required|numeric|min:0',
+            'ppn_persen' => 'nullable|array',
+            'ppn_persen.*' => 'nullable|numeric|min:0|max:100',
+            'persen_ppn_global' => 'nullable|numeric|min:0|max:100',
+        ], [
+            'supplier_id.required' => 'Supplier harus dipilih.',
+            'supplier_id.exists' => 'Supplier tidak ditemukan.',
+            'tgl_tempo.required_if' => 'Tanggal tempo harus diisi untuk pembayaran tempo.',
+            'barang_id.required' => 'Minimal ada 1 barang yang harus ditambahkan.',
+            'barang_id.*.integer' => 'Barang baru harus disimpan terlebih dahulu sebelum bisa ditambahkan ke penerimaan.',
+            'barang_id.*.exists' => 'Ada barang yang tidak ditemukan. Muat ulang data barang lalu coba simpan lagi.',
+            'qty.*.min' => 'Quantity barang harus lebih dari 0.',
+            'harga_jual.*.min' => 'Harga jual tidak valid.',
+            'harga_beli.*.min' => 'Harga beli tidak valid.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $invoiceLockAcquired = false;
         DB::beginTransaction();
         try {
+            $lockResult = DB::select('SELECT GET_LOCK(?, 10) as acquired', ['kopkartex:penerimaan:invoice:' . date('ymd')]);
+            $invoiceLockAcquired = (int) ($lockResult[0]->acquired ?? 0) === 1;
+
+            if (! $invoiceLockAcquired) {
+                throw new Exception('Sistem sedang memproses penerimaan lain. Silakan klik Simpan lagi beberapa detik lagi.');
+            }
+
             $kartuStok = app(KartuStokService::class);
             $formattedDate = $this->parseTransactionDate($request->date);
             $unitId = $this->currentUnitId();
 
             if (! $unitId) {
                 throw new Exception('Unit penerimaan tidak ditemukan untuk user ini.');
-            }
-            
-            // Validasi supplier
-            if (!$request->supplier_id) {
-                throw new Exception('Supplier harus dipilih.');
             }
             
             // Cari supplier berdasarkan ID
@@ -145,17 +200,12 @@ class PenerimaanController extends Controller
                 $statusBayar = 'paid';
             }
 
-            // Validasi ada barang yang ditambahkan
             $quantities = $request->input('qty', []);
             $barangIds = $request->input('barang_id', []);
-            
-            if (empty($barangIds) || empty($quantities)) {
-                throw new Exception('Minimal ada 1 barang yang harus ditambahkan.');
-            }
 
             // Simpan header penerimaan dengan ID dan kode supplier
             $hdr = new Penerimaan;
-            $hdr->nomor_invoice = $request->invoice ?? $this->genCode();
+            $hdr->nomor_invoice = $this->genCode(true);
             $hdr->tgl_penerimaan = $formattedDate;
             $hdr->idsupplier = $supplier->id;
             $hdr->kode_supplier = $supplier->kode_supplier;
@@ -199,11 +249,6 @@ class PenerimaanController extends Controller
 
                 $kodeBarang = $kodeBarangArr[$index] ?? '';
                 $namaBarang = $namaBarangArr[$index] ?? '';
-                
-                // Cek apakah ini barang baru (dimulai dengan 'new-')
-                if (str_starts_with($barangId, 'new-')) {
-                    throw new Exception('Barang baru harus disimpan terlebih dahulu sebelum bisa ditambahkan ke penerimaan.');
-                }
                 
                 // Hitung PPN - gunakan PPN per item jika ada, jika tidak gunakan global
                 $ppnPersen = $ppnPersenArr[$index] ?? $persenPpnGlobal;
@@ -265,6 +310,10 @@ class PenerimaanController extends Controller
                 'success' => false,
                 'message' => $e->getMessage()
             ], 500);
+        } finally {
+            if ($invoiceLockAcquired) {
+                DB::select('SELECT RELEASE_LOCK(?)', ['kopkartex:penerimaan:invoice:' . date('ymd')]);
+            }
         }
     }
 
