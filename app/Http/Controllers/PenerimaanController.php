@@ -129,7 +129,7 @@ class PenerimaanController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'date' => 'required|date',
-            'supplier_id' => 'required|exists:supplier,id',
+            'supplier_id' => 'required|exists:suppliers,id',
             'metode_bayar' => 'required|in:cash,tempo',
             'tgl_tempo' => 'nullable|required_if:metode_bayar,tempo|date',
             'note' => 'nullable|string',
@@ -320,8 +320,15 @@ class PenerimaanController extends Controller
     public function getSupplier(Request $request)
     {
         $q = $request->q;
-        $supplier = Supplier::where('nama_supplier', 'LIKE', "%$q%")
-            ->select('id', 'kode_supplier', 'nama_supplier as text')
+        $supplier = Supplier::where(function ($query) use ($q) {
+                $query->where('nama_supplier', 'LIKE', "%$q%")
+                    ->orWhere('kode_supplier', 'LIKE', "%$q%")
+                    ->orWhere('telp', 'LIKE', "%$q%")
+                    ->orWhere('kontak_person', 'LIKE', "%$q%");
+            })
+            ->select('id', 'kode_supplier', 'nama_supplier as text', 'alamat', 'telp', 'kontak_person', 'email')
+            ->orderBy('nama_supplier')
+            ->limit(50)
             ->get();
 
         return response()->json($supplier);

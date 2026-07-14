@@ -52,6 +52,9 @@
                                     {{-- Input hidden untuk data supplier --}}
                                     <input type="hidden" id="supplier_id" name="supplier_id">
                                     <input type="hidden" id="kode_supplier" name="kode_supplier">
+                                    <button class="btn btn-outline-secondary btn-sm px-2 py-0" type="button" id="btn-browse-supplier" data-bs-toggle="modal" data-bs-target="#modalSupplierList" title="Cari supplier">
+                                        <i class="bi bi-search"></i>
+                                    </button>
                                     <button class="btn btn-outline-primary btn-sm px-2 py-0" type="button" id="btn-add-supplier" data-bs-toggle="modal" data-bs-target="#modalSupplier">
                                         <i class="bi bi-plus-lg"></i>
                                     </button>
@@ -92,7 +95,54 @@
                                     </button>
                                     <span class="input-group-text bg-primary"><i class="bi bi-search text-white"></i></span>
                                 </div>
-                                <small class="text-muted">Tekan Enter untuk mencari, F2 untuk auto focus</small>
+                                <small class="text-muted">Tekan Enter untuk menampilkan detail barang, lalu Enter lagi pada detail untuk masuk ke list.</small>
+                            </div>
+                        </div>
+
+                        {{-- Detail Barang Sebelum Masuk List --}}
+                        <div class="row mb-3" id="item-detail-panel" style="display: none;">
+                            <div class="col-md-12">
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="row g-2 align-items-end">
+                                        <input type="hidden" id="detail-barang-id">
+                                        <input type="hidden" id="detail-satuan">
+                                        <input type="hidden" id="detail-kategori">
+                                        <input type="hidden" id="detail-type">
+                                        <div class="col-md-2">
+                                            <label class="form-label form-label-sm mb-1">Kode</label>
+                                            <input type="text" class="form-control form-control-sm" id="detail-kode" readonly>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label form-label-sm mb-1">Nama Barang</label>
+                                            <input type="text" class="form-control form-control-sm" id="detail-nama" readonly>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <label class="form-label form-label-sm mb-1">Qty</label>
+                                            <input type="number" class="form-control form-control-sm item-detail-input" id="detail-qty" min="0.001" step="0.001" value="1">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label form-label-sm mb-1">Harga Beli</label>
+                                            <input type="number" class="form-control form-control-sm item-detail-input" id="detail-harga-beli" min="0" step="0.01">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label form-label-sm mb-1">Harga Jual</label>
+                                            <input type="number" class="form-control form-control-sm item-detail-input" id="detail-harga-jual" min="0" step="0.01">
+                                        </div>
+                                        <div class="col-md-1">
+                                            <label class="form-label form-label-sm mb-1">PPN %</label>
+                                            <input type="number" class="form-control form-control-sm item-detail-input" id="detail-ppn" min="0" max="100" step="0.01">
+                                        </div>
+                                        <div class="col-md-1 d-grid">
+                                            <button type="button" class="btn btn-success btn-sm" id="btn-add-detail-item" title="Masukkan ke list">
+                                                <i class="bi bi-check2"></i>
+                                            </button>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <small class="text-muted" id="detail-info"></small>
+                                            <small class="fw-semibold text-success float-end" id="detail-total">Total: 0</small>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -167,6 +217,44 @@
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+
+    {{-- Modal Pilih Supplier --}}
+    <div class="modal fade" id="modalSupplierList" tabindex="-1" aria-labelledby="modalSupplierListLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary">
+                    <h5 class="modal-title text-white" id="modalSupplierListLabel">
+                        <i class="bi bi-search"></i> Pilih Supplier
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group input-group-sm mb-3">
+                        <span class="input-group-text">Cari</span>
+                        <input type="text" class="form-control" id="supplier-list-search" placeholder="Nama, kode, telepon, kontak">
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Kode</th>
+                                    <th>Nama Supplier</th>
+                                    <th>Kontak</th>
+                                    <th>Alamat</th>
+                                    <th class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="supplier-list-body">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">Memuat data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -470,6 +558,7 @@
             let supplierList = [];
             let rowCounter = 0;
             let globalPpnPersen = 0;
+            let selectedDetailItem = null;
             const draftKey = 'kopkartex:penerimaan:draft:{{ auth()->id() }}';
             let suppressDraftSave = false;
             let draftSaveTimer = null;
@@ -530,6 +619,144 @@
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 }).format(amount);
+            }
+
+            function escapeHtml(value) {
+                return $('<div>').text(value || '').html();
+            }
+
+            function pickSupplier(supplier) {
+                $('#supplier-search').typeahead('val', supplier.text || '');
+                $('#supplier-search').val(supplier.text || '');
+                $('#supplier_id').val(supplier.id || '');
+                $('#kode_supplier').val(supplier.kode_supplier || '');
+                $('#modalSupplierList').modal('hide');
+                scheduleDraftSave();
+                setTimeout(() => $('#barcode-search').focus(), 100);
+            }
+
+            function renderSupplierList(data) {
+                if (!data || data.length === 0) {
+                    $('#supplier-list-body').html('<tr><td colspan="5" class="text-center text-muted">Supplier tidak ditemukan</td></tr>');
+                    return;
+                }
+
+                const rows = data.map(function(item) {
+                    return `<tr>
+                        <td>${escapeHtml(item.kode_supplier)}</td>
+                        <td>${escapeHtml(item.text)}</td>
+                        <td>
+                            <div>${escapeHtml(item.telp)}</div>
+                            <small class="text-muted">${escapeHtml(item.kontak_person)}</small>
+                        </td>
+                        <td>${escapeHtml(item.alamat)}</td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-success btn-pilih-supplier" data-supplier="${encodeURIComponent(JSON.stringify(item))}">
+                                <i class="bi bi-check2"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                }).join('');
+
+                $('#supplier-list-body').html(rows);
+            }
+
+            function loadSupplierModal(query = '') {
+                $('#supplier-list-body').html('<tr><td colspan="5" class="text-center text-muted">Memuat data...</td></tr>');
+                $.ajax({
+                    url: '{{ route('penerimaan.getsupplier') }}',
+                    type: 'GET',
+                    data: { q: query },
+                    dataType: 'json',
+                    success: renderSupplierList,
+                    error: function() {
+                        $('#supplier-list-body').html('<tr><td colspan="5" class="text-center text-danger">Gagal memuat supplier</td></tr>');
+                    }
+                });
+            }
+
+            function updateDetailTotal() {
+                const qty = parseFloat($('#detail-qty').val()) || 0;
+                const hargaBeli = parseFloat($('#detail-harga-beli').val()) || 0;
+                const ppnPersen = parseFloat($('#detail-ppn').val()) || 0;
+                const calculation = calculatePpn(hargaBeli, qty, ppnPersen);
+                $('#detail-total').text('Total: ' + formatCurrency(calculation.total));
+            }
+
+            function showItemDetail(item, ppnPersen = null) {
+                selectedDetailItem = item;
+                const usePpnPersen = ppnPersen !== null ? ppnPersen : globalPpnPersen;
+
+                $('#detail-barang-id').val(item.id || '');
+                $('#detail-kode').val(item.code || item.kode_barang || '');
+                $('#detail-nama').val(item.text || item.nama_barang || '');
+                $('#detail-satuan').val(item.satuan || '');
+                $('#detail-kategori').val(item.kategori || '');
+                $('#detail-type').val(item.type || '');
+                $('#detail-qty').val(item.qty || 1);
+                $('#detail-harga-beli').val(item.harga_beli || 0);
+                $('#detail-harga-jual').val(item.harga_jual || 0);
+                $('#detail-ppn').val(usePpnPersen);
+                $('#detail-info').text([
+                    item.satuan ? 'Satuan: ' + item.satuan : '',
+                    item.kategori ? 'Kategori: ' + item.kategori : '',
+                    item.type ? 'Type: ' + item.type : ''
+                ].filter(Boolean).join(' | '));
+                $('#item-detail-panel').show();
+                updateDetailTotal();
+                $('#barcode-search').typeahead('val', '');
+                $('#barcode-search').val('');
+                setTimeout(() => $('#detail-qty').focus().select(), 100);
+            }
+
+            function clearItemDetail() {
+                selectedDetailItem = null;
+                $('#item-detail-panel').hide();
+                $('#detail-barang-id, #detail-kode, #detail-nama, #detail-satuan, #detail-kategori, #detail-type').val('');
+                $('#detail-qty').val(1);
+                $('#detail-harga-beli, #detail-harga-jual, #detail-ppn').val('');
+                $('#detail-info').text('');
+                $('#detail-total').text('Total: 0');
+            }
+
+            function commitItemDetail() {
+                if (!selectedDetailItem || !$('#detail-barang-id').val()) {
+                    Swal.fire('Perhatian', 'Pilih barang terlebih dahulu.', 'warning');
+                    $('#barcode-search').focus();
+                    return;
+                }
+
+                const qty = parseFloat($('#detail-qty').val()) || 0;
+                const hargaBeli = parseFloat($('#detail-harga-beli').val()) || 0;
+                const hargaJual = parseFloat($('#detail-harga-jual').val()) || 0;
+                const ppnPersen = parseFloat($('#detail-ppn').val()) || 0;
+
+                if (qty <= 0) {
+                    Swal.fire('Perhatian', 'Qty harus lebih dari 0.', 'warning');
+                    $('#detail-qty').focus().select();
+                    return;
+                }
+
+                if (hargaJual <= 0) {
+                    Swal.fire('Perhatian', 'Harga jual harus diisi.', 'warning');
+                    $('#detail-harga-jual').focus().select();
+                    return;
+                }
+
+                addRow({
+                    id: $('#detail-barang-id').val(),
+                    code: $('#detail-kode').val(),
+                    text: $('#detail-nama').val(),
+                    satuan: $('#detail-satuan').val(),
+                    kategori: $('#detail-kategori').val(),
+                    type: $('#detail-type').val(),
+                    qty: qty,
+                    harga_beli: hargaBeli,
+                    harga_jual: hargaJual
+                }, ppnPersen);
+
+                clearItemDetail();
+                clearAndFocusBarcode();
             }
 
             function collectDraftData() {
@@ -825,6 +1052,7 @@
                 
                 // Clear table
                 $('#tbterima tbody').empty();
+                clearItemDetail();
                 updateTotals();
                 updateTableAlert();
                 suppressDraftSave = false;
@@ -909,6 +1137,26 @@
                 // Inisialisasi load supplier
                 loadSuppliers();
 
+                $('#modalSupplierList').on('shown.bs.modal', function() {
+                    $('#supplier-list-search').val($('#supplier-search').val());
+                    loadSupplierModal($('#supplier-list-search').val());
+                    setTimeout(() => $('#supplier-list-search').focus().select(), 150);
+                });
+
+                let supplierListTimer = null;
+                $('#supplier-list-search').on('input', function() {
+                    clearTimeout(supplierListTimer);
+                    const query = $(this).val();
+                    supplierListTimer = setTimeout(function() {
+                        loadSupplierModal(query);
+                    }, 250);
+                });
+
+                $('#supplier-list-body').on('click', '.btn-pilih-supplier', function() {
+                    const supplier = JSON.parse(decodeURIComponent($(this).attr('data-supplier')));
+                    pickSupplier(supplier);
+                });
+
                 // Toggle field tempo berdasarkan metode bayar
                 $('#metode_bayar').on('change', function() {
                     if ($(this).val() === 'tempo') {
@@ -974,10 +1222,7 @@
                     }
                     
                     // Set nilai untuk supplier yang dipilih
-                    $('#supplier-search').val(suggestion.text);
-                    $('#supplier_id').val(suggestion.id);
-                    $('#kode_supplier').val(suggestion.kode_supplier || '');
-                    scheduleDraftSave();
+                    pickSupplier(suggestion);
                 });
 
                 // Submit form tambah supplier
@@ -1156,12 +1401,21 @@
                         }
                     }
                 }).on('typeahead:select', function(ev, suggestion) {
-                    addRow(suggestion, globalPpnPersen);
-                    // Auto clear input setelah memilih
-                    $(this).typeahead('val', '');
+                    showItemDetail(suggestion, globalPpnPersen);
                 });
 
-                // Enter untuk search barcode dengan auto-clear
+                $('#btn-add-detail-item').on('click', commitItemDetail);
+
+                $('.item-detail-input').on('input', updateDetailTotal);
+
+                $('.item-detail-input').on('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        commitItemDetail();
+                    }
+                });
+
+                // Enter untuk search barcode, tampilkan detail dulu
                 $('#barcode-search').on('keydown', function(e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
@@ -1176,9 +1430,7 @@
                                     if (currentRequest !== null) currentRequest.abort();
                                 },
                                 success: function(response) { 
-                                    addRow(response, globalPpnPersen);
-                                    // Auto clear input
-                                    $('#barcode-search').val('');
+                                    showItemDetail(response, globalPpnPersen);
                                 },
                                 error: function() {
                                     // Barang tidak ditemukan, tampilkan konfirmasi untuk tambah baru
