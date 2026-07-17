@@ -1772,8 +1772,13 @@ public function pinbrg(Request $request)
         }
         return $this->getDataPinbrg($request);
     }
-    
-    return view('laporan.pinbrg');
+
+    $units = Unit::query()
+        ->whereNull('deleted_at')
+        ->orderBy('nama_unit')
+        ->get(['id', 'nama_unit']);
+
+    return view('laporan.pinbrg', compact('units'));
 }
 
 /**
@@ -1786,8 +1791,9 @@ private function getDataPinbrg(Request $request)
 {
     $period = $request->input('period', date('Y-m'));
     $search = $this->resolvePinbrgSearch($request);
+    $unit = $this->resolvePinbrgUnit($request);
     
-    $query = $this->buildPinbrgQuery($period, $search);
+    $query = $this->buildPinbrgQuery($period, $search, $unit);
     
     // Untuk cek data
     if ($request->input('check_data') == 'true') {
@@ -1839,10 +1845,13 @@ public function generatePinbrg(Request $request)
         ]);
         
         $period = $request->input('period');
+        $unit = $this->resolvePinbrgUnit($request);
         $startDate = $period . '-01';
         $endDate = date('Y-m-t', strtotime($startDate));
         
-        Pinbrg::where('period', $period)->delete();
+        Pinbrg::where('period', $period)
+            ->when($unit !== 'all', fn ($query) => $query->where('lokasi', $unit))
+            ->delete();
 
         $resultsToko = DB::table('penjualan as p')
             ->leftJoin('users as usr', 'usr.id', '=', 'p.anggota_id')
@@ -1875,6 +1884,7 @@ public function generatePinbrg(Request $request)
             ->where('p.status', 'hutang')
             ->whereBetween(DB::raw('DATE(p.tanggal)'), [$startDate, $endDate])
             ->whereNull('p.deleted_at')
+            ->when($unit !== 'all', fn ($query) => $query->where('p.unit_id', $unit))
             ->groupBy(
                 'p.id',
                 'u.id',
@@ -1891,48 +1901,51 @@ public function generatePinbrg(Request $request)
             )
             ->get();
 
-        $resultsBengkel = DB::table('transaksi_bengkels as tb')
-            ->leftJoin('users as usr', 'usr.id', '=', 'tb.anggota_id')
-            ->leftJoin('transaksi_bengkel_cicilan as tbc', 'tbc.transaksi_bengkel_id', '=', 'tb.id')
-            ->select(
-                DB::raw("'" . $period . "' as period"),
-                DB::raw("'2' as unit_usaha"),
-                DB::raw('5 as lokasi'),
-                'usr.nomor_anggota as NO_AGT',
-                'tb.nomor_invoice as NOPIN',
-                DB::raw("RIGHT(tb.nomor_invoice, 6) as NO_PIN"),
-                DB::raw('DATE(tb.tanggal) as TG_PIN'),
-                'tb.grandtotal as TOTAL_HARGA',
-                DB::raw('COALESCE(SUM(tbc.total_cicilan), 0) as JUM_PIN'),
-                DB::raw("COALESCE(SUM(CASE WHEN tbc.status = 'hutang' THEN tbc.total_cicilan ELSE 0 END), 0) as SISA_PIN"),
-                DB::raw('COALESCE(MAX(tbc.cicilan), 0) as ANGS_X'),
-                DB::raw('COALESCE(SUM(CASE WHEN tbc.cicilan = 1 THEN tbc.total_cicilan ELSE 0 END), 0) as ANGSUR1'),
-                DB::raw('COALESCE(SUM(CASE WHEN tbc.cicilan = 2 THEN tbc.total_cicilan ELSE 0 END), 0) as ANGSUR2'),
-                DB::raw("CASE WHEN tbc.kategori = 0 THEN '2' WHEN tbc.kategori = 1 THEN '1' ELSE '1' END as JENIS"),
-                // DB::raw("COALESCE(MIN(CASE WHEN tbc.status = 'hutang' THEN tbc.cicilan END), 0) as ANGS_KE"),
-                DB::raw('0 as ANGS_KE'),
-                'usr.unit as UNIT',
-                'usr.status_lama as STATUS',
-                'usr.nik as NO_BADGE',
-                DB::raw("CASE WHEN tbc.kategori = 0 THEN 'BP' WHEN tbc.kategori = 1 THEN 'NB' ELSE 'NB' END as KEL"),
-                DB::raw("'2' as jenis_penjualan")
-            )
-            ->where('tb.metode_bayar', 'cicilan')
-            ->where('tb.status', 'hutang')
-            ->whereBetween(DB::raw('DATE(tb.tanggal)'), [$startDate, $endDate])
-            ->whereNull('tb.deleted_at')
-            ->groupBy(
-                'tb.id',
-                'usr.nomor_anggota',
-                'usr.nik',
-                'usr.unit',
-                'usr.status_lama',
-                'tb.nomor_invoice',
-                'tb.tanggal',
-                'tb.grandtotal',
-                'tbc.kategori'
-            )
-            ->get();
+        $resultsBengkel = collect();
+        if ($unit === 'all' || $unit === '5') {
+            $resultsBengkel = DB::table('transaksi_bengkels as tb')
+                ->leftJoin('users as usr', 'usr.id', '=', 'tb.anggota_id')
+                ->leftJoin('transaksi_bengkel_cicilan as tbc', 'tbc.transaksi_bengkel_id', '=', 'tb.id')
+                ->select(
+                    DB::raw("'" . $period . "' as period"),
+                    DB::raw("'2' as unit_usaha"),
+                    DB::raw('5 as lokasi'),
+                    'usr.nomor_anggota as NO_AGT',
+                    'tb.nomor_invoice as NOPIN',
+                    DB::raw("RIGHT(tb.nomor_invoice, 6) as NO_PIN"),
+                    DB::raw('DATE(tb.tanggal) as TG_PIN'),
+                    'tb.grandtotal as TOTAL_HARGA',
+                    DB::raw('COALESCE(SUM(tbc.total_cicilan), 0) as JUM_PIN'),
+                    DB::raw("COALESCE(SUM(CASE WHEN tbc.status = 'hutang' THEN tbc.total_cicilan ELSE 0 END), 0) as SISA_PIN"),
+                    DB::raw('COALESCE(MAX(tbc.cicilan), 0) as ANGS_X'),
+                    DB::raw('COALESCE(SUM(CASE WHEN tbc.cicilan = 1 THEN tbc.total_cicilan ELSE 0 END), 0) as ANGSUR1'),
+                    DB::raw('COALESCE(SUM(CASE WHEN tbc.cicilan = 2 THEN tbc.total_cicilan ELSE 0 END), 0) as ANGSUR2'),
+                    DB::raw("CASE WHEN tbc.kategori = 0 THEN '2' WHEN tbc.kategori = 1 THEN '1' ELSE '1' END as JENIS"),
+                    // DB::raw("COALESCE(MIN(CASE WHEN tbc.status = 'hutang' THEN tbc.cicilan END), 0) as ANGS_KE"),
+                    DB::raw('0 as ANGS_KE'),
+                    'usr.unit as UNIT',
+                    'usr.status_lama as STATUS',
+                    'usr.nik as NO_BADGE',
+                    DB::raw("CASE WHEN tbc.kategori = 0 THEN 'BP' WHEN tbc.kategori = 1 THEN 'NB' ELSE 'NB' END as KEL"),
+                    DB::raw("'2' as jenis_penjualan")
+                )
+                ->where('tb.metode_bayar', 'cicilan')
+                ->where('tb.status', 'hutang')
+                ->whereBetween(DB::raw('DATE(tb.tanggal)'), [$startDate, $endDate])
+                ->whereNull('tb.deleted_at')
+                ->groupBy(
+                    'tb.id',
+                    'usr.nomor_anggota',
+                    'usr.nik',
+                    'usr.unit',
+                    'usr.status_lama',
+                    'tb.nomor_invoice',
+                    'tb.tanggal',
+                    'tb.grandtotal',
+                    'tbc.kategori'
+                )
+                ->get();
+        }
 
         $results = $resultsToko->concat($resultsBengkel)->values();
 
@@ -2000,8 +2013,10 @@ public function exportPinbrgDbf(Request $request)
 {
     try {
         $period = $request->input('period', date('Y-m'));
+        $search = $this->resolvePinbrgSearch($request);
+        $unit = $this->resolvePinbrgUnit($request);
         
-        $data = $this->buildPinbrgQuery($period)->get();
+        $data = $this->buildPinbrgQuery($period, $search, $unit)->get();
         
         if ($data->isEmpty()) {
             return response()->json([
@@ -2128,7 +2143,7 @@ private function formatDbfField($value, $maxLength)
     return $stringValue;
 }
 
-private function buildPinbrgQuery(string $period, string $search = '')
+private function buildPinbrgQuery(string $period, string $search = '', string $unit = 'all')
 {
     return Pinbrg::query()
         ->leftJoin('users as usr_pinbrg', 'usr_pinbrg.nomor_anggota', '=', 'pinbrg.NO_AGT')
@@ -2139,6 +2154,9 @@ private function buildPinbrgQuery(string $period, string $search = '')
         )
         ->when($period !== '', function ($query) use ($period) {
             $query->where('pinbrg.period', $period);
+        })
+        ->when($unit !== 'all', function ($query) use ($unit) {
+            $query->where('pinbrg.lokasi', $unit);
         })
         ->when($search !== '', function ($query) use ($search) {
             $query->where(function ($q) use ($search) {
@@ -2152,6 +2170,17 @@ private function buildPinbrgQuery(string $period, string $search = '')
                     ->orWhere('usr_pinbrg.status_lama', 'like', "%{$search}%");
             });
         });
+}
+
+private function resolvePinbrgUnit(Request $request): string
+{
+    $unit = $request->input('unit', 'all');
+
+    if ($unit === null || $unit === '' || $unit === 'all') {
+        return 'all';
+    }
+
+    return (string) $unit;
 }
 
 private function resolvePinbrgSearch(Request $request): string

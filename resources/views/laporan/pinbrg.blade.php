@@ -21,7 +21,16 @@
                             <label class="form-label">Periode</label>
                             <input type="month" class="form-control form-control-sm" name="period" id="period" value="{{ date('Y-m') }}">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-3">
+                            <label class="form-label">Unit</label>
+                            <select class="form-select form-select-sm" name="unit" id="unit">
+                                <option value="all">Semua Unit</option>
+                                @foreach($units as $unit)
+                                    <option value="{{ $unit->id }}">{{ $unit->nama_unit }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label">Pencarian</label>
                             <input type="text" class="form-control form-control-sm" name="search" id="search" placeholder="Cari No. Anggota, No. Invoice, No. Badge...">
                         </div>
@@ -170,6 +179,7 @@
                             
                             // Tambahkan parameter custom
                             d.period = $('#period').val();
+                            d.unit = $('#unit').val();
                             d.search_term = $('#search').val();
                             
                             // Untuk pencarian, gunakan parameter search bawaan DataTables
@@ -275,7 +285,7 @@
                 $('#search').off('keyup');
 
                 // Ganti dengan event untuk filter period saja
-                $('#period').on('change', function() {
+                $('#period, #unit').on('change', function() {
                     tbPinbrg.ajax.reload();
                 });
                 
@@ -291,6 +301,7 @@
                         type: "GET",
                         data: {
                             period: $('#period').val(),
+                            unit: $('#unit').val(),
                             search_term: $('#search').val(),
                             get_totals: true
                         },
@@ -323,10 +334,12 @@
                 // Generate data
                 $('#btnGenerate').click(function() {
                     const period = $('#period').val();
+                    const unit = $('#unit').val();
+                    const unitText = $('#unit option:selected').text();
                     
                     Swal.fire({
                         title: 'Generate Data',
-                        text: `Generate data pinbrg untuk periode ${period}?`,
+                        text: `Generate data pinbrg untuk periode ${period} (${unitText})?`,
                         icon: 'question',
                         showCancelButton: true,
                         confirmButtonColor: '#3085d6',
@@ -349,6 +362,7 @@
                                 type: "POST",
                                 data: {
                                     period: period,
+                                    unit: unit,
                                     _token: "{{ csrf_token() }}"
                                 },
                                 success: function(response) {
@@ -390,6 +404,8 @@
                 // Export to DBF
                 $('#btnExportDbf').click(function() {
                     const period = $('#period').val();
+                    const unit = $('#unit').val();
+                    const unitText = $('#unit option:selected').text();
                     
                     // Check if data exists first
                     $.ajax({
@@ -397,6 +413,7 @@
                         type: "GET",
                         data: {
                             period: period,
+                            unit: unit,
                             search_term: $('#search').val(),
                             check_data: true
                         },
@@ -405,7 +422,7 @@
                                 Swal.fire({
                                     icon: 'warning',
                                     title: 'Tidak Ada Data',
-                                    text: `Tidak ada data untuk periode ${period}. Generate data terlebih dahulu.`
+                                    text: `Tidak ada data untuk periode ${period} (${unitText}). Generate data terlebih dahulu.`
                                 });
                                 return;
                             }
@@ -413,7 +430,7 @@
                             // Proceed with export
                             Swal.fire({
                                 title: 'Export to DBF',
-                                text: `Export data pinbrg periode ${period} ke format DBF?`,
+                                text: `Export data pinbrg periode ${period} (${unitText}) ke format DBF?`,
                                 icon: 'question',
                                 showCancelButton: true,
                                 confirmButtonColor: '#28a745',
@@ -446,9 +463,21 @@
                                     periodInput.type = 'hidden';
                                     periodInput.name = 'period';
                                     periodInput.value = period;
+
+                                    const unitInput = document.createElement('input');
+                                    unitInput.type = 'hidden';
+                                    unitInput.name = 'unit';
+                                    unitInput.value = unit;
+
+                                    const searchInput = document.createElement('input');
+                                    searchInput.type = 'hidden';
+                                    searchInput.name = 'search_term';
+                                    searchInput.value = $('#search').val();
                                     
                                     form.appendChild(tokenInput);
                                     form.appendChild(periodInput);
+                                    form.appendChild(unitInput);
+                                    form.appendChild(searchInput);
                                     
                                     document.body.appendChild(form);
                                     form.submit();
@@ -464,6 +493,7 @@
                 async function fetchAllPinbrgData() {
                     const params = new URLSearchParams({
                         period: $('#period').val(),
+                        unit: $('#unit').val(),
                         search_term: $('#search').val(),
                         all_data: 'true'
                     });
@@ -531,6 +561,7 @@
                             <h2>Laporan Pinjaman Barang (PINBRG)</h2>
                             <div class="meta">
                                 <div>Periode: ${$('#period').val()}</div>
+                                <div>Unit: ${$('#unit option:selected').text()}</div>
                                 <div>Pencarian: ${$('#search').val() || 'Semua data'}</div>
                                 <div>Total Data: ${rows.length}</div>
                             </div>
@@ -634,6 +665,7 @@
                 // Reset filter
                 $('#btnResetFilter').click(function() {
                     $('#period').val(yearMonth);
+                    $('#unit').val('all');
                     $('#search').val('');
                     tbPinbrg.ajax.reload();
                 });
