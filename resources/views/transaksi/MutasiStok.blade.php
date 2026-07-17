@@ -103,7 +103,7 @@
                                         </div>
                                         <div class="col-md-2">
                                             <label class="form-label form-label-sm mb-1">Stok</label>
-                                            <input type="number" class="form-control form-control-sm" id="detail-stok" readonly>
+                                            <input type="text" class="form-control form-control-sm" id="detail-stok" readonly>
                                         </div>
                                         <div class="col-md-2">
                                             <label class="form-label form-label-sm mb-1">Qty Mutasi</label>
@@ -308,15 +308,25 @@
                 updateTableAlert();
             }
 
+            function parseStockValue(value) {
+                return parseFloat(value) || 0;
+            }
+
+            function formatStockDisplay(value) {
+                const stock = parseStockValue(value);
+                return Number.isInteger(stock) ? stock.toString() : stock.toString().replace(/\.?0+$/, '');
+            }
+
             function showItemDetail(item) {
                 selectedDetailItem = item;
+                const stock = parseStockValue(item.stok);
 
                 $('#detail-barang-id').val(item.id || '');
                 $('#detail-kode').val(item.code || item.kode_barang || '');
                 $('#detail-nama').val(item.text || item.nama_barang || '');
-                $('#detail-stok').val(item.stok || 0);
+                $('#detail-stok').val(formatStockDisplay(stock)).data('stock', stock);
                 $('#detail-qty').val(item.qty || 1);
-                $('#detail-info').text(`Stok tersedia di unit asal: ${item.stok || 0}`);
+                $('#detail-info').text(`Stok tersedia di unit asal: ${formatStockDisplay(stock)}`);
                 $('#item-detail-panel').show();
                 clearBarcodeSearch();
                 setTimeout(() => $('#detail-qty').focus().select(), 100);
@@ -326,6 +336,7 @@
                 selectedDetailItem = null;
                 $('#item-detail-panel').hide();
                 $('#detail-barang-id, #detail-kode, #detail-nama, #detail-stok').val('');
+                $('#detail-stok').removeData('stock');
                 $('#detail-qty').val(1);
                 $('#detail-info').text('');
             }
@@ -338,7 +349,7 @@
                 }
 
                 const qty = parseFloat($('#detail-qty').val()) || 0;
-                const stok = parseFloat($('#detail-stok').val()) || 0;
+                const stok = parseStockValue($('#detail-stok').data('stock'));
 
                 if (qty <= 0) {
                     Swal.fire('Perhatian', 'Qty mutasi harus lebih dari 0.', 'warning');
@@ -347,7 +358,7 @@
                 }
 
                 if (qty > stok) {
-                    Swal.fire('Stok tidak mencukupi!', 'Stok tersedia: ' + stok, 'warning');
+                    Swal.fire('Stok tidak mencukupi!', 'Stok tersedia: ' + formatStockDisplay(stok), 'warning');
                     $('#detail-qty').focus().select();
                     return;
                 }
@@ -370,6 +381,7 @@
                 let existingRowId = null;
                 const searchCode = datarow.code || datarow.kode_barang || '';
                 const rowQty = parseFloat(datarow.qty) || 1;
+                const stock = parseStockValue(datarow.stok);
                 
                 $('#tbmutasi tbody tr').each(function() {
                     const rowCode = $(this).find('input[name="kode_barang[]"]').val();
@@ -392,7 +404,7 @@
                             Swal.fire({
                                 icon: 'warning',
                                 title: 'Stok tidak mencukupi!',
-                                text: 'Stok maksimal: ' + maxQty,
+                                text: 'Stok maksimal: ' + formatStockDisplay(maxQty),
                                 timer: 2000
                             });
                         }
@@ -415,12 +427,12 @@
                         </td>
                         <td>${datarow.text || ''}</td>
                         <td class="text-center">
-                            <input type="number" readonly value="${datarow.stok || 0}" class="form-control form-control-sm stok-info" style="width: 80px;">
+                            <input type="text" readonly value="${formatStockDisplay(stock)}" class="form-control form-control-sm stok-info" style="width: 80px;">
                             <small class="text-muted">tersedia</small>
                         </td>
                         <td class="text-center">
                             <input type="number" value="${rowQty}" class="form-control form-control-sm qty-mutasi" min="0.001" step="0.001" 
-                                   max="${datarow.stok || 0}" name="qty[]" required>
+                                   max="${stock}" name="qty[]" required>
                             <small class="text-muted">mutasi</small>
                         </td>
                         <td class="text-center">
@@ -503,7 +515,7 @@
                 const unit2 = $('#unit2').val();
                 
                 if(!unit1 || !unit2) {
-                    $('#scnbarcode, #btnsimpan').hide();
+                    $('#scnbarcode, #item-detail-panel, #btnsimpan').hide();
                     return;
                 }
                 
@@ -513,7 +525,7 @@
                         title: 'Perhatian',
                         text: 'Unit asal dan tujuan tidak boleh sama!'
                     });
-                    $('#scnbarcode, #btnsimpan').hide();
+                    $('#scnbarcode, #item-detail-panel, #btnsimpan').hide();
                     return;
                 }
                 
@@ -580,6 +592,7 @@
 
                 // Validasi unit
                 $('#unit1, #unit2').on('change', function() {
+                    clearItemDetail();
                     validasi();
                 });
 
@@ -679,7 +692,7 @@
                         Swal.fire({
                             icon: 'warning',
                             title: 'Stok tidak mencukupi!',
-                            text: 'Stok tersedia: ' + max,
+                            text: 'Stok tersedia: ' + formatStockDisplay(max),
                             timer: 2000
                         });
                     }
