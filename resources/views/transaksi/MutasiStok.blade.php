@@ -83,7 +83,42 @@
                                     <input type="text" class="form-control typeahead" id="barcode-search" placeholder="Scan barcode atau ketik nama barang" autocomplete="off">
                                     <span class="input-group-text bg-primary"><i class="bi bi-search text-white"></i></span>
                                 </div>
-                                <small class="text-muted">Tekan Enter untuk mencari, F2 untuk auto focus</small>
+                                <small class="text-muted">Tekan Enter untuk menampilkan detail barang, isi qty, lalu Enter lagi untuk masuk ke list.</small>
+                            </div>
+                        </div>
+
+                        {{-- Detail Barang Sebelum Masuk List --}}
+                        <div class="row mb-3" id="item-detail-panel" style="display: none;">
+                            <div class="col-md-12">
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="row g-2 align-items-end">
+                                        <input type="hidden" id="detail-barang-id">
+                                        <div class="col-md-2">
+                                            <label class="form-label form-label-sm mb-1">Kode</label>
+                                            <input type="text" class="form-control form-control-sm" id="detail-kode" readonly>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label form-label-sm mb-1">Nama Barang</label>
+                                            <input type="text" class="form-control form-control-sm" id="detail-nama" readonly>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label form-label-sm mb-1">Stok</label>
+                                            <input type="number" class="form-control form-control-sm" id="detail-stok" readonly>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label form-label-sm mb-1">Qty Mutasi</label>
+                                            <input type="number" class="form-control form-control-sm item-detail-input" id="detail-qty" min="0.001" step="0.001" value="1">
+                                        </div>
+                                        <div class="col-md-2 d-grid">
+                                            <button type="button" class="btn btn-success btn-sm" id="btn-add-detail-item" title="Masukkan ke list">
+                                                <i class="bi bi-check2"></i>
+                                            </button>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <small class="text-muted" id="detail-info"></small>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -238,6 +273,7 @@
             let rowCounter = 0;
             let mutasiId = null;
             let typeaheadInstance = null;
+            let selectedDetailItem = null;
 
             function updateTableAlert() {
                 const rowCount = $('#tbmutasi tbody tr').length;
@@ -272,10 +308,68 @@
                 updateTableAlert();
             }
 
+            function showItemDetail(item) {
+                selectedDetailItem = item;
+
+                $('#detail-barang-id').val(item.id || '');
+                $('#detail-kode').val(item.code || item.kode_barang || '');
+                $('#detail-nama').val(item.text || item.nama_barang || '');
+                $('#detail-stok').val(item.stok || 0);
+                $('#detail-qty').val(item.qty || 1);
+                $('#detail-info').text(`Stok tersedia di unit asal: ${item.stok || 0}`);
+                $('#item-detail-panel').show();
+                clearBarcodeSearch();
+                setTimeout(() => $('#detail-qty').focus().select(), 100);
+            }
+
+            function clearItemDetail() {
+                selectedDetailItem = null;
+                $('#item-detail-panel').hide();
+                $('#detail-barang-id, #detail-kode, #detail-nama, #detail-stok').val('');
+                $('#detail-qty').val(1);
+                $('#detail-info').text('');
+            }
+
+            function commitItemDetail() {
+                if (!selectedDetailItem || !$('#detail-barang-id').val()) {
+                    Swal.fire('Perhatian', 'Pilih barang terlebih dahulu.', 'warning');
+                    focusBarcodeSearch();
+                    return;
+                }
+
+                const qty = parseFloat($('#detail-qty').val()) || 0;
+                const stok = parseFloat($('#detail-stok').val()) || 0;
+
+                if (qty <= 0) {
+                    Swal.fire('Perhatian', 'Qty mutasi harus lebih dari 0.', 'warning');
+                    $('#detail-qty').focus().select();
+                    return;
+                }
+
+                if (qty > stok) {
+                    Swal.fire('Stok tidak mencukupi!', 'Stok tersedia: ' + stok, 'warning');
+                    $('#detail-qty').focus().select();
+                    return;
+                }
+
+                addRow({
+                    ...selectedDetailItem,
+                    id: $('#detail-barang-id').val(),
+                    code: $('#detail-kode').val(),
+                    text: $('#detail-nama').val(),
+                    stok: stok,
+                    qty: qty
+                });
+
+                clearItemDetail();
+                focusBarcodeSearch();
+            }
+
             function addRow(datarow){
                 let existingRow = false;
                 let existingRowId = null;
                 const searchCode = datarow.code || datarow.kode_barang || '';
+                const rowQty = parseFloat(datarow.qty) || 1;
                 
                 $('#tbmutasi tbody tr').each(function() {
                     const rowCode = $(this).find('input[name="kode_barang[]"]').val();
@@ -285,7 +379,7 @@
                         
                         // Update quantity jika barang sudah ada
                         const currentQty = parseFloat($(this).find('input[name="qty[]"]').val()) || 0;
-                        const newQty = currentQty + 1;
+                        const newQty = currentQty + rowQty;
                         const maxQty = parseFloat($(this).find('input[name="qty[]"]').attr('max')) || 0;
                         
                         if (newQty <= maxQty) {
@@ -325,7 +419,7 @@
                             <small class="text-muted">tersedia</small>
                         </td>
                         <td class="text-center">
-                            <input type="number" value="1" class="form-control form-control-sm qty-mutasi" min="0.001" step="0.001" 
+                            <input type="number" value="${rowQty}" class="form-control form-control-sm qty-mutasi" min="0.001" step="0.001" 
                                    max="${datarow.stok || 0}" name="qty[]" required>
                             <small class="text-muted">mutasi</small>
                         </td>
@@ -385,7 +479,8 @@
                 $('#unit1').val('');
                 $('#unit2').val('');
                 $('textarea[name="note"]').val('');
-                $('#scnbarcode, #btnsimpan').hide();
+                $('#scnbarcode, #item-detail-panel, #btnsimpan').hide();
+                clearItemDetail();
                 
                 // Clear table
                 $('#tbmutasi tbody').empty();
@@ -515,15 +610,19 @@
                         }
                     }
                 }).on('typeahead:select', function(ev, suggestion) {
-                    addRow(suggestion);
-                    // Clear typeahead value after selection
-                    $(this).typeahead('val', '');
-                }).on('typeahead:close', function(ev) {
-                    // Clear suggestions when closing
-                    $(this).typeahead('val', '');
+                    showItemDetail(suggestion);
                 });
 
-                // Enter untuk search barcode - PERBAIKAN UTAMA
+                $('#btn-add-detail-item').on('click', commitItemDetail);
+
+                $('.item-detail-input').on('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        commitItemDetail();
+                    }
+                });
+
+                // Enter untuk search barcode, tampilkan detail dulu
                 $('#barcode-search').on('keydown', function(e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
@@ -555,9 +654,7 @@
                                     if (currentRequest !== null) currentRequest.abort();
                                 },
                                 success: function(response) { 
-                                    addRow(response);
-                                    // Clear input field setelah berhasil
-                                    $('#barcode-search').val('').typeahead('val', '');
+                                    showItemDetail(response);
                                 },
                                 error: function() {
                                     Swal.fire({
@@ -565,8 +662,7 @@
                                         text: "Barang dengan kode '" + searchVal + "' tidak ditemukan di unit ini.",
                                         icon: "error"
                                     });
-                                    // Tetap clear input meski error
-                                    $('#barcode-search').val('').typeahead('val', '');
+                                    clearBarcodeSearch();
                                 }
                             });
                         }
