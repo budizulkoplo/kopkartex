@@ -86,7 +86,7 @@ class CashBankTransactionController extends Controller
         DB::beginTransaction();
         try {
             $transaction = CashBankTransaction::create([
-                'nomor_transaksi' => $this->genCode($validated['jenis']),
+                'nomor_transaksi' => $this->genCode($validated['jenis'], $validated['document_code_id'] ?? null),
                 ...$this->transactionPayload($validated),
                 'status' => 'posted',
                 'created_user' => Auth::id(),
@@ -367,7 +367,10 @@ class CashBankTransactionController extends Controller
 
     public function getNumber(Request $request)
     {
-        return response()->json($this->genCode($request->input('jenis', 'umum')));
+        return response()->json($this->genCode(
+            $request->input('jenis', 'umum'),
+            $request->input('document_code_id')
+        ));
     }
 
     public function quickDocument(Request $request)
@@ -574,15 +577,27 @@ class CashBankTransactionController extends Controller
         return view('cashbank.transaksi.nota', compact('transaction', 'unitUsahaName'));
     }
 
-    private function genCode(string $jenis): string
+    private function genCode(string $jenis, $documentCodeId = null): string
     {
         $prefix = $jenis === 'pembayaran_hutang' ? 'CBH' : 'CBU';
-        $total = CashBankTransaction::withTrashed()
-            ->whereDate('created_at', now()->toDateString())
-            ->where('jenis', $jenis)
-            ->count();
+        if ($documentCodeId) {
+            $document = CashBankDocumentCode::find($documentCodeId);
+            $prefix = trim((string) ($document?->prefix ?: $document?->kode ?: $prefix));
+        }
 
-        return $prefix . '-' . date('ymd') . str_pad($total + 1, 3, '0', STR_PAD_LEFT);
+        $date = date('ymd');
+        $baseNumber = $prefix . '-' . $date;
+        $lastNumber = CashBankTransaction::withTrashed()
+            ->where('nomor_transaksi', 'like', $baseNumber . '%')
+            ->orderByDesc('nomor_transaksi')
+            ->value('nomor_transaksi');
+
+        $lastSequence = 0;
+        if ($lastNumber && preg_match('/^' . preg_quote($baseNumber, '/') . '(\d+)$/', $lastNumber, $matches)) {
+            $lastSequence = (int) $matches[1];
+        }
+
+        return $baseNumber . str_pad($lastSequence + 1, 3, '0', STR_PAD_LEFT);
     }
 
     private function bankOptions()

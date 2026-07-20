@@ -345,6 +345,7 @@
                                                     @foreach($documents as $document)
                                                         <option value="{{ $document->id }}"
                                                             data-name="{{ $document->nama }}"
+                                                            data-prefix="{{ $document->prefix ?: $document->kode }}"
                                                             data-bank-id="{{ $document->bank_id }}"
                                                             data-transaction-type="{{ $document->transaction_type ?? 'payment' }}"
                                                             data-account-code="{{ $document->bank?->kode_akun ?? '' }}"
@@ -472,9 +473,7 @@
                                                 <th style="width: 23%">Kode Akun</th>
                                                 <th style="width: 24%">Invoice</th>
                                                 <th class="text-end">Nilai</th>
-                                                <th class="text-end">Sudah Bayar</th>
                                                 <th class="text-end">Jumlah</th>
-                                                <th class="text-end">Sisa</th>
                                                 <th style="width: 18%">Keterangan</th>
                                                 <th style="width: 40px"></th>
                                             </tr>
@@ -482,9 +481,9 @@
                                         <tbody></tbody>
                                         <tfoot>
                                             <tr>
-                                                <th colspan="4" class="text-end">Total Pembayaran</th>
+                                                <th colspan="3" class="text-end">Total Pembayaran</th>
                                                 <th class="text-end" id="detailTotal">0</th>
-                                                <th colspan="3"></th>
+                                                <th colspan="2"></th>
                                             </tr>
                                         </tfoot>
                                     </table>
@@ -822,7 +821,6 @@
                     }
                     const sisa = Math.max(nilai - sudah - bayar, 0);
                     $(this).find('.sisa').val(sisa);
-                    $(this).find('.sisa-label').text(formatNumber(sisa));
                     setMoney(bayarDisplay, bayar);
                     total += bayar;
                 });
@@ -849,18 +847,12 @@
                         <td>
                             <input type="text" class="form-control form-control-sm text-end nilai-invoice-display money-display" data-hidden="#nilaiInvoice${idx}" inputmode="numeric" autocomplete="off">
                             <input type="hidden" name="detail[${idx}][nilai_invoice]" class="nilai-invoice" id="nilaiInvoice${idx}">
-                        </td>
-                        <td>
-                            <input type="text" class="form-control form-control-sm text-end sudah-dibayar-display money-display" data-hidden="#sudahDibayar${idx}" inputmode="numeric" autocomplete="off">
                             <input type="hidden" name="detail[${idx}][sudah_dibayar]" class="sudah-dibayar" id="sudahDibayar${idx}">
                         </td>
                         <td>
                             <input type="text" class="form-control form-control-sm text-end jumlah-bayar-display money-display" data-hidden="#jumlahBayar${idx}" inputmode="numeric" autocomplete="off">
                             <input type="hidden" class="jumlah-bayar" id="jumlahBayar${idx}" name="detail[${idx}][jumlah_bayar]">
-                        </td>
-                        <td>
                             <input type="hidden" name="detail[${idx}][sisa]" class="sisa">
-                            <div class="text-end sisa-label">0</div>
                         </td>
                         <td><input type="text" class="form-control form-control-sm detail-note" name="detail[${idx}][keterangan]" value="${escapeAttr(data.keterangan)}"></td>
                         <td><button type="button" class="btn btn-sm btn-outline-danger btnRemove"><i class="bi bi-trash"></i></button></td>
@@ -871,7 +863,7 @@
                 bindInvoiceSearch(row.find('.invoice-search'));
                 if (data.nomor_invoice) fillInvoice(row, data);
                 if (data.nilai_invoice) setMoney(row.find('.nilai-invoice-display'), data.nilai_invoice);
-                if (data.sudah_dibayar) setMoney(row.find('.sudah-dibayar-display'), data.sudah_dibayar);
+                row.find('.sudah-dibayar').val(Number(data.sudah_dibayar || 0));
                 if (data.jumlah_bayar) setMoney(row.find('.jumlah-bayar-display'), data.jumlah_bayar);
                 recalc();
             }
@@ -881,7 +873,7 @@
                 row.find('.invoice-search').val(data.nomor_invoice || data.text);
                 row.find('.penerimaan-id').val(data.id);
                 setMoney(row.find('.nilai-invoice-display'), data.nilai_invoice);
-                setMoney(row.find('.sudah-dibayar-display'), data.sudah_dibayar);
+                row.find('.sudah-dibayar').val(Number(data.sudah_dibayar || 0));
                 setMoney(row.find('.jumlah-bayar-display'), data.jumlah_bayar || data.sisa);
                 if (data.supplier_id) $('#supplierId').val(data.supplier_id);
                 if (data.nama_supplier) {
@@ -1032,7 +1024,7 @@
             $('#cashbankForm').on('input', '.money-display', function () {
                 formatMoneyInput(this);
 
-                if ($(this).hasClass('jumlah-bayar-display') || $(this).hasClass('nilai-invoice-display') || $(this).hasClass('sudah-dibayar-display')) {
+                if ($(this).hasClass('jumlah-bayar-display') || $(this).hasClass('nilai-invoice-display')) {
                     recalc();
                 }
             });
@@ -1048,6 +1040,7 @@
                     selected.attr('data-account-code') || selected.data('account-code') || bank.account_code || '',
                     selected.attr('data-account-name') || selected.data('account-name') || bank.account_name || ''
                 );
+                refreshNumberPreview();
             });
 
             $('[name=unit_id]').on('change', syncUnitPreview);
@@ -1092,8 +1085,15 @@
             });
 
             $('#btnRefreshNumber').on('click', function () {
-                $.get("{{ route("cashbank.transactions.$routeScope.number") }}", { jenis }).done(number => $('#nomorPreview').val(number));
+                refreshNumberPreview();
             });
+
+            function refreshNumberPreview() {
+                $.get("{{ route("cashbank.transactions.$routeScope.number") }}", {
+                    jenis,
+                    document_code_id: $('#documentCode').val()
+                }).done(number => $('#nomorPreview').val(number));
+            }
 
             $('#btnPrint').on('click', function () {
                 if (!lastSavedNotaUrl) {
@@ -1109,10 +1109,11 @@
                 $.post("{{ route("cashbank.transactions.$routeScope.quick-document") }}", $(this).serialize())
                     .done(({ data }) => {
                         const bank = bankLookup[data.bank_id] || {};
-                        $('#documentCode').append(`<option value="${data.id}" data-name="${data.nama}" data-bank-id="${data.bank_id || ''}" data-transaction-type="${data.transaction_type || 'payment'}" data-account-code="${bank.account_code || ''}" data-account-name="${bank.account_name || ''}" selected>${data.kode}</option>`);
+                        $('#documentCode').append(`<option value="${data.id}" data-name="${data.nama}" data-prefix="${data.prefix || data.kode}" data-bank-id="${data.bank_id || ''}" data-transaction-type="${data.transaction_type || 'payment'}" data-account-code="${bank.account_code || ''}" data-account-name="${bank.account_name || ''}" selected>${data.kode}</option>`);
                         $('#documentNamePreview').val(data.nama);
                         if (data.bank_id) $('[name=bank_id]').val(data.bank_id);
                         setMainAccount(bank.account_code, bank.account_name);
+                        refreshNumberPreview();
                         $('#documentModal').modal('hide');
                         this.reset();
                     })
