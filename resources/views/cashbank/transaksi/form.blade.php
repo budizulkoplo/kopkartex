@@ -665,6 +665,44 @@
                 $('#btnPrint').prop('disabled', !lastSavedNotaUrl);
             }
 
+            function resetFormForNextTransaction(selectedDocumentId = '') {
+                const currentDocumentId = selectedDocumentId || $('#documentCode').val() || '';
+                const currentUnitId = $('[name=unit_id]').val() || '';
+                const currentDate = $('input[name=tgl_transaksi]').val() || '{{ date('Y-m-d') }}';
+                const currentPeriod = $('input[name=periode]').val() || '{{ date('Ym') }}';
+
+                $('#cashbankForm')[0].reset();
+                $('#detailTable tbody').empty();
+                $('#detailTotal').text('0');
+                setMoney('#sejumlahDisplay', 0);
+                $('#supplierId').val('');
+                $('#supplierSearch').val('');
+                $('#supplierCodePreview').val('');
+                $('#memberCodePreview').val('');
+                $('#memberSearch').val('');
+                $('#paidToPreview').val('');
+                $('#documentNamePreview').val('');
+                setMainAccount('', '');
+                $('#noRefNota').data('auto-ref', true).val('');
+                $('input[name=no_cash_cek_giro]').val('');
+                $('input[name=tgl_giro_cek]').val('');
+                $('input[name=tgl_transaksi]').val(currentDate);
+                $('input[name=periode]').val(currentPeriod);
+                if (currentUnitId) {
+                    $('[name=unit_id]').val(currentUnitId);
+                }
+                if (currentDocumentId) {
+                    $('#documentCode').val(currentDocumentId);
+                    $('#documentCode').trigger('change');
+                } else {
+                    $('#nomorPreview').val('');
+                }
+                syncUnitPreview();
+                detailIndex = 0;
+                addDetailRow();
+                formDirty = true;
+            }
+
             function validateDetailCoa() {
                 const rows = $('#detailTable tbody tr');
                 if (!rows.length) {
@@ -1197,7 +1235,7 @@
                     success: response => {
                         rememberSavedTransaction(response);
                         Swal.fire({ icon: 'success', title: response.message, timer: 1500, showConfirmButton: false })
-                            .then(() => {});
+                            .then(() => resetFormForNextTransaction($('#documentCode').val()));
                     },
                     error: xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'),
                     complete: () => $('#btnSave').prop('disabled', false)
