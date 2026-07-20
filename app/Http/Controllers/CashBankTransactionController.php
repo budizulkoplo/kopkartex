@@ -50,10 +50,13 @@ class CashBankTransactionController extends Controller
         $start = $request->input('tanggal_awal', now()->startOfMonth()->toDateString());
         $end = $request->input('tanggal_akhir', now()->toDateString());
         $keyword = trim((string) $request->input('q', ''));
+        $jenis = $request->input('jenis', '');
 
         $transactions = CashBankTransaction::with(['details.coa', 'logs.user', 'unit', 'documentCode', 'bank', 'supplier'])
-            ->where('jenis', 'pembayaran_hutang')
             ->whereBetween('tgl_transaksi', [$start, $end])
+            ->when(in_array($jenis, ['umum', 'pembayaran_hutang'], true), function ($query) use ($jenis): void {
+                $query->where('jenis', $jenis);
+            })
             ->when($keyword !== '', function ($query) use ($keyword): void {
                 $query->where(function ($query) use ($keyword): void {
                     $query->where('nomor_transaksi', 'like', "%{$keyword}%")
@@ -67,11 +70,12 @@ class CashBankTransactionController extends Controller
             ->withQueryString();
 
         return view('cashbank.transaksi.riwayat-hutang', [
-            'title' => 'Riwayat Pembayaran Supplier',
+            'title' => 'Riwayat Transaksi Cash Bank',
             'transactions' => $transactions,
             'tanggal_awal' => $start,
             'tanggal_akhir' => $end,
             'keyword' => $keyword,
+            'jenis' => $jenis,
             'units' => $this->unitOptions(),
             'documents' => CashBankDocumentCode::with('bank')->where('is_active', true)->orderBy('kode')->get(),
             'coas' => $this->transactionCoaOptions(),
@@ -133,8 +137,6 @@ class CashBankTransactionController extends Controller
 
     public function show(CashBankTransaction $transaction)
     {
-        abort_unless($transaction->jenis === 'pembayaran_hutang', 404);
-
         $transaction->load(['details.coa', 'logs.user', 'documentCode', 'bank', 'supplier']);
 
         return response()->json([
@@ -173,8 +175,6 @@ class CashBankTransactionController extends Controller
 
     public function update(Request $request, CashBankTransaction $transaction)
     {
-        abort_unless($transaction->jenis === 'pembayaran_hutang', 404);
-
         $validated = $this->validatedTransaction($request);
         $oldPenerimaanIds = $transaction->details()->whereNotNull('penerimaan_id')->pluck('penerimaan_id')->all();
 
@@ -227,8 +227,6 @@ class CashBankTransactionController extends Controller
 
     public function destroy(CashBankTransaction $transaction)
     {
-        abort_unless($transaction->jenis === 'pembayaran_hutang', 404);
-
         $penerimaanIds = $transaction->details()->whereNotNull('penerimaan_id')->pluck('penerimaan_id')->all();
 
         DB::beginTransaction();

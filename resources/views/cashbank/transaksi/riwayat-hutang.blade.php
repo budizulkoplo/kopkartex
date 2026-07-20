@@ -17,6 +17,14 @@
             <div class="card card-info card-outline mb-3">
                 <div class="card-body">
                     <form method="GET" action="{{ route('cashbank.transactions.hutang.history') }}" class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">Jenis</label>
+                            <select name="jenis" class="form-select form-select-sm">
+                                <option value="" {{ $jenis === '' ? 'selected' : '' }}>Semua</option>
+                                <option value="pembayaran_hutang" {{ $jenis === 'pembayaran_hutang' ? 'selected' : '' }}>Pembayaran Supplier</option>
+                                <option value="umum" {{ $jenis === 'umum' ? 'selected' : '' }}>Pembayaran Umum</option>
+                            </select>
+                        </div>
                         <div class="col-md-2">
                             <label class="form-label">Tanggal Awal</label>
                             <input type="date" name="tanggal_awal" class="form-control form-control-sm" value="{{ $tanggal_awal }}">
@@ -25,11 +33,11 @@
                             <label class="form-label">Tanggal Akhir</label>
                             <input type="date" name="tanggal_akhir" class="form-control form-control-sm" value="{{ $tanggal_akhir }}">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-2">
                             <label class="form-label">Cari</label>
                             <input type="text" name="q" class="form-control form-control-sm" value="{{ $keyword }}" placeholder="No transaksi / supplier / no nota">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <button class="btn btn-sm btn-primary"><i class="bi bi-search"></i> Tampilkan</button>
                             <a href="{{ route('cashbank.transactions.hutang.history') }}" class="btn btn-sm btn-secondary">Reset</a>
                         </div>
@@ -45,6 +53,7 @@
                                 <tr>
                                     <th>Tanggal</th>
                                     <th>No Transaksi</th>
+                                    <th>Jenis</th>
                                     <th>Dibayar Kepada</th>
                                     <th>No Ref</th>
                                     <th class="text-end">Jumlah</th>
@@ -57,6 +66,11 @@
                                     <tr>
                                         <td>{{ optional($transaction->tgl_transaksi)->format('d-m-Y') }}</td>
                                         <td><strong>{{ $transaction->nomor_transaksi }}</strong></td>
+                                        <td>
+                                            <span class="badge {{ $transaction->jenis === 'pembayaran_hutang' ? 'bg-info' : 'bg-secondary' }}">
+                                                {{ $transaction->jenis === 'pembayaran_hutang' ? 'Pembayaran Supplier' : 'Pembayaran Umum' }}
+                                            </span>
+                                        </td>
                                         <td>{{ $transaction->dibayar_kepada }}</td>
                                         <td>{{ $transaction->no_ref_nota ?: '-' }}</td>
                                         <td class="text-end">{{ number_format((float) $transaction->sejumlah, 0, ',', '.') }}</td>
@@ -85,20 +99,20 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <a href="{{ route('cashbank.transactions.hutang.nota', $transaction->nomor_transaksi) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="Cetak">
+                                            <a href="{{ route('cashbank.transactions.' . ($transaction->jenis === 'pembayaran_hutang' ? 'hutang' : 'umum') . '.nota', $transaction->nomor_transaksi) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="Cetak">
                                                 <i class="bi bi-printer"></i>
                                             </a>
                                             <button type="button" class="btn btn-sm btn-outline-warning btnEdit" data-id="{{ $transaction->id }}" title="Edit">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger btnDelete" data-id="{{ $transaction->id }}" data-number="{{ $transaction->nomor_transaksi }}" title="Hapus">
-                                                <i class="bi bi-trash"></i>
+                                            <button type="button" class="btn btn-sm btn-outline-danger btnDelete" data-id="{{ $transaction->id }}" data-number="{{ $transaction->nomor_transaksi }}" title="Batal">
+                                                <i class="bi bi-x-circle"></i>
                                             </button>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted py-4">Belum ada transaksi pembayaran hutang.</td>
+                                        <td colspan="8" class="text-center text-muted py-4">Belum ada transaksi cash bank.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -359,11 +373,11 @@
                 const url = "{{ route('cashbank.transactions.hutang.destroy', ['transaction' => '__ID__']) }}".replace('__ID__', id);
 
                 Swal.fire({
-                    title: 'Hapus transaksi?',
-                    html: `Transaksi <b>${number}</b> akan dihapus dan status hutang terkait dihitung ulang.`,
+                    title: 'Batal transaksi?',
+                    html: `Transaksi <b>${number}</b> akan dibatalkan dan status terkait dihitung ulang.`,
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonText: 'Ya, hapus',
+                    confirmButtonText: 'Ya, batalkan',
                     cancelButtonText: 'Batal'
                 }).then(result => {
                     if (!result.isConfirmed) return;
