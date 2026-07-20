@@ -460,6 +460,7 @@
 
             <form method="POST" action="{{ route('login') }}" autocomplete="off" id="loginForm">
               @csrf
+              <input type="hidden" name="remember" value="1">
               <div class="mb-3">
                 <label class="form-label" for="username">Username</label>
                 <div class="input-group-modern">
