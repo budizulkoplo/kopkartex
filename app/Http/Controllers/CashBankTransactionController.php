@@ -137,8 +137,6 @@ class CashBankTransactionController extends Controller
 
     public function show(CashBankTransaction $transaction)
     {
-        abort_unless($transaction->jenis === 'pembayaran_hutang', 404);
-
         $transaction->load(['details.coa', 'logs.user', 'documentCode', 'bank', 'supplier']);
 
         return response()->json([
@@ -177,8 +175,6 @@ class CashBankTransactionController extends Controller
 
     public function update(Request $request, CashBankTransaction $transaction)
     {
-        abort_unless($transaction->jenis === 'pembayaran_hutang', 404);
-
         $validated = $this->validatedTransaction($request);
         $oldPenerimaanIds = $transaction->details()->whereNotNull('penerimaan_id')->pluck('penerimaan_id')->all();
 
@@ -231,8 +227,6 @@ class CashBankTransactionController extends Controller
 
     public function destroy(CashBankTransaction $transaction)
     {
-        abort_unless($transaction->jenis === 'pembayaran_hutang', 404);
-
         $penerimaanIds = $transaction->details()->whereNotNull('penerimaan_id')->pluck('penerimaan_id')->all();
 
         DB::beginTransaction();

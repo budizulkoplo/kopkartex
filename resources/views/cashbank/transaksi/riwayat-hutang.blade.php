@@ -102,14 +102,12 @@
                                             <a href="{{ route('cashbank.transactions.' . ($transaction->jenis === 'pembayaran_hutang' ? 'hutang' : 'umum') . '.nota', $transaction->nomor_transaksi) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="Cetak">
                                                 <i class="bi bi-printer"></i>
                                             </a>
-                                            @if($transaction->jenis === 'pembayaran_hutang')
-                                                <button type="button" class="btn btn-sm btn-outline-warning btnEdit" data-id="{{ $transaction->id }}" title="Edit">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-outline-danger btnDelete" data-id="{{ $transaction->id }}" data-number="{{ $transaction->nomor_transaksi }}" title="Hapus">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            @endif
+                                            <button type="button" class="btn btn-sm btn-outline-warning btnEdit" data-id="{{ $transaction->id }}" title="Edit">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger btnDelete" data-id="{{ $transaction->id }}" data-number="{{ $transaction->nomor_transaksi }}" title="Batal">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
                                         </td>
                                     </tr>
                                 @empty
@@ -375,11 +373,11 @@
                 const url = "{{ route('cashbank.transactions.hutang.destroy', ['transaction' => '__ID__']) }}".replace('__ID__', id);
 
                 Swal.fire({
-                    title: 'Hapus transaksi?',
-                    html: `Transaksi <b>${number}</b> akan dihapus dan status hutang terkait dihitung ulang.`,
+                    title: 'Batal transaksi?',
+                    html: `Transaksi <b>${number}</b> akan dibatalkan dan status terkait dihitung ulang.`,
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonText: 'Ya, hapus',
+                    confirmButtonText: 'Ya, batalkan',
                     cancelButtonText: 'Batal'
                 }).then(result => {
                     if (!result.isConfirmed) return;
