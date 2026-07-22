@@ -584,10 +584,12 @@ class CashBankTransactionController extends Controller
         }
 
         $date = date('ymd');
+        $year = date('Y');
         $baseNumber = $prefix . '-' . $date;
         $lastNumber = CashBankTransaction::withTrashed()
+            ->whereYear('created_at', $year)
             ->where('nomor_transaksi', 'like', $baseNumber . '%')
-            ->orderByDesc('nomor_transaksi')
+            ->orderByDesc('id')
             ->value('nomor_transaksi');
 
         $lastSequence = 0;
@@ -595,7 +597,7 @@ class CashBankTransactionController extends Controller
             $lastSequence = (int) $matches[1];
         }
 
-        return $baseNumber . str_pad($lastSequence + 1, 3, '0', STR_PAD_LEFT);
+        return $baseNumber . str_pad($lastSequence + 1, 6, '0', STR_PAD_LEFT);
     }
 
     private function bankOptions()
