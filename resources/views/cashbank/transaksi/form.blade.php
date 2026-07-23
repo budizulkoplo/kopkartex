@@ -1126,10 +1126,19 @@
                 refreshNumberPreview();
             });
 
+            $('input[name=tgl_transaksi]').on('change', function () {
+                const compactDate = String($(this).val() || '').replace(/-/g, '');
+                if (compactDate.length >= 6) {
+                    $('input[name=periode]').val(compactDate.substring(0, 6));
+                }
+                refreshNumberPreview();
+            });
+
             function refreshNumberPreview() {
                 $.get("{{ route("cashbank.transactions.$routeScope.number") }}", {
                     jenis,
-                    document_code_id: $('#documentCode').val()
+                    document_code_id: $('#documentCode').val(),
+                    tgl_transaksi: $('input[name=tgl_transaksi]').val()
                 }).done(number => $('#nomorPreview').val(number));
             }
 

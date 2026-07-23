@@ -90,7 +90,11 @@ class CashBankTransactionController extends Controller
         DB::beginTransaction();
         try {
             $transaction = CashBankTransaction::create([
-                'nomor_transaksi' => $this->genCode($validated['jenis'], $validated['document_code_id'] ?? null),
+                'nomor_transaksi' => $this->genCode(
+                    $validated['jenis'],
+                    $validated['document_code_id'] ?? null,
+                    $validated['tgl_transaksi'] ?? null
+                ),
                 ...$this->transactionPayload($validated),
                 'status' => 'posted',
                 'created_user' => Auth::id(),
@@ -367,7 +371,8 @@ class CashBankTransactionController extends Controller
     {
         return response()->json($this->genCode(
             $request->input('jenis', 'umum'),
-            $request->input('document_code_id')
+            $request->input('document_code_id'),
+            $request->input('tgl_transaksi')
         ));
     }
 
@@ -575,7 +580,7 @@ class CashBankTransactionController extends Controller
         return view('cashbank.transaksi.nota', compact('transaction', 'unitUsahaName'));
     }
 
-    private function genCode(string $jenis, $documentCodeId = null): string
+    private function genCode(string $jenis, $documentCodeId = null, $transactionDate = null): string
     {
         $prefix = $jenis === 'pembayaran_hutang' ? 'CBH' : 'CBU';
         if ($documentCodeId) {
@@ -583,19 +588,23 @@ class CashBankTransactionController extends Controller
             $prefix = trim((string) ($document?->prefix ?: $document?->kode ?: $prefix));
         }
 
-        $date = date('ymd');
-        $year = date('Y');
-        $baseNumber = $prefix . '-' . $date;
-        $lastNumber = CashBankTransaction::withTrashed()
-            ->whereYear('created_at', $year)
-            ->where('nomor_transaksi', 'like', $baseNumber . '%')
-            ->orderByDesc('id')
-            ->value('nomor_transaksi');
+        $date = Carbon::parse($transactionDate ?: now());
+        $year = $date->format('Y');
+        $yearPrefix = $prefix . '-' . $date->format('y');
+        $baseNumber = $prefix . '-' . $date->format('ymd');
+        $numberPattern = '/^' . preg_quote($prefix, '/') . '-\d{6}(\d{6})$/';
 
-        $lastSequence = 0;
-        if ($lastNumber && preg_match('/^' . preg_quote($baseNumber, '/') . '(\d+)$/', $lastNumber, $matches)) {
-            $lastSequence = (int) $matches[1];
-        }
+        $lastSequence = CashBankTransaction::withTrashed()
+            ->whereYear('tgl_transaksi', $year)
+            ->where('nomor_transaksi', 'like', $yearPrefix . '%')
+            ->pluck('nomor_transaksi')
+            ->reduce(function (int $max, string $number) use ($numberPattern): int {
+                if (preg_match($numberPattern, $number, $matches)) {
+                    return max($max, (int) $matches[1]);
+                }
+
+                return $max;
+            }, 0);
 
         return $baseNumber . str_pad($lastSequence + 1, 6, '0', STR_PAD_LEFT);
     }
