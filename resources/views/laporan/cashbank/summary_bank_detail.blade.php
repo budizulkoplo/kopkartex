@@ -14,9 +14,22 @@
             border-top: 3px solid #0d6efd;
         }
 
+        .summary-bank-page .card {
+            margin-bottom: .75rem;
+        }
+
+        .summary-bank-page .card-body {
+            padding: .75rem 1rem;
+        }
+
+        .summary-bank-page .report-filter .card-body {
+            padding-top: .65rem;
+            padding-bottom: .65rem;
+        }
+
         .summary-bank-page .form-label {
             font-weight: 700;
-            font-size: .82rem;
+            font-size: .8rem;
             color: #14213d;
             margin-bottom: 0;
             white-space: nowrap;
@@ -24,33 +37,33 @@
 
         .summary-bank-page .filter-row {
             display: grid;
-            grid-template-columns: 150px minmax(0, 1fr) 150px;
+            grid-template-columns: 140px minmax(0, 1fr) 150px;
             gap: 6px;
             align-items: center;
-            margin-bottom: 6px;
+            margin-bottom: 5px;
         }
 
         .summary-bank-page .period-row {
             display: grid;
-            grid-template-columns: 150px 160px 28px 160px auto;
+            grid-template-columns: 140px 160px 28px 160px auto;
             gap: 6px;
             align-items: center;
         }
 
         .summary-bank-page .report-sheet {
-            max-width: 900px;
-            margin: 0 auto;
+            width: 100%;
+            margin: 0;
             background: #fff;
         }
 
         .summary-bank-page .report-title {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .summary-bank-page .report-title h4 {
             margin: 0;
-            font-size: 1.05rem;
+            font-size: 1rem;
             font-weight: 700;
             text-transform: uppercase;
         }
@@ -61,19 +74,27 @@
         }
 
         .summary-bank-page .summary-table {
-            font-size: .84rem;
+            font-size: .82rem;
+            margin-bottom: 0;
         }
 
         .summary-bank-page .summary-table th,
         .summary-bank-page .summary-table td {
-            padding: .25rem .35rem;
+            padding: .22rem .35rem;
             vertical-align: top;
         }
 
         .summary-bank-page .summary-total th {
-            font-size: 1rem;
-            padding-top: .45rem;
-            padding-bottom: .45rem;
+            font-size: .95rem;
+            padding-top: .35rem;
+            padding-bottom: .35rem;
+        }
+
+        @media (max-width: 768px) {
+            .summary-bank-page .filter-row,
+            .summary-bank-page .period-row {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media print {
