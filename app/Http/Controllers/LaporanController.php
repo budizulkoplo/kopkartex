@@ -56,33 +56,61 @@ class LaporanController extends Controller
     public function cashbankSummaryBankDetail(Request $request)
     {
         $filters = [
+            'unit_usaha' => $request->input('unit_usaha'),
             'bank_id' => $request->input('bank_id'),
             'tanggal_awal' => $request->input('tanggal_awal', now()->startOfMonth()->toDateString()),
             'tanggal_akhir' => $request->input('tanggal_akhir', now()->toDateString()),
         ];
 
-        $openingBalance = 0;
         $rows = collect();
+        $selectedBank = null;
 
         if ($filters['bank_id']) {
-            $openingBalance = $this->cashbankBankRows($filters, true)->sum(fn ($row) => $row->debit - $row->kredit);
-            $runningBalance = $openingBalance;
-            $rows = $this->cashbankBankRows($filters)->map(function ($row) use (&$runningBalance) {
-                $runningBalance += $row->debit - $row->kredit;
-                $row->saldo = $runningBalance;
+            $selectedBank = DB::table('cashbank_banks')
+                ->where('id', $filters['bank_id'])
+                ->first(['id', 'kode_akun', 'nama_akun', 'nama_bank']);
 
-                return $row;
-            });
+            $query = $this->cashbankRowsQuery()
+                ->whereBetween('cb.tgl_transaksi', [$filters['tanggal_awal'], $filters['tanggal_akhir']])
+                ->where('cb.bank_id', $filters['bank_id']);
+
+            if ($filters['unit_usaha']) {
+                $unitIds = DB::table('unit')
+                    ->whereNull('deleted_at')
+                    ->where('unit_usaha', $filters['unit_usaha'])
+                    ->pluck('id')
+                    ->push((int) $filters['unit_usaha'])
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $query->whereIn('cb.unit_id', $unitIds);
+            }
+
+            $rows = $query
+                ->get()
+                ->groupBy(fn ($row) => ($row->coa_kode ?: '-') . '|' . ($row->coa_nama ?: '-'))
+                ->map(function ($group) {
+                    $first = $group->first();
+
+                    return (object) [
+                        'coa_kode' => $first->coa_kode ?: '-',
+                        'coa_nama' => $first->coa_nama ?: '-',
+                        'debit' => $group->sum('debit'),
+                        'kredit' => $group->sum('kredit'),
+                    ];
+                })
+                ->sortBy('coa_kode')
+                ->values();
         }
 
         return view('laporan.cashbank.summary_bank_detail', $this->cashbankReportOptions() + [
             'filters' => $filters,
             'rows' => $rows,
-            'openingBalance' => $openingBalance,
+            'selectedBank' => $selectedBank,
             'totals' => [
                 'debit' => $rows->sum('debit'),
                 'kredit' => $rows->sum('kredit'),
-                'saldo' => $openingBalance + $rows->sum('debit') - $rows->sum('kredit'),
             ],
         ]);
     }
