@@ -126,16 +126,16 @@
                             
                             body {
                                 font-family: 'Arial', sans-serif;
-                                font-size: 12px;
-                                line-height: 1.4;
+                                font-size: 10px;
+                                line-height: 1.18;
                                 color: #000;
-                                padding: 20px;
+                                padding: 12px;
                                 background: white;
                             }
                             
                             @page {
-                                size: A4 landscape;
-                                margin: 15mm;
+                                size: A4 portrait;
+                                margin: 10mm;
                             }
                             
                             @media print {
@@ -155,8 +155,8 @@
                             
                             .header {
                                 text-align: center;
-                                margin-bottom: 20px;
-                                padding-bottom: 10px;
+                                margin-bottom: 8px;
+                                padding-bottom: 6px;
                                 border-bottom: 2px solid #000;
                             }
                             
@@ -179,7 +179,7 @@
                             table {
                                 width: 100%;
                                 border-collapse: collapse;
-                                margin-top: 10px;
+                                margin-top: 6px;
                                 table-layout: fixed;
                             }
                             
@@ -187,18 +187,20 @@
                                 background-color: #f2f2f2 !important;
                                 color: #000 !important;
                                 border: 1px solid #000 !important;
-                                padding: 6px 4px;
+                                padding: 3px 3px;
                                 font-weight: bold;
-                                font-size: 11px;
+                                font-size: 9px;
                                 text-align: left;
                                 -webkit-print-color-adjust: exact;
                             }
                             
                             td {
                                 border: 1px solid #000 !important;
-                                padding: 4px 3px;
-                                font-size: 10px;
+                                padding: 2px 3px;
+                                font-size: 8.8px;
                                 text-align: left;
+                                vertical-align: top;
+                                overflow-wrap: anywhere;
                             }
                             
                             .text-right {
@@ -230,20 +232,19 @@
                             .grand-total-row td {
                                 border-top: 3px double #000 !important;
                                 font-weight: bold;
+                                font-size: 12px;
+                                padding: 5px 4px;
                             }
                             
                             /* Column widths */
-                            th:nth-child(1), td:nth-child(1) { width: 7%; }  /* No */
-                            th:nth-child(2), td:nth-child(2) { width: 8%; }  /* Tanggal */
-                            th:nth-child(3), td:nth-child(3) { width: 10%; } /* Invoice */
-                            th:nth-child(4), td:nth-child(4) { width: 12%; } /* Customer */
-                            th:nth-child(5), td:nth-child(5) { width: 8%; }  /* Unit */
-                            th:nth-child(6), td:nth-child(6) { width: 8%; }  /* Metode */
-                            th:nth-child(7), td:nth-child(7) { width: 10%; } /* Kode Barang */
-                            th:nth-child(8), td:nth-child(8) { width: 15%; } /* Nama Barang */
-                            th:nth-child(9), td:nth-child(9) { width: 6%; }  /* Qty */
-                            th:nth-child(10), td:nth-child(10) { width: 10%; } /* Harga */
-                            th:nth-child(11), td:nth-child(11) { width: 10%; } /* Total */
+                            th:nth-child(1), td:nth-child(1) { width: 5%; }  /* No */
+                            th:nth-child(2), td:nth-child(2) { width: 13%; } /* Invoice */
+                            th:nth-child(3), td:nth-child(3) { width: 17%; } /* Customer */
+                            th:nth-child(4), td:nth-child(4) { width: 14%; } /* Kode Barang */
+                            th:nth-child(5), td:nth-child(5) { width: 24%; } /* Nama Barang */
+                            th:nth-child(6), td:nth-child(6) { width: 7%; }  /* Qty */
+                            th:nth-child(7), td:nth-child(7) { width: 10%; } /* Harga */
+                            th:nth-child(8), td:nth-child(8) { width: 10%; } /* Total */
                             
                             .footer {
                                 margin-top: 20px;
@@ -270,11 +271,8 @@
                                 <thead>
                                     <tr>
                                         <th class="text-center">No</th>
-                                        <th>Tanggal</th>
                                         <th>Invoice</th>
                                         <th>Customer</th>
-                                        <th>Unit</th>
-                                        <th>Metode</th>
                                         <th>Kode Barang</th>
                                         <th>Nama Barang</th>
                                         <th class="text-right">Qty</th>
@@ -320,11 +318,8 @@
                         printHTML += `
                             <tr>
                                 <td class="text-center">${rowNumber++}</td>
-                                <td>${row.tanggal}</td>
                                 <td>${row.nomor_invoice}</td>
                                 <td>${row.customer}</td>
-                                <td>${row.nama_unit}</td>
-                                <td>${row.metode_bayar}</td>
                                 <td>${row.kode_barang}</td>
                                 <td>${row.nama_barang}</td>
                                 <td class="text-right">${formatQty(row.qty)}</td>
@@ -336,7 +331,7 @@
                     // Tambahkan subtotal untuk invoice ini
                     printHTML += `
                         <tr class="subtotal-row invoice-total">
-                            <td colspan="8" class="text-right bold">Subtotal Invoice ${invoice}</td>
+                            <td colspan="5" class="text-right bold">Subtotal Invoice ${invoice}</td>
                             <td colspan="2" class="text-right bold">Subtotal</td>
                             <td class="text-right bold">${group.total.toLocaleString('id-ID')}</td>
                         </tr>`;
@@ -347,7 +342,7 @@
                     if (invoiceIndex < Object.keys(invoiceGroups).length && rowNumber % 40 === 0) {
                         printHTML += `
                             <tr class="page-break">
-                                <td colspan="11"></td>
+                                <td colspan="8"></td>
                             </tr>`;
                     }
                 }
@@ -357,7 +352,7 @@
                             </tbody>
                             <tfoot>
                                 <tr class="grand-total-row grand-total">
-                                    <td colspan="8" class="text-right bold">GRAND TOTAL</td>
+                                    <td colspan="5" class="text-right bold">GRAND TOTAL</td>
                                     <td class="text-right bold">${data.length} transaksi</td>
                                     <td class="text-right bold">${invoiceCount} invoice</td>
                                     <td class="text-right bold">${grandTotal.toLocaleString('id-ID')}</td>

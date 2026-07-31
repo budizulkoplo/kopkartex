@@ -32,6 +32,16 @@
         <div class="container-fluid">
             <div class="card card-info card-outline">
                 <div class="card-body">
+                    <style>
+                        #tbpenerimaan .report-total-row td {
+                            font-size: 1rem;
+                            padding-top: .45rem;
+                            padding-bottom: .45rem;
+                        }
+                        #tbpenerimaan .report-total-row td:last-child {
+                            font-size: 1.08rem;
+                        }
+                    </style>
                     <table id="tbpenerimaan" class="table table-sm table-bordered" style="width: 100%; font-size: small;">
                         <thead class="table-light">
                             <tr>
@@ -48,13 +58,13 @@
                         </thead>
                         <tbody></tbody>
                         <tfoot>
-                            <tr class="table-primary fw-bold">
+                            <tr class="table-primary fw-bold report-total-row">
                                 <td colspan="6" class="text-end">TOTAL PAGE</td>
                                 <td id="page-total-jumlah" class="text-end">0</td>
                                 <td></td>
                                 <td id="page-total-subtotal" class="text-end">Rp 0</td>
                             </tr>
-                            <tr class="table-success fw-bold">
+                            <tr class="table-success fw-bold report-total-row">
                                 <td colspan="6" class="text-end">TOTAL SEMUA DATA</td>
                                 <td id="all-total-jumlah" class="text-end">0</td>
                                 <td></td>
@@ -267,6 +277,9 @@
                             .invoice-total td {
                                 background: #ededed !important;
                                 border-top: 1.5px solid #000;
+                                font-size: 10px;
+                                padding-top: 3px;
+                                padding-bottom: 3px;
                                 -webkit-print-color-adjust: exact;
                                 print-color-adjust: exact;
                             }
@@ -274,6 +287,9 @@
                                 background: #dfefff !important;
                                 border-top: 2px double #000;
                                 font-weight: 700;
+                                font-size: 11.5px;
+                                padding-top: 4px;
+                                padding-bottom: 4px;
                                 -webkit-print-color-adjust: exact;
                                 print-color-adjust: exact;
                             }
@@ -493,7 +509,7 @@
                         var invoiceGroup = invoiceGroups[invoiceKey];
 
                         $(rows).eq(startIndex + invoiceGroup.count - 1).after(
-                            `<tr class="fw-bold bg-light invoice-total-row">
+                            `<tr class="fw-bold bg-light invoice-total-row report-total-row">
                                 <td colspan="6" class="text-end">Total Invoice: ${escapeHtml(row.nomor_invoice || '-')}</td>
                                 <td class="text-end">${formatQty(invoiceGroup.jumlah)}</td>
                                 <td></td>
