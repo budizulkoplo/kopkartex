@@ -21,6 +21,12 @@
             }
 
             $displayName = singkatNama(auth()->user()->name ?? 'Guest');
+            $authUser = auth()->user();
+            $unitName = $authUser?->unit?->nama_unit;
+
+            if (!$unitName && $authUser?->unit_kerja) {
+                $unitName = \App\Models\Unit::whereKey($authUser->unit_kerja)->value('nama_unit');
+            }
         @endphp
 
         <div class="user-panel d-flex align-items-center p-3">
@@ -42,7 +48,7 @@
                 <a href="#" class="d-block text-white">{{ $displayName }}</a>
                 <small class="text-success">
                     <small class="text-warning">
-                        {{ auth()->user()->unit->nama_unit ?? '-' }}
+                        {{ $unitName ?: '-' }}
                     </small>
                 </small>
             </div>

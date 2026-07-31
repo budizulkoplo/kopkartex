@@ -81,6 +81,7 @@ Route::prefix('retur')->middleware($menuAccessMiddleware)->group(function () {
     Route::post('/store-supplier', [ReturController::class, 'storeSupplier'])->name('retur.store-supplier');
     Route::post('/store-barang', [ReturController::class, 'storeBarang'])->name('retur.store-barang');
     Route::get('/getinvoice', [ReturController::class, 'getInvoice'])->name('retur.getinvoice');
+    Route::get('/get-penerimaan-invoice', [ReturController::class, 'getPenerimaanInvoice'])->name('retur.get-penerimaan-invoice');
     Route::get('/kategori', [ReturController::class, 'getKategori'])->name('retur.kategori');
     Route::post('/store', [ReturController::class, 'store'])->name('retur.store');
     Route::get('/datatable', [ReturController::class, 'getDataTable'])->name('retur.datatable');

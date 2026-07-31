@@ -378,7 +378,6 @@
 
             function addRow(datarow){
                 let existingRow = false;
-                let existingRowId = null;
                 const searchCode = datarow.code || datarow.kode_barang || '';
                 const rowQty = parseFloat(datarow.qty) || 1;
                 const stock = parseStockValue(datarow.stok);
@@ -387,7 +386,6 @@
                     const rowCode = $(this).find('input[name="kode_barang[]"]').val();
                     if(searchCode && rowCode === searchCode) {
                         existingRow = true;
-                        existingRowId = $(this).attr('id');
                         
                         // Update quantity jika barang sudah ada
                         const currentQty = parseFloat($(this).find('input[name="qty[]"]').val()) || 0;
@@ -396,7 +394,8 @@
                         
                         if (newQty <= maxQty) {
                             $(this).find('input[name="qty[]"]').val(newQty);
-                            updateTotals();
+                            $(this).prependTo('#tbmutasi tbody');
+                            numbering();
                             
                             // Tampilkan notifikasi sukses
                             showSuccessToast(`Qty ${datarow.text} ditambah menjadi ${newQty}`);
@@ -822,10 +821,9 @@
 
                 // Shortcut keyboard
                 $(document).keydown(function(e) {
-                    // Ctrl + S untuk simpan
                     if (e.ctrlKey && e.key === 's') {
                         e.preventDefault();
-                        $('#frmmutasi').submit();
+                        $('#btnsimpan').focus();
                     }
                     // Esc untuk batal
                     if (e.key === 'Escape') {
@@ -836,6 +834,13 @@
                         e.preventDefault();
                         clearBarcodeSearch();
                         $('#barcode-search').focus();
+                    }
+                });
+
+                $('#frmmutasi').on('keydown', function(e) {
+                    if (e.key === 'Enter' && !$(e.target).is('#barcode-search, .item-detail-input')) {
+                        e.preventDefault();
+                        return false;
                     }
                 });
 

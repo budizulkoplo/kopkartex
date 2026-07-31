@@ -912,6 +912,8 @@
                             hargaJualInput.val(datarow.harga_jual);
                         }
                         
+                        $(this).prependTo('#tbterima tbody');
+                        numbering();
                         updateTotals();
                         scheduleDraftSave();
                         
@@ -972,7 +974,8 @@
                             </span>
                         </td>
                     </tr>`;
-                    $('#tbterima tbody').append(str);
+                    $('#tbterima tbody').prepend(str);
+                    numbering();
                     updateTotals();
                     updateTableAlert();
                     scheduleDraftSave();
@@ -1411,6 +1414,14 @@
                 $('.item-detail-input').on('keydown', function(e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
+                        const fields = ['#detail-qty', '#detail-harga-beli', '#detail-harga-jual', '#detail-ppn'];
+                        const currentIndex = fields.indexOf('#' + this.id);
+
+                        if (currentIndex >= 0 && currentIndex < fields.length - 1) {
+                            $(fields[currentIndex + 1]).focus().select();
+                            return;
+                        }
+
                         commitItemDetail();
                     }
                 });

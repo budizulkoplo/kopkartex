@@ -9,6 +9,7 @@ use App\Models\Supplier;
 use App\Models\Barang;
 use App\Models\Satuan;
 use App\Models\Kategori;
+use App\Models\Penerimaan;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -57,8 +58,16 @@ class ReturController extends Controller
     public function getBarang(Request $request)
     {
         $unitId = Auth::user()->unit_kerja;
+
+        if (! $request->filled('penerimaan_id')) {
+            return response()->json([]);
+        }
         
         $barang = StokUnit::join('barang', 'barang.id', 'stok_unit.barang_id')
+            ->join('penerimaan_detail', function ($join) use ($request) {
+                $join->on('penerimaan_detail.barang_id', '=', 'barang.id')
+                    ->where('penerimaan_detail.idpenerimaan', $request->penerimaan_id);
+            })
             ->where('stok_unit.unit_id', $unitId)
             ->where(function($query) use ($request) {
                 $query->where('barang.kode_barang', 'LIKE', "%{$request->q}%")
@@ -69,8 +78,9 @@ class ReturController extends Controller
                 'barang.kode_barang as code',
                 'barang.nama_barang as text',
                 'stok_unit.stok',
-                'barang.harga_beli',
-                'barang.harga_jual',
+                'penerimaan_detail.jumlah as qty_beli',
+                'penerimaan_detail.harga_beli',
+                'penerimaan_detail.harga_jual',
                 'barang.type',
                 'barang.idsatuan',
                 'barang.idkategori'
@@ -92,8 +102,16 @@ class ReturController extends Controller
         app(BarangNonMovingService::class)->restoreByCode((string) $request->kode);
 
         $unitId = Auth::user()->unit_kerja;
+
+        if (! $request->filled('penerimaan_id')) {
+            return response()->json(['error' => 'Invoice pembelian wajib dipilih'], 404);
+        }
         
         $barang = StokUnit::join('barang', 'barang.id', 'stok_unit.barang_id')
+            ->join('penerimaan_detail', function ($join) use ($request) {
+                $join->on('penerimaan_detail.barang_id', '=', 'barang.id')
+                    ->where('penerimaan_detail.idpenerimaan', $request->penerimaan_id);
+            })
             ->where("barang.kode_barang", "=", $request->kode)
             ->where("stok_unit.unit_id", "=", $unitId)
             ->select(
@@ -101,8 +119,9 @@ class ReturController extends Controller
                 'barang.kode_barang as code',
                 'barang.nama_barang as text',
                 'stok_unit.stok',
-                'barang.harga_beli',
-                'barang.harga_jual',
+                'penerimaan_detail.jumlah as qty_beli',
+                'penerimaan_detail.harga_beli',
+                'penerimaan_detail.harga_jual',
                 'barang.type',
                 'barang.idsatuan',
                 'barang.idkategori'
@@ -128,6 +147,55 @@ class ReturController extends Controller
             ->get();
 
         return response()->json($supplier);
+    }
+
+    public function getPenerimaanInvoice(Request $request)
+    {
+        $q = $request->input('q', '');
+        $unitId = Auth::user()->unit_kerja;
+        $supplierId = $request->input('supplier_id');
+
+        $invoices = Penerimaan::query()
+            ->with(['details.barang'])
+            ->whereNull('deleted_at')
+            ->where('unit_id', $unitId)
+            ->when($supplierId, fn ($query) => $query->where('idsupplier', $supplierId))
+            ->where('nomor_invoice', 'LIKE', "%{$q}%")
+            ->orderBy('tgl_penerimaan', 'desc')
+            ->limit(20)
+            ->get(['idpenerimaan', 'nomor_invoice', 'tgl_penerimaan', 'idsupplier', 'kode_supplier', 'nama_supplier', 'grandtotal'])
+            ->map(fn ($row) => [
+                'id' => $row->idpenerimaan,
+                'text' => $row->nomor_invoice,
+                'nomor_invoice' => $row->nomor_invoice,
+                'tgl_penerimaan' => optional($row->tgl_penerimaan)->format('d-m-Y'),
+                'supplier_id' => $row->idsupplier,
+                'kode_supplier' => $row->kode_supplier,
+                'nama_supplier' => $row->nama_supplier,
+                'grandtotal' => (float) $row->grandtotal,
+                'details' => $row->details->map(function ($detail) use ($unitId) {
+                    $barang = $detail->barang;
+                    $stok = $barang
+                        ? StokUnit::where('barang_id', $barang->id)->where('unit_id', $unitId)->value('stok')
+                        : 0;
+
+                    return [
+                        'id' => $barang?->id,
+                        'code' => $barang?->kode_barang,
+                        'text' => $barang?->nama_barang,
+                        'nama_barang' => $barang?->nama_barang,
+                        'qty_beli' => (float) $detail->jumlah,
+                        'stok' => (float) ($stok ?? 0),
+                        'harga_beli' => (float) $detail->harga_beli,
+                        'harga_jual' => (float) $detail->harga_jual,
+                        'type' => $barang?->type,
+                        'idsatuan' => $barang?->idsatuan,
+                        'idkategori' => $barang?->idkategori,
+                    ];
+                })->values(),
+            ]);
+
+        return response()->json($invoices);
     }
     
     public function storeSupplier(Request $request)
@@ -253,6 +321,18 @@ class ReturController extends Controller
             $unitId = Auth::user()->unit_kerja;
             
             // Validasi supplier
+            if (!$request->penerimaan_id) {
+                throw new Exception('Invoice pembelian wajib dipilih.');
+            }
+
+            $penerimaan = Penerimaan::where('unit_id', $unitId)
+                ->whereKey($request->penerimaan_id)
+                ->first();
+
+            if (!$penerimaan) {
+                throw new Exception('Invoice pembelian tidak ditemukan untuk unit ini.');
+            }
+
             if (!$request->supplier_id) {
                 throw new Exception('Supplier harus dipilih.');
             }
@@ -262,13 +342,27 @@ class ReturController extends Controller
             if (!$supplier) {
                 throw new Exception('Supplier tidak ditemukan.');
             }
+
+            if ((int) $penerimaan->idsupplier !== (int) $supplier->id) {
+                throw new Exception('Invoice pembelian tidak sesuai dengan supplier yang dipilih.');
+            }
             
             // Validasi ada barang yang diretur
             $quantities = $request->input('qty', []);
             $barangIds = $request->input('barang_id', []);
+            $qtyBeliArr = $request->input('qty_beli', []);
             
             if (empty($barangIds) || empty($quantities)) {
                 throw new Exception('Minimal ada 1 barang yang harus diretur.');
+            }
+
+            $returIndexes = collect($quantities)
+                ->filter(fn ($qty) => (float) $qty > 0)
+                ->keys()
+                ->all();
+
+            if (empty($returIndexes)) {
+                throw new Exception('Isi minimal 1 qty retur.');
             }
 
             $hdr = new ReturBarang;
@@ -279,6 +373,8 @@ class ReturController extends Controller
             $hdr->note = $request->note;
             $hdr->tgl_retur = $date->format('Y-m-d');
             $hdr->unit_id = $unitId;
+            $hdr->penerimaan_id = $penerimaan->idpenerimaan;
+            $hdr->nomor_penerimaan = $penerimaan->nomor_invoice;
             $hdr->created_user = Auth::user()->id;
             $hdr->save();
             
@@ -293,10 +389,17 @@ class ReturController extends Controller
             
             $grandTotal = 0;
             
-            foreach ($barangIds as $index => $barangId) {
+            foreach ($returIndexes as $index) {
+                $barangId = $barangIds[$index] ?? null;
+
                 // Validasi quantity
-                if (empty($quantities[$index]) || $quantities[$index] <= 0) {
+                if (empty($quantities[$index]) || $quantities[$index] <= 0 || ! $barangId) {
                     throw new Exception("Quantity barang ke-" . ($index + 1) . " harus lebih dari 0.");
+                }
+
+                $qtyBeli = (float) ($qtyBeliArr[$index] ?? 0);
+                if ($qtyBeli > 0 && (float) $quantities[$index] > $qtyBeli) {
+                    throw new Exception("Qty retur melebihi qty pembelian untuk barang: " . ($namaBarangArr[$index] ?? 'Unknown'));
                 }
                 
                 // Validasi stok

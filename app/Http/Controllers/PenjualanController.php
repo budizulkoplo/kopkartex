@@ -481,26 +481,17 @@ class PenjualanController extends Controller
             $penjualan->metode_bayar = $request->metodebayar; // Ubah: menerima metode bayar dari request
             $penjualan->unit_id = Auth::user()->unit_kerja;
             $penjualan->customer = $request->customer;
-            
-            // Cari customer umum dengan nama mengandung 'purchase'
+
+            $selectedAnggota = $request->idcustomer ? User::find($request->idcustomer) : null;
+
             if($request->metodebayar == 'cicilan') {
-                $customerUmum = User::where('name', 'like', '%purchase%')
-                    ->first();
-                
-                if(!$customerUmum) {
-                    // Buat customer umum jika belum ada
-                    $customerUmum = new User();
-                    $customerUmum->name = 'Purchase Umum';
-                    $customerUmum->email = 'purchase.umum@' . Auth::user()->unit_kerja . '.com';
-                    $customerUmum->password = bcrypt('purchase123');
-                    $customerUmum->nomor_anggota = 'UMUM-' . date('YmdHis');
-                    $customerUmum->unit_id = Auth::user()->unit_kerja;
-                    $customerUmum->save();
+                if (! $selectedAnggota) {
+                    throw new Exception('Anggota wajib dipilih untuk pembayaran cicilan.');
                 }
-                
-                $penjualan->anggota_id = $customerUmum->id;
+
+                $penjualan->anggota_id = $selectedAnggota->id;
             } else {
-                $penjualan->anggota_id = null;
+                $penjualan->anggota_id = $selectedAnggota?->id;
             }
             
             $penjualan->diskon = $request->diskon;
@@ -604,7 +595,7 @@ class PenjualanController extends Controller
                     $cicilan0 = new PenjualanCicil();
                     $cicilan0->penjualan_id = $penjualan->id;
                     $cicilan0->cicilan = 1;
-                    $cicilan0->anggota_id = $customerUmum->id;
+                    $cicilan0->anggota_id = $selectedAnggota->id;
                     $cicilan0->pokok = $totalCicilan0;
                     $cicilan0->bunga = 0;
                     $cicilan0->total_cicilan = $totalCicilan0;
@@ -626,7 +617,7 @@ class PenjualanController extends Controller
                         $cicilan = new PenjualanCicil();
                         $cicilan->penjualan_id = $penjualan->id;
                         $cicilan->cicilan = $i;
-                        $cicilan->anggota_id = $customerUmum->id;
+                        $cicilan->anggota_id = $selectedAnggota->id;
                         
                         // Untuk fungsi hitung_cicilan_toko, bunga selalu 0
                         $cicilan->pokok = $result[0]->jumlah; // Total cicilan = pokok karena tanpa bunga
@@ -656,40 +647,8 @@ class PenjualanController extends Controller
         }
     }
 
-    // Tambahkan method untuk get anggota umum
     public function getAnggotaUmum(Request $request){
-        $query = $request->get('query');
-
-        $users = User::where('name', 'like', '%purchase%')
-            ->leftJoin('penjualan_cicilan', function($join) {
-                $join->on('penjualan_cicilan.anggota_id', '=', 'users.id')
-                    ->where('penjualan_cicilan.status', '=', 'hutang');
-            })
-            ->where(function ($q) use ($query) {
-                $q->where('users.nomor_anggota', 'LIKE', "%{$query}%")
-                ->orWhere('users.name', 'LIKE', "%{$query}%");
-            })
-            ->select(
-                'users.id',
-                'users.name',
-                'users.nomor_anggota',
-                DB::raw('0 as limit_hutang'), // Limit hutang 0 untuk umum
-                DB::raw('SUM(penjualan_cicilan.pokok) as total_pokok')
-            )
-            ->groupBy('users.id', 'users.name', 'users.nomor_anggota')
-            ->get();
-
-        $formatted = $users->map(function ($user) {
-            return [
-                'id' => $user->id,
-                'name' => $user->name,
-                'nomor_anggota' => $user->nomor_anggota,
-                'limit_hutang' => 0, // Tidak ada limit untuk umum
-                'total_pokok' => $user->total_pokok,
-            ];
-        });
-
-        return response()->json($formatted);
+        return $this->getAnggota($request);
     }
 
     public function RiwayatPenjualan(Request $request): View

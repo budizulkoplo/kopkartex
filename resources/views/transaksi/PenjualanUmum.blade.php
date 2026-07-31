@@ -21,12 +21,7 @@
             <form class="needs-validation" novalidate id="frmterima" autocomplete="off">
                 <div class="card card-success card-outline mb-4">
                     <div class="card-header p-2">
-                        <div class="alert alert-success ps-2 p-0 mb-0" role="alert" id="detailcus" style="display: none">
-                            <div class="alert alert-info mb-0">
-                                <i class="bi bi-info-circle"></i> 
-                                Transaksi umum menggunakan customer khusus "Purchase"
-                            </div>
-                        </div>
+                        <div class="alert alert-success ps-2 p-0 mb-0" role="alert" id="detailcus" style="display: none"></div>
                     </div>
                     <div class="card-body p-3">
                         <div class="row mb-3">
@@ -38,9 +33,9 @@
                                 </div>
                                 <div class="input-group input-group-sm mb-2 align-items-center">
                                     <div class="input-group-text">
-                                        <label class="mb-0">Customer</label>
+                                        <label class="mb-0">Anggota</label>
                                     </div>
-                                    <input type="text" class="form-control" id="customer" name="customer" required autocomplete="off" placeholder="Nama customer">
+                                    <input type="text" class="form-control" id="customer" name="customer" required autocomplete="off" placeholder="Cari anggota...">
                                     <input type="hidden" id="idcustomer" name="idcustomer" value="0">
                                 </div>
                             </div>
@@ -64,6 +59,25 @@
                                     <div class="fs-6 fw-bold txtinv">{{ $invoice }}</div>
                                 </div>
                                 <div class="fs-3 fw-bold text-success topgrandtotal">Rp. 0</div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="d-flex align-items-center bg-light p-2 rounded border">
+                                    <div class="me-3 fw-bold text-primary" style="min-width: 100px;">
+                                        <i class="bi bi-plus-circle"></i> QTY JUAL:
+                                    </div>
+                                    <div class="me-3 small" id="selected-item-info" style="min-width: 280px;">
+                                        <span class="text-muted">Pilih barang dulu</span>
+                                    </div>
+                                    <div style="width: 150px;">
+                                        <input type="number" class="form-control form-control-sm" id="input-qty-jual" value="1" min="0.001" step="0.001" onfocus="this.select()">
+                                    </div>
+                                    <div class="ms-3 text-muted small">
+                                        <i class="bi bi-arrow-return-left"></i> isi qty, lalu Enter untuk input produk
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -433,6 +447,25 @@
                     $('#barcode-search').focus();
                 }, 100);
             }
+
+            function focusToQtyInput() {
+                setTimeout(() => {
+                    $('#input-qty-jual').focus().select();
+                }, 100);
+            }
+
+            function showSelectedItemInfo(item) {
+                if (!item) {
+                    $('#selected-item-info').html('<span class="text-muted">Pilih barang dulu</span>');
+                    return;
+                }
+
+                const harga = item.harga_jual_umum || item.harga_jual || 0;
+                $('#selected-item-info').html(`
+                    <div class="fw-semibold">${item.code || ''} - ${item.text || ''}</div>
+                    <div class="text-muted">Harga: ${formatRupiahWithDecimal(harga)} | Stok: ${formatStok(item.stok || 0)}</div>
+                `);
+            }
             
             // Fungsi untuk menambah produk yang sama (update qty)
             function incrementExistingProduct(idbarang, rowElement, additionalQty = 1) {
@@ -454,6 +487,8 @@
                 }
                 
                 rowElement.find('.barangqty').val(newQty);
+                rowElement.prependTo('#tbterima tbody');
+                numbering();
                 kalkulasi();
             }
             
@@ -473,7 +508,7 @@
                 return true;
             }
             
-            function addRow(datarow = null) {
+            function addRow(datarow = null, qty = 1) {
                 datarow = datarow || {id: 0, code: '', text: '', harga_jual_umum: 0, stok: 0, type: '', kategori_cicilan: 1};
                 
                 // VALIDASI: Cek stok sebelum menambahkan produk
@@ -485,7 +520,7 @@
                 // Cek apakah produk sudah ada di tabel
                 if (datarow.id && existingProducts[datarow.id]) {
                     const existingRow = existingProducts[datarow.id];
-                    incrementExistingProduct(datarow.id, existingRow);
+                    incrementExistingProduct(datarow.id, existingRow, qty);
                     clearBarcodeSearch();
                     return;
                 }
@@ -519,7 +554,7 @@
                                    max="${datarow.stok}" 
                                    name="qty[]" 
                                    onkeyup="kalkulasi(this)" 
-                                   value="1" 
+                                   value="${qty}" 
                                    data-id="${datarow.id}" 
                                    required>
                             <input type="hidden" name="harga_beli[]" class="hargabeli" value="${datarow.harga_beli || 0}">
@@ -534,7 +569,7 @@
                     </tr>
                 `);
                 
-                $('#tbterima tbody').append(newRow);
+                $('#tbterima tbody').prepend(newRow);
                 numbering();
                 kalkulasi();
                 
@@ -705,6 +740,7 @@
             function clearform(refreshInvoice = true) {
                 $('#customer').val('');
                 $('#idcustomer').val('0');
+                $('#detailcus').html('').hide();
                 $('textarea[name="note"]').val('');
                 $('.topgrandtotal').text('Rp. 0');
                 $('#subtotal').val(0);
@@ -714,6 +750,8 @@
                 $('#kembali').val(0);
                 $('#tbterima tbody').empty();
                 $('#metodebayar').val('tunai').trigger('change');
+                $('#input-qty-jual').val('1');
+                showSelectedItemInfo(null);
                 
                 existingProducts = {};
                 
@@ -739,6 +777,51 @@
                     addRow({id: 0, code: '', text: '', harga_jual_umum: 0, stok: 0});
                 });
                 
+                $('#customer').typeahead({
+                    minLength: 2,
+                    displayText: function(item) {
+                        return item.nomor_anggota + ' - ' + item.name;
+                    },
+                    source: function(query, process) {
+                        return $.get('{{ route('jual.umum.getanggota') }}', { query: query }, function(data) {
+                            return process(data);
+                        });
+                    },
+                    afterSelect: function(item) {
+                        let persentase = 0;
+                        if (item.limit_hutang > 0) {
+                            persentase = (item.total_pokok / (item.limit_hutang + item.total_pokok)) * 100;
+                        }
+
+                        let alertClass = 'alert-success';
+                        if (persentase >= 50 && persentase <= 75) {
+                            alertClass = 'alert-warning';
+                        } else if (persentase > 75) {
+                            alertClass = 'alert-danger';
+                        }
+
+                        $('#detailcus')
+                            .removeClass('alert-success alert-warning alert-danger')
+                            .addClass(alertClass + ' text-dark')
+                            .html(`
+                                <table class="mb-0">
+                                    <tr><td class="pe-2">Nomor Anggota</td><td>:<b> ${item.nomor_anggota} - ${item.name}</b></td></tr>
+                                    <tr><td>Jumlah Hutang</td><td>: ${formatRupiahWithDecimal(item.total_pokok)}</td></tr>
+                                    <tr><td>Sisa Limit Hutang</td><td>: ${formatRupiahWithDecimal(item.limit_hutang)}</td></tr>
+                                </table>
+                            `)
+                            .show();
+                        $('#customer').val(item.name);
+                        $('#idcustomer').val(item.id);
+                        $('#barcode-search').focus();
+                    }
+                });
+
+                $('#customer').on('input', function() {
+                    $('#idcustomer').val('0');
+                    $('#detailcus').html('').hide();
+                });
+
                 // Handle metode bayar change
                 $('#metodebayar').on('change', function() {
                     if($(this).val() == 'cicilan'){
@@ -748,21 +831,7 @@
                             $('#jmlcicilan').val(1);
                         }
                         
-                        // Untuk cicilan, sembunyikan input pembayaran tunai
                         $('.clmetode').hide().find('input, select').prop('required', false).val('');
-                        
-                        // Otomatis set customer untuk umum
-                        $.ajax({
-                            url: '{{ route('jual.umum.getanggota') }}',
-                            method: 'GET',
-                            data: { query: 'purchase' },
-                            success: function(data) {
-                                if(data.length > 0) {
-                                    $('#customer').val(data[0].name);
-                                    $('#idcustomer').val(data[0].id);
-                                }
-                            }
-                        });
                     } else {
                         $('.fieldcicilan').hide();
                         $('#jmlcicilan').val('');
@@ -841,7 +910,7 @@
                             return '';
                         }
                         
-                        addRow({
+                        const selectedItem = {
                             id: item.id,
                             code: item.code,
                             text: item.text,
@@ -850,9 +919,30 @@
                             stok: item.stok,
                             type: item.type,
                             kategori_cicilan: item.kategori_cicilan
-                        });
+                        };
+                        $('#barcode-search').data('selected-item', selectedItem);
+                        showSelectedItemInfo(selectedItem);
+                        focusToQtyInput();
                         
                         return '';
+                    }
+                });
+
+                $('#input-qty-jual').on('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+
+                        const selectedItem = $('#barcode-search').data('selected-item');
+                        const qty = parseFloat($(this).val()) || 1;
+
+                        if (selectedItem) {
+                            addRow(selectedItem, qty);
+                            $('#barcode-search').removeData('selected-item');
+                            $(this).val(1);
+                            showSelectedItemInfo(null);
+                        } else {
+                            clearBarcodeSearch();
+                        }
                     }
                 });
                 
@@ -886,13 +976,14 @@
                                         return;
                                     }
                                     
-                                    // Gunakan harga_jual_umum
-                                    addRow({
+                                    const selectedItem = {
                                         ...response,
                                         harga_jual: response.harga_jual_umum
-                                    });
+                                    };
+                                    $('#barcode-search').data('selected-item', selectedItem);
+                                    showSelectedItemInfo(selectedItem);
+                                    focusToQtyInput();
                                     loader(false);
-                                    clearBarcodeSearch();
                                 },
                                 error: function(xhr, status, error) {
                                     Swal.fire({
@@ -914,9 +1005,12 @@
                     }
                 });
                 
-                // Nonaktifkan Enter di seluruh form kecuali untuk input barcode
+                // Nonaktifkan Enter di seluruh form kecuali untuk input barcode dan qty
                 $(window).keydown(function (event) {
                     if (event.key === "Enter") {
+                        if ($(event.target).is('#barcode-search') || $(event.target).is('#input-qty-jual')) {
+                            return true;
+                        }
                         event.preventDefault();
                         return false;
                     }
@@ -971,6 +1065,17 @@
                     
                     // Validasi khusus untuk cicilan
                     if ($('#metodebayar').val() === 'cicilan') {
+                        if (!$('#idcustomer').val() || $('#idcustomer').val() === '0') {
+                            Swal.fire({
+                                icon: "warning",
+                                title: "Anggota belum dipilih",
+                                text: "Pilih anggota dari daftar untuk pembayaran cicilan",
+                                showConfirmButton: true
+                            });
+                            $('#customer').focus();
+                            return;
+                        }
+
                         // Cek cicilan sebelum submit
                         if(!cekCicilan()) {
                             Swal.fire({

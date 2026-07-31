@@ -26,52 +26,55 @@
                     </div>
                     <div class="card-body p-3">
                         {{-- Header Form --}}
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="input-group input-group-sm mb-2"> 
-                                    <span class="input-group-text label-fixed-width">Date</span>
+                        <div class="retur-header-grid mb-3">
+                            <div class="retur-field">
+                                <label class="form-label form-label-sm mb-1">Tanggal</label>
+                                <div class="input-group input-group-sm">
                                     <input type="text" class="form-control datepicker" name="tgl_retur" required>
                                     <span class="input-group-text bg-primary"><i class="bi bi-calendar2-week-fill text-white"></i></span>
                                 </div>
-                                <div class="input-group input-group-sm mb-2"> 
-                                    <span class="input-group-text label-fixed-width">Petugas</span>
-                                    <input type="text" class="form-control" value="{{ auth()->user()->name }}" disabled>
-                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="input-group input-group-sm mb-2"> 
-                                    <span class="input-group-text label-fixed-width">No. Retur</span>
+                            <div class="retur-field">
+                                <label class="form-label form-label-sm mb-1">No. Retur</label>
+                                <div class="input-group input-group-sm">
                                     <input type="text" class="form-control" name="invoice" value="{{ $invoice ?? '' }}" readonly required>
-                                    <button type="button" class="btn btn-outline-secondary" onclick="generateNewInvoice()">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="generateNewInvoice()" title="Generate nomor baru">
                                         <i class="bi bi-arrow-clockwise"></i>
                                     </button>
                                 </div>
-                                <div class="input-group input-group-sm mb-2"> 
-                                    <span class="input-group-text label-fixed-width">Supplier</span>
+                            </div>
+                            <div class="retur-field">
+                                <label class="form-label form-label-sm mb-1">Unit</label>
+                                <input type="text" class="form-control form-control-sm" value="{{ auth()->user()->unit->nama_unit ?? 'Unit' }}" disabled>
+                            </div>
+                            <div class="retur-field">
+                                <label class="form-label form-label-sm mb-1">Petugas</label>
+                                <input type="text" class="form-control form-control-sm" value="{{ auth()->user()->name }}" disabled>
+                            </div>
+                            <div class="retur-field">
+                                <label class="form-label form-label-sm mb-1">Supplier</label>
+                                <div class="input-group input-group-sm">
                                     <input type="text" class="form-control typeahead" id="supplier-search" name="supplier" required>
-                                    {{-- Input hidden untuk data supplier --}}
                                     <input type="hidden" id="supplier_id" name="supplier_id">
                                     <input type="hidden" id="kode_supplier" name="kode_supplier">
-                                    <button class="btn btn-outline-primary btn-sm px-2 py-0" type="button" id="btn-add-supplier" data-bs-toggle="modal" data-bs-target="#modalSupplier">
+                                    <button class="btn btn-outline-primary" type="button" id="btn-add-supplier" data-bs-toggle="modal" data-bs-target="#modalSupplier" title="Tambah supplier">
                                         <i class="bi bi-plus-lg"></i>
                                     </button>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="input-group input-group-sm mb-2"> 
-                                    <span class="input-group-text label-fixed-width">Unit</span>
-                                    <input type="text" class="form-control" value="{{ auth()->user()->unit->nama_unit ?? 'Unit' }}" disabled>
-                                </div>
+                            <div class="retur-field">
+                                <label class="form-label form-label-sm mb-1">Invoice Beli</label>
+                                <select class="form-select form-select-sm" id="penerimaan-search" name="penerimaan_id" required></select>
                             </div>
                         </div>
 
                         {{-- Scan Barang --}}
                         <div class="row mb-3">
                             <div class="col-md-12">
-                                <div class="input-group input-group-sm mb-2"> 
-                                    <span class="input-group-text label-fixed-width">Barcode</span>
+                                <label class="form-label form-label-sm mb-1">Barcode / Nama Barang</label>
+                                <div class="input-group input-group-sm mb-1"> 
                                     <input type="text" class="form-control typeahead" id="barcode-search" placeholder="Scan barcode atau ketik nama" autocomplete="off">
-                                    <button class="btn btn-outline-primary btn-sm px-2 py-0" type="button" onclick="quickAddItem()">
+                                    <button class="btn btn-outline-primary" type="button" onclick="quickAddItem()">
                                         <i class="bi bi-plus-lg"></i> Tambah Baru
                                     </button>
                                     <span class="input-group-text bg-primary"><i class="bi bi-search text-white"></i></span>
@@ -89,8 +92,9 @@
                                             <tr class="bg-light">
                                                 <th width="5%">#</th>
                                                 <th width="12%">Kode</th>
-                                                <th width="25%">Nama Barang</th>
-                                                <th width="10%">Stok</th>
+                                                <th width="23%">Nama Barang</th>
+                                                <th width="8%">Qty Beli</th>
+                                                <th width="8%">Stok</th>
                                                 <th width="10%">Qty Retur</th>
                                                 <th width="12%">Harga Beli</th>
                                                 <th width="12%">Harga Jual</th>
@@ -101,7 +105,7 @@
                                         <tbody></tbody>
                                         <tfoot>
                                             <tr class="table-success">
-                                                <th colspan="7" class="text-end fw-bold">Grand Total:</th>
+                                                <th colspan="8" class="text-end fw-bold">Grand Total:</th>
                                                 <th id="grandtotal" class="fw-bold text-end">0</th>
                                                 <th></th>
                                             </tr>
@@ -346,6 +350,40 @@
             .tt-suggestion.new-supplier:hover {
                 background-color: #e2f7eb !important;
             }
+            .retur-header-grid {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(220px, 1fr));
+                gap: 0.75rem 1rem;
+                align-items: end;
+            }
+            .retur-field {
+                min-width: 0;
+            }
+            .retur-field .form-label {
+                font-weight: 600;
+                color: #495057;
+            }
+            .retur-field .twitter-typeahead {
+                min-width: 0;
+            }
+            #penerimaan-search + .select2-container {
+                width: 100% !important;
+                display: block;
+            }
+            #penerimaan-search + .select2-container .select2-selection--single {
+                min-height: calc(1.5em + 0.5rem + 2px);
+                height: calc(1.5em + 0.5rem + 2px);
+                border-color: #ced4da;
+                font-size: 0.875rem;
+            }
+            #penerimaan-search + .select2-container .select2-selection__rendered {
+                line-height: calc(1.5em + 0.5rem);
+                padding-left: 0.5rem;
+                padding-right: 2rem;
+            }
+            #penerimaan-search + .select2-container .select2-selection__arrow {
+                height: calc(1.5em + 0.5rem);
+            }
             .label-fixed-width {
                 min-width: 90px !important;
                 font-size: 0.875rem !important;
@@ -398,6 +436,9 @@
                 margin-left: 5px !important;
             }
             @media (max-width: 768px) {
+                .retur-header-grid {
+                    grid-template-columns: 1fr;
+                }
                 .table-responsive {
                     font-size: 0.8rem !important;
                 }
@@ -457,33 +498,34 @@
                 $('#grandtotal').text(formatCurrency(grandTotal));
             }
 
-            function addRow(datarow){
+            function addRow(datarow, options = {}){
                 // Cek apakah barang sudah ada di tabel
                 let existingRow = false;
                 const searchCode = datarow.code || datarow.kode_barang || '';
+                const qtyBeli = parseFloat(datarow.qty_beli || datarow.jumlah || 0) || 0;
                 
                 $('#tbretur tbody tr').each(function() {
                     const rowCode = $(this).find('input[name="kode_barang[]"]').val();
                     if(searchCode && rowCode === searchCode) {
                         existingRow = true;
-                        
-                        // Update quantity jika barang sudah ada
+
                         const qtyInput = $(this).find('input[name="qty[]"]');
-                        const currentQty = parseInt(qtyInput.val()) || 0;
-                        const maxStok = parseInt($(this).find('.max-stok').data('stok')) || 0;
-                        
-                        if (currentQty + 1 <= maxStok) {
-                            qtyInput.val(currentQty + 1);
-                        } else {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Stok Tidak Cukup',
-                                text: 'Stok tersedia hanya ' + maxStok + ' item'
-                            });
+                        if (!options.draft && options.increment !== false) {
+                            const currentQty = parseFloat(qtyInput.val()) || 0;
+                            const maxRetur = parseFloat(qtyInput.attr('max')) || 0;
+                            
+                            if (currentQty <= 0 && maxRetur > 0) {
+                                qtyInput.val(Math.min(1, maxRetur));
+                            } else if (currentQty + 1 <= maxRetur) {
+                                qtyInput.val(currentQty + 1);
+                            }
                         }
                         
+                        $(this).prependTo('#tbretur tbody');
+                        numbering();
                         updateTotals();
-                        clearAndFocusBarcode();
+                        clearAndFocusBarcode(false);
+                        setTimeout(() => qtyInput.focus().select(), 100);
                         return false;
                     }
                 });
@@ -492,7 +534,7 @@
                     rowCounter++;
                     
                     // Validasi stok minimal 1 untuk bisa diretur
-                    if (datarow.stok <= 0) {
+                    if (!options.draft && datarow.stok <= 0) {
                         Swal.fire({
                             icon: 'warning',
                             title: 'Stok Habis',
@@ -504,6 +546,8 @@
                     
                     const typeBadge = datarow.type ? `<span class="type-badge">${datarow.type}</span>` : '';
                     
+                    const rowQty = options.draft ? 0 : (parseFloat(datarow.qty) || 1);
+                    const maxRetur = Math.max(Math.min(parseFloat(datarow.stok) || 0, qtyBeli || parseFloat(datarow.stok) || 0), 0);
                     const str = `<tr data-id="${datarow.id || 'new-' + rowCounter}" data-stok="${datarow.stok}" class="align-middle" id="row-${rowCounter}">
                         <td class="text-center">${rowCounter}</td>
                         <td>
@@ -512,6 +556,7 @@
                             <input type="hidden" name="barang_id[]" value="${datarow.id || ''}">
                             <input type="hidden" name="satuan[]" value="${datarow.satuan || ''}">
                             <input type="hidden" name="kategori[]" value="${datarow.kategori || ''}">
+                            <input type="hidden" name="qty_beli[]" value="${qtyBeli}">
                             ${datarow.code || datarow.kode_barang || 'N/A'}
                         </td>
                         <td>
@@ -519,10 +564,14 @@
                             ${typeBadge}
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-info max-stok" data-stok="${datarow.stok}">${datarow.stok}</span>
+                            <span class="badge bg-secondary">${formatQty(qtyBeli)}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-info max-stok" data-stok="${datarow.stok}">${formatQty(datarow.stok)}</span>
                         </td>
                         <td>
-                            <input type="number" value="1" class="form-control form-control-sm qty" min="1" max="${datarow.stok}" name="qty[]" style="width: 90px;" required>
+                            <input type="number" value="${rowQty}" class="form-control form-control-sm qty" min="0" max="${maxRetur}" name="qty[]" style="width: 90px;" required>
+                            <small class="text-muted">Max: ${formatQty(maxRetur)}</small>
                         </td>
                         <td>
                             <input type="number" value="${datarow.harga_beli || 0}" step="0.01" class="form-control form-control-sm harga_beli" name="harga_beli[]" style="width: 100px;" required>
@@ -531,7 +580,7 @@
                             <input type="number" value="${datarow.harga_jual || 0}" step="0.01" class="form-control form-control-sm harga_jual" name="harga_jual[]" style="width: 100px;" required>
                         </td>
                         <td class="text-end">
-                            <span class="subtotal-item fw-bold">${formatCurrency(1 * (datarow.harga_beli || 0))}</span>
+                            <span class="subtotal-item fw-bold">${formatCurrency(rowQty * (datarow.harga_beli || 0))}</span>
                         </td>
                         <td class="text-center">
                             <span class="badge bg-danger dellist" onclick="removeRow(${rowCounter})" title="Hapus">
@@ -539,20 +588,28 @@
                             </span>
                         </td>
                     </tr>`;
-                    $('#tbretur tbody').append(str);
+                    $('#tbretur tbody').prepend(str);
+                    numbering();
                     updateTotals();
                     updateTableAlert();
                     
-                    clearAndFocusBarcode();
+                    clearAndFocusBarcode(!options.draft);
                 }
             }
 
-            function clearAndFocusBarcode() {
+            function formatQty(value) {
+                const qty = parseFloat(value) || 0;
+                return Number.isInteger(qty) ? qty.toString() : qty.toString().replace(/\.?0+$/, '');
+            }
+
+            function clearAndFocusBarcode(focus = true) {
                 $('#barcode-search').typeahead('val', '');
                 $('#barcode-search').val('');
-                setTimeout(() => {
-                    $('#barcode-search').focus();
-                }, 100);
+                if (focus) {
+                    setTimeout(() => {
+                        $('#barcode-search').focus();
+                    }, 100);
+                }
             }
 
             function removeRow(rowId) {
@@ -563,6 +620,25 @@
                 setTimeout(() => {
                     $('#barcode-search').focus();
                 }, 100);
+            }
+
+            function loadInvoiceDraftItems(invoice) {
+                $('#tbretur tbody').empty();
+
+                if (!invoice || !invoice.details || invoice.details.length === 0) {
+                    updateTotals();
+                    numbering();
+                    Swal.fire('Perhatian', 'Invoice ini tidak memiliki detail barang.', 'warning');
+                    return;
+                }
+
+                invoice.details.forEach(function(item) {
+                    addRow(item, { draft: true, increment: false });
+                });
+
+                updateTotals();
+                numbering();
+                $('#barcode-search').focus();
             }
 
             function clearform(){
@@ -588,6 +664,7 @@
 
             function doClearForm(){
                 $('input[name="invoice"]').val('');
+                $('#penerimaan-search').val(null).trigger('change');
                 $('#supplier-search').val('');
                 $('#supplier_id').val('');
                 $('#kode_supplier').val('');
@@ -716,6 +793,11 @@
                     $('#supplier-search').val(suggestion.text);
                     $('#supplier_id').val(suggestion.id);
                     $('#kode_supplier').val(suggestion.kode_supplier || '');
+                    $('#penerimaan-search').val(null).trigger('change');
+                    $('#tbretur tbody').empty();
+                    updateTotals();
+                    numbering();
+                    $('#penerimaan-search').focus();
                 });
 
                 // Submit form tambah supplier
@@ -861,7 +943,10 @@
                     datumTokenizer: Bloodhound.tokenizers.whitespace,
                     queryTokenizer: Bloodhound.tokenizers.whitespace,
                     remote: {
-                        url: '{{ route('retur.getbarang') }}?q=%QUERY',
+                        url: '{{ route('retur.getbarang') }}?q=%QUERY&penerimaan_id=%PENERIMAAN',
+                        replace: function(url, query) {
+                            return url.replace('%QUERY', query).replace('%PENERIMAAN', $('#penerimaan-search').val() || '');
+                        },
                         wildcard: '%QUERY'
                     }
                 });
@@ -893,16 +978,92 @@
                     $(this).typeahead('val', '');
                 });
 
+                $('#penerimaan-search').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%',
+                    placeholder: 'Pilih invoice pembelian',
+                    allowClear: true,
+                    ajax: {
+                        url: '{{ route('retur.get-penerimaan-invoice') }}',
+                        dataType: 'json',
+                        delay: 250,
+                        data: function(params) {
+                            return {
+                                q: params.term || '',
+                                supplier_id: $('#supplier_id').val() || ''
+                            };
+                        },
+                        processResults: function(data) {
+                            return {
+                                results: data.map(function(item) {
+                                    return {
+                                        id: item.id,
+                                        text: item.nomor_invoice + ' - ' + (item.tgl_penerimaan || '-') + ' - ' + formatCurrency(item.grandtotal || 0),
+                                        payload: item
+                                    };
+                                })
+                            };
+                        },
+                        cache: true
+                    },
+                    templateResult: function(data) {
+                        if (!data.id || !data.payload) {
+                            return data.text;
+                        }
+
+                        return $(`
+                            <div>
+                                <strong>${data.payload.nomor_invoice}</strong> - ${data.payload.nama_supplier || '-'}
+                                <br>
+                                <small class="text-muted">${data.payload.tgl_penerimaan || '-'} | ${formatCurrency(data.payload.grandtotal || 0)}</small>
+                            </div>
+                        `);
+                    }
+                }).on('select2:opening', function(e) {
+                    if (!$('#supplier_id').val()) {
+                        e.preventDefault();
+                        Swal.fire('Perhatian', 'Pilih supplier terlebih dahulu.', 'warning');
+                        $('#supplier-search').focus();
+                    }
+                }).on('select2:select', function(e) {
+                    const invoice = e.params.data.payload;
+                    loadInvoiceDraftItems(invoice);
+                }).on('select2:clear', function() {
+                    $('#tbretur tbody').empty();
+                    updateTotals();
+                    numbering();
+                });
+
                 // Enter untuk search barcode
                 $('#barcode-search').on('keydown', function(e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         const searchVal = $(this).val().trim();
+                        const supplierId = $('#supplier_id').val();
+                        if (!supplierId) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Perhatian',
+                                text: 'Pilih supplier terlebih dahulu.'
+                            });
+                            $('#supplier-search').focus();
+                            return;
+                        }
+                        const penerimaanId = $('#penerimaan-search').val();
+                        if (!penerimaanId) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Perhatian',
+                                text: 'Pilih invoice pembelian terlebih dahulu.'
+                            });
+                            $('#penerimaan-search').focus();
+                            return;
+                        }
                         if (searchVal) {
                             $.ajax({
                                 url: '{{ route('retur.getbarangbycode') }}',
                                 method: 'GET',
-                                data: { kode: searchVal },
+                                data: { kode: searchVal, penerimaan_id: penerimaanId },
                                 dataType: 'json',
                                 beforeSend: function() {
                                     if (currentRequest !== null) currentRequest.abort();
@@ -967,8 +1128,8 @@
 
                 // Validasi qty tidak melebihi stok
                 $('#tbretur').on('input', '.qty', function() {
-                    const maxStok = parseInt($(this).closest('tr').find('.max-stok').data('stok')) || 0;
-                    const currentVal = parseInt($(this).val()) || 0;
+                    const maxStok = parseFloat($(this).attr('max')) || 0;
+                    const currentVal = parseFloat($(this).val()) || 0;
                     
                     if (currentVal > maxStok) {
                         $(this).val(maxStok);
@@ -1016,6 +1177,27 @@
                         return; 
                     }
 
+                    const penerimaanId = $('#penerimaan-search').val();
+                    if (!$('#supplier_id').val()) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Perhatian',
+                            text: 'Supplier harus dipilih terlebih dahulu!'
+                        });
+                        $('#supplier-search').focus();
+                        return;
+                    }
+
+                    if (!penerimaanId) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Perhatian',
+                            text: 'Invoice pembelian harus dipilih!'
+                        });
+                        $('#penerimaan-search').focus();
+                        return;
+                    }
+
                     // Validasi supplier harus dipilih
                     const supplierId = $('#supplier_id').val();
                     const supplierName = $('#supplier-search').val().trim();
@@ -1042,23 +1224,33 @@
 
                     // Validasi qty tidak melebihi stok
                     let validStok = true;
+                    let hasReturQty = false;
                     let errorMessage = '';
                     
                     $('input[name="qty[]"]').each(function(index) {
                         const qty = parseFloat($(this).val()) || 0;
-                        const maxStok = parseInt($(this).closest('tr').find('.max-stok').data('stok')) || 0;
+                        const maxStok = parseFloat($(this).attr('max')) || 0;
                         const namaBarang = $(this).closest('tr').find('input[name="nama_barang[]"]').val();
+
+                        if (qty > 0) {
+                            hasReturQty = true;
+                        }
                         
                         if (qty > maxStok) {
                             validStok = false;
-                            errorMessage += `• ${namaBarang}: Qty (${qty}) > Stok (${maxStok})\n`;
+                            errorMessage += `- ${namaBarang}: Qty (${qty}) > maksimal retur (${maxStok})\n`;
                         }
                         
-                        if (qty <= 0) {
+                        if (qty < 0) {
                             validStok = false;
-                            errorMessage += `• ${namaBarang}: Qty harus lebih dari 0\n`;
+                            errorMessage += `- ${namaBarang}: Qty tidak boleh minus\n`;
                         }
                     });
+
+                    if (!hasReturQty) {
+                        validStok = false;
+                        errorMessage += '- Isi minimal 1 qty retur\n';
+                    }
                     
                     if (!validStok) {
                         Swal.fire({
@@ -1163,10 +1355,12 @@
 
                 // Reset supplier saat input dikosongkan
                 $('#supplier-search').on('input', function() {
-                    if (!$(this).val().trim()) {
-                        $('#supplier_id').val('');
-                        $('#kode_supplier').val('');
-                    }
+                    $('#supplier_id').val('');
+                    $('#kode_supplier').val('');
+                    $('#penerimaan-search').val(null).trigger('change');
+                    $('#tbretur tbody').empty();
+                    updateTotals();
+                    numbering();
                 });
             });
         </script>

@@ -72,6 +72,9 @@
                                     <div class="me-3 fw-bold text-primary" style="min-width: 100px;">
                                         <i class="bi bi-plus-circle"></i> QTY JUAL:
                                     </div>
+                                    <div class="me-3 small" id="selected-item-info" style="min-width: 280px;">
+                                        <span class="text-muted">Pilih barang dulu</span>
+                                    </div>
                                     <div style="width: 150px;">
                                         <input type="number" class="form-control form-control-sm" id="input-qty-jual" value="1" min="0.001" step="0.001" onfocus="this.select()">
                                     </div>
@@ -454,6 +457,18 @@
                     $('#barcode-search').focus();
                 }, 100);
             }
+
+            function showSelectedItemInfo(item) {
+                if (!item) {
+                    $('#selected-item-info').html('<span class="text-muted">Pilih barang dulu</span>');
+                    return;
+                }
+
+                $('#selected-item-info').html(`
+                    <div class="fw-semibold">${item.code || ''} - ${item.text || ''}</div>
+                    <div class="text-muted">Harga: ${formatRupiahWithDecimal(item.harga_jual || 0)} | Stok: ${formatStok(item.stok || 0)}</div>
+                `);
+            }
             
             // Fungsi untuk menambah produk yang sama (update qty)
             function incrementExistingProduct(idbarang, rowElement, additionalQty = 1) {
@@ -475,6 +490,8 @@
                 }
                 
                 rowElement.find('.barangqty').val(newQty);
+                rowElement.prependTo('#tbterima tbody');
+                numbering();
                 kalkulasi();
             }
             
@@ -742,6 +759,7 @@
                 $('#tbterima tbody').empty();
                 $('#metodebayar').val('tunai').trigger('change');
                 $('#input-qty-jual').val('1'); // Reset qty ke 1
+                showSelectedItemInfo(null);
                 
                 // Reset existingProducts
                 existingProducts = {};
@@ -803,6 +821,7 @@
                             .show();
                         $('#idcustomer').val(item.id);
                         $('#customer').val(item.name);
+                        $('#barcode-search').focus();
                     }
                 });
             }
@@ -964,6 +983,7 @@
                         
                         // POIN 3: Simpan data item dan fokus ke input qty
                         $('#barcode-search').data('selected-item', item);
+                        showSelectedItemInfo(item);
                         focusToQtyInput();
                         
                         // PERBAIKAN: Return string kosong agar tidak mengisi input
@@ -983,6 +1003,7 @@
                             addRow(selectedItem, qty);
                             $('#barcode-search').removeData('selected-item');
                             $(this).val(1); // Reset qty ke 1
+                            showSelectedItemInfo(null);
                         } else {
                             // Jika tidak ada item yang dipilih, fokus ke barcode
                             focusToBarcode();
@@ -1025,6 +1046,7 @@
                                     
                                     // POIN 3: Simpan data dan fokus ke qty
                                     $('#barcode-search').data('selected-item', response);
+                                    showSelectedItemInfo(response);
                                     focusToQtyInput();
                                     
                                     loader(false);

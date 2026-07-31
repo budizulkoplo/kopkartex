@@ -34,20 +34,24 @@ class EnsureMenuAccess
             ->get()
             ->filter(fn (Menu $menu) => $menu->hasRoleAccess($user->getRoleNames()->all()));
 
-        $allowed = $allowedMenus->contains(function (Menu $menu) use ($routeName) {
+        $routeNames = $this->routeAliases($routeName);
+
+        $allowed = $allowedMenus->contains(function (Menu $menu) use ($routeNames) {
             $menuLink = trim((string) $menu->link);
 
             if ($menuLink === '' || $menuLink === '#') {
                 return false;
             }
 
-            if ($routeName === $menuLink) {
+            if (in_array($menuLink, $routeNames, true)) {
                 return true;
             }
 
-            foreach ($this->routePatternsFromMenuLink($menuLink) as $pattern) {
-                if ($pattern !== '' && str_starts_with($routeName, $pattern . '.')) {
-                    return true;
+            foreach ($routeNames as $routeName) {
+                foreach ($this->routePatternsFromMenuLink($menuLink) as $pattern) {
+                    if ($pattern !== '' && str_starts_with($routeName, $pattern . '.')) {
+                        return true;
+                    }
                 }
             }
 
@@ -72,5 +76,16 @@ class EnsureMenuAccess
         }
 
         return array_values(array_unique(array_filter($patterns)));
+    }
+
+    protected function routeAliases(string $routeName): array
+    {
+        $aliases = [$routeName];
+
+        if (str_starts_with($routeName, 'penjualan.')) {
+            $aliases[] = 'jual.' . substr($routeName, strlen('penjualan.'));
+        }
+
+        return array_values(array_unique($aliases));
     }
 }

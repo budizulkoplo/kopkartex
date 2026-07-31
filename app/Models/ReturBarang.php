@@ -22,6 +22,8 @@ class ReturBarang extends Model
         'grandtotal',
         'note',
         'unit_id',
+        'penerimaan_id',
+        'nomor_penerimaan',
         'created_user'
     ];
     

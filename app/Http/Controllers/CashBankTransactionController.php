@@ -511,10 +511,6 @@ class CashBankTransactionController extends Controller
                 DB::raw('(COALESCE(penerimaan.grandtotal, 0) - COALESCE(paid.total_bayar, 0)) as sisa')
             )
             ->whereNull('penerimaan.deleted_at')
-            ->where(function ($query) {
-                $query->where('penerimaan.metode_bayar', 'tempo')
-                    ->orWhere('penerimaan.status_bayar', '!=', 'paid');
-            })
             ->having('sisa', '>', 0);
 
         if ($supplierId) {
