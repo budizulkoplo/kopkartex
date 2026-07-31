@@ -31,6 +31,7 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\BarangBengkelController;
 use App\Http\Controllers\TagihanController;
 use App\Http\Controllers\KategoriBengkelController;
+use App\Http\Controllers\KategoriCicilanController;
 
 //LAPORAN
 use App\Http\Controllers\LaporanController;
@@ -139,6 +140,9 @@ Route::prefix('master')->middleware($menuAccessMiddleware)->group(function () {
     Route::get('/kategori-bengkel', [KategoriBengkelController::class, 'index'])->name('kategori.bengkel.index');
     Route::get('/kategori-bengkel/{id}/edit', [KategoriBengkelController::class, 'edit'])->name('kategori.bengkel.edit');
     Route::put('/kategori-bengkel/{id}', [KategoriBengkelController::class, 'update'])->name('kategori.bengkel.update');
+    Route::get('/kategori-cicilan', [KategoriCicilanController::class, 'index'])->name('kategori.cicilan.index');
+    Route::get('/kategori-cicilan/{id}/edit', [KategoriCicilanController::class, 'edit'])->name('kategori.cicilan.edit');
+    Route::put('/kategori-cicilan/{id}', [KategoriCicilanController::class, 'update'])->name('kategori.cicilan.update');
 });
 
 Route::prefix('penerimaan')->middleware($menuAccessMiddleware)->group(function () {
