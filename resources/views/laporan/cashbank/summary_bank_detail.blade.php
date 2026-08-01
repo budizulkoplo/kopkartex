@@ -194,7 +194,7 @@
                             <input type="date" name="tanggal_akhir" class="form-control form-control-sm" value="{{ $filters['tanggal_akhir'] }}" required>
                             <div class="d-flex gap-2">
                                 <button class="btn btn-sm btn-primary"><i class="bi bi-eye"></i> View Print</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printSummaryBankDetail()"><i class="bi bi-printer"></i> Print</button>
                             </div>
                         </div>
                     </form>
@@ -203,7 +203,7 @@
 
             <div class="card card-primary card-outline">
                 <div class="card-body">
-                    <div class="report-sheet">
+                    <div class="report-sheet" id="summaryBankDetailPrintArea">
                         <div class="report-title">
                             <h4>{{ $bankTitle }}</h4>
                             <p>{{ \Carbon\Carbon::parse($filters['tanggal_awal'])->format('d-m-Y') }} - {{ \Carbon\Carbon::parse($filters['tanggal_akhir'])->format('d-m-Y') }}</p>
@@ -260,6 +260,108 @@
                     }
                 });
             });
+
+            function printSummaryBankDetail() {
+                const report = document.getElementById('summaryBankDetailPrintArea');
+
+                if (!report) {
+                    window.print();
+                    return;
+                }
+
+                const printWindow = window.open('', '_blank', 'width=1000,height=800');
+
+                printWindow.document.open();
+                printWindow.document.write(`
+                    <!doctype html>
+                    <html>
+                        <head>
+                            <meta charset="utf-8">
+                            <title>Laporan Summary Bank Detail</title>
+                            <style>
+                                @page {
+                                    size: A4 portrait;
+                                    margin: 10mm;
+                                }
+
+                                * {
+                                    box-sizing: border-box;
+                                }
+
+                                body {
+                                    margin: 0;
+                                    color: #000;
+                                    background: #fff;
+                                    font-family: Arial, Helvetica, sans-serif;
+                                    font-size: 10px;
+                                }
+
+                                .report-sheet {
+                                    width: 100%;
+                                }
+
+                                .report-title {
+                                    text-align: center;
+                                    margin-bottom: 8px;
+                                }
+
+                                .report-title h4 {
+                                    margin: 0;
+                                    font-size: 13px;
+                                    font-weight: 700;
+                                    text-transform: uppercase;
+                                }
+
+                                .report-title p {
+                                    margin: 2px 0 0;
+                                    font-size: 10px;
+                                }
+
+                                table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                }
+
+                                th,
+                                td {
+                                    border: 1px solid #000;
+                                    padding: 3px 5px;
+                                    vertical-align: top;
+                                }
+
+                                th {
+                                    background: #f2f2f2;
+                                    font-weight: 700;
+                                }
+
+                                .text-center {
+                                    text-align: center;
+                                }
+
+                                .text-end {
+                                    text-align: right;
+                                }
+
+                                .text-muted {
+                                    color: #555;
+                                }
+
+                                .summary-total th {
+                                    font-size: 11px;
+                                }
+                            </style>
+                        </head>
+                        <body>${report.outerHTML}</body>
+                    </html>
+                `);
+                printWindow.document.close();
+
+                printWindow.onload = function () {
+                    printWindow.focus();
+                    printWindow.print();
+                    printWindow.close();
+                };
+            }
         </script>
     </x-slot>
 </x-app-layout>
