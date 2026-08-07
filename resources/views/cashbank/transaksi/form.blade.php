@@ -372,19 +372,21 @@
                                             </div>
                                         </div>
 
-                                        @if($jenis === 'pembayaran_hutang')
-                                            <div class="cb-field">
-                                                <label>Bayar Supplier</label>
-                                                <div class="cb-control-row">
-                                                    <input type="text" class="form-control form-control-sm cb-cyan fw-semibold" id="supplierCodePreview" readonly style="max-width: 120px;">
-                                                    <input type="text" class="form-control form-control-sm cb-cyan fw-semibold" id="supplierSearch" autocomplete="off">
-                                                    <input type="hidden" name="supplier_id" id="supplierId">
-                                                    <button type="button" class="btn btn-sm btn-outline-info cb-new" id="btnPickSupplier">Ambil</button>
+                                        <div class="cb-field">
+                                            <label>Bayar Supplier</label>
+                                            <div class="cb-control-row">
+                                                <input type="text" class="form-control form-control-sm cb-cyan fw-semibold" id="supplierCodePreview" autocomplete="off" placeholder="Kode" style="max-width: 120px;">
+                                                <input type="text" class="form-control form-control-sm cb-cyan fw-semibold" id="supplierSearch" autocomplete="off" placeholder="Nama supplier">
+                                                <input type="hidden" name="supplier_id" id="supplierId">
+                                                <button type="button" class="btn btn-sm btn-outline-info cb-new" id="btnPickSupplier">Ambil</button>
+                                                @if($jenis === 'pembayaran_hutang')
                                                     <button type="button" class="btn btn-sm btn-info cb-new" id="btnLoadSupplierInvoices"><i class="bi bi-search"></i> Muat Invoice</button>
-                                                    <button type="button" class="btn btn-sm btn-outline-primary cb-new" data-bs-toggle="modal" data-bs-target="#supplierModal"><i class="bi bi-plus-lg"></i></button>
-                                                </div>
+                                                @endif
+                                                <button type="button" class="btn btn-sm btn-outline-primary cb-new" data-bs-toggle="modal" data-bs-target="#supplierModal"><i class="bi bi-plus-lg"></i></button>
                                             </div>
-                                        @else
+                                        </div>
+
+                                        @if($jenis !== 'pembayaran_hutang')
                                             <div class="cb-field">
                                                 <label>Bayar Anggota</label>
                                                 <div class="cb-control-row">
@@ -839,6 +841,42 @@
                 $('#paidToPreview').val(data.text || data.nama_supplier || '');
             }
 
+            function findSupplierByCode(code) {
+                const normalizedCode = String(code || '').trim().toLowerCase();
+
+                return $.get("{{ route("cashbank.transactions.$routeScope.suppliers") }}", { q: code })
+                    .then(function (rows) {
+                        const exact = rows.find(row => String(row.kode_supplier || '').trim().toLowerCase() === normalizedCode);
+                        const supplier = exact || (rows.length === 1 ? rows[0] : null);
+
+                        if (!supplier) {
+                            return $.Deferred().reject({
+                                message: rows.length
+                                    ? 'Kode supplier belum spesifik. Klik Ambil untuk memilih supplier yang sesuai.'
+                                    : 'Kode supplier tidak ditemukan.'
+                            }).promise();
+                        }
+
+                        selectSupplier(supplier);
+                        return supplier;
+                    });
+            }
+
+            function resolveTypedSupplierCode(showWarning = true) {
+                const supplierId = $('#supplierId').val();
+                const supplierCode = $('#supplierCodePreview').val().trim();
+
+                if (!supplierCode || supplierId) {
+                    return $.Deferred().resolve().promise();
+                }
+
+                return findSupplierByCode(supplierCode).fail(function (error) {
+                    if (showWarning) {
+                        Swal.fire('Perhatian', error.message || 'Supplier tidak ditemukan.', 'warning');
+                    }
+                });
+            }
+
             function selectMember(data) {
                 markFormDirty();
                 $('#memberCodePreview').val(data.nomor_anggota || '');
@@ -953,6 +991,18 @@
                 }
             }).on('keydown', function (e) {
                 if (e.key === 'Enter') e.preventDefault();
+            });
+
+            $('#supplierCodePreview').on('input', function () {
+                $('#supplierId').val('');
+                $('#supplierSearch').val('');
+            }).on('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    resolveTypedSupplierCode(true);
+                }
+            }).on('change blur', function () {
+                resolveTypedSupplierCode(false);
             });
 
             function searchSupplierPicker() {
@@ -1090,36 +1140,39 @@
                     return;
                 }
 
-                $.get("{{ route("cashbank.transactions.$routeScope.invoices") }}", {
-                    supplier_code: supplierCode,
-                    q: ''
-                }).done(function (rows) {
-                    if (!rows.length) {
-                        Swal.fire('Info', 'Tidak ada nota hutang yang belum terbayar untuk supplier ini.', 'info');
-                        return;
-                    }
-
-                    rows.forEach(row => {
-                        const emptyRow = $('#detailTable tbody tr').filter(function () {
-                            return !$(this).find('.nomor-invoice').val()
-                                && !$(this).find('.invoice-search').val()
-                                && parseMoney($(this).find('.jumlah-bayar-display').val()) <= 0;
-                        }).first();
-                        const targetRow = emptyRow.length ? emptyRow : null;
-                        const data = {
-                            ...row,
-                            coa_id: $('#mainCoa').val(),
-                            sisa: row.sisa
-                        };
-
-                        if (targetRow) {
-                            fillInvoice(targetRow, data);
-                        } else {
-                            addDetailRow(data);
+                resolveTypedSupplierCode(true).done(function () {
+                    $.get("{{ route("cashbank.transactions.$routeScope.invoices") }}", {
+                        supplier_id: $('#supplierId').val(),
+                        supplier_code: $('#supplierCodePreview').val().trim(),
+                        q: ''
+                    }).done(function (rows) {
+                        if (!rows.length) {
+                            Swal.fire('Info', 'Tidak ada nota hutang yang belum terbayar untuk supplier ini.', 'info');
+                            return;
                         }
-                        recalc();
-                    });
-                }).fail(xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'));
+
+                        rows.forEach(row => {
+                            const emptyRow = $('#detailTable tbody tr').filter(function () {
+                                return !$(this).find('.nomor-invoice').val()
+                                    && !$(this).find('.invoice-search').val()
+                                    && parseMoney($(this).find('.jumlah-bayar-display').val()) <= 0;
+                            }).first();
+                            const targetRow = emptyRow.length ? emptyRow : null;
+                            const data = {
+                                ...row,
+                                coa_id: $('#mainCoa').val(),
+                                sisa: row.sisa
+                            };
+
+                            if (targetRow) {
+                                fillInvoice(targetRow, data);
+                            } else {
+                                addDetailRow(data);
+                            }
+                            recalc();
+                        });
+                    }).fail(xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'));
+                });
             });
 
             $('#btnRefreshNumber').on('click', function () {
@@ -1224,6 +1277,22 @@
                 addDetailRow();
             });
 
+            function submitCashbankForm(form) {
+                $.ajax({
+                    url: "{{ route("cashbank.transactions.$routeScope.store") }}",
+                    method: 'POST',
+                    data: $(form).serialize(),
+                    beforeSend: () => $('#btnSave').prop('disabled', true),
+                    success: response => {
+                        rememberSavedTransaction(response);
+                        Swal.fire({ icon: 'success', title: response.message, timer: 1500, showConfirmButton: false })
+                            .then(() => resetFormForNextTransaction($('#documentCode').val()));
+                    },
+                    error: xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'),
+                    complete: () => $('#btnSave').prop('disabled', false)
+                });
+            }
+
             $('#cashbankForm').on('submit', function (e) {
                 e.preventDefault();
 
@@ -1236,19 +1305,7 @@
                     return;
                 }
 
-                $.ajax({
-                    url: "{{ route("cashbank.transactions.$routeScope.store") }}",
-                    method: 'POST',
-                    data: $(this).serialize(),
-                    beforeSend: () => $('#btnSave').prop('disabled', true),
-                    success: response => {
-                        rememberSavedTransaction(response);
-                        Swal.fire({ icon: 'success', title: response.message, timer: 1500, showConfirmButton: false })
-                            .then(() => resetFormForNextTransaction($('#documentCode').val()));
-                    },
-                    error: xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'),
-                    complete: () => $('#btnSave').prop('disabled', false)
-                });
+                resolveTypedSupplierCode(true).done(() => submitCashbankForm(this));
             });
 
             addDetailRow();
