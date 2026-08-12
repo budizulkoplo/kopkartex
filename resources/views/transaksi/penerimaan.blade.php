@@ -966,7 +966,7 @@
                         </td>
                         <td class="text-end">
                             <div class="total-item fw-bold total-beli">${formatCurrency(calculation.total)}</div>
-                            <small class="text-muted">Sub: ${formatCurrency(calculation.subtotal)}</small>
+                            
                         </td>
                         <td class="text-center">
                             <span class="badge bg-danger dellist" onclick="removeRow(${rowCounter})" title="Hapus">
