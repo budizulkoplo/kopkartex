@@ -610,6 +610,56 @@
         </div>
     </div>
 
+    @if($jenis === 'pembayaran_hutang')
+    <div class="modal fade" id="invoicePickModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Pilih Invoice Hutang</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                        <div class="text-muted small" id="invoicePickSupplierLabel">Pilih invoice yang akan dibayar.</div>
+                        <div class="input-group input-group-sm" style="max-width: 360px;">
+                            <input type="text" class="form-control" id="invoicePickKeyword" placeholder="Cari no invoice / catatan">
+                            <button type="button" class="btn btn-primary" id="btnInvoicePickSearch"><i class="bi bi-search"></i> Cari</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped table-hover align-middle" id="invoicePickTable" style="font-size: small;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 36px">
+                                        <input type="checkbox" class="form-check-input" id="invoicePickSelectAll" title="Pilih semua">
+                                    </th>
+                                    <th>No Invoice</th>
+                                    <th>Tgl Transaksi</th>
+                                    <th>Jatuh Tempo</th>
+                                    <th>Metode</th>
+                                    <th>Catatan</th>
+                                    <th class="text-end">Nilai Invoice</th>
+                                    <th class="text-end">Sudah Dibayar</th>
+                                    <th class="text-end">Sisa Hutang</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="10" class="text-muted">Pilih supplier lalu klik Muat Invoice.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="me-auto small text-muted" id="invoicePickCount">0 invoice terpilih</div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-sm btn-info" id="btnApplySelectedInvoices"><i class="bi bi-check2-square"></i> Masukkan Invoice Terpilih</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="modal fade" id="memberPickModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -962,6 +1012,105 @@
                 recalc();
             }
 
+            let invoicePickerCache = [];
+
+            function selectedPenerimaanIds() {
+                const ids = [];
+                $('#detailTable tbody .penerimaan-id').each(function () {
+                    const id = String($(this).val() || '');
+                    if (id) ids.push(id);
+                });
+                return ids;
+            }
+
+            function applyInvoiceToDetail(rowData) {
+                const alreadyLoaded = selectedPenerimaanIds().includes(String(rowData.id));
+                if (alreadyLoaded) {
+                    return false;
+                }
+
+                const emptyRow = $('#detailTable tbody tr').filter(function () {
+                    return !$(this).find('.nomor-invoice').val()
+                        && !$(this).find('.invoice-search').val()
+                        && parseMoney($(this).find('.jumlah-bayar-display').val()) <= 0;
+                }).first();
+                const data = {
+                    ...rowData,
+                    coa_id: $('#mainCoa').val(),
+                    sisa: rowData.sisa
+                };
+
+                if (emptyRow.length) {
+                    fillInvoice(emptyRow, data);
+                } else {
+                    addDetailRow(data);
+                }
+                recalc();
+                return true;
+            }
+
+            function updateInvoicePickCount() {
+                const count = $('#invoicePickTable tbody .invoice-pick-check:checked').length;
+                $('#invoicePickCount').text(count + ' invoice terpilih');
+                const checks = $('#invoicePickTable tbody .invoice-pick-check');
+                const allChecked = checks.length > 0 && checks.length === count;
+                $('#invoicePickSelectAll').prop('checked', allChecked);
+            }
+
+            function renderInvoicePicker(rows) {
+                invoicePickerCache = rows || [];
+                const tbody = $('#invoicePickTable tbody');
+                const loadedIds = selectedPenerimaanIds();
+
+                if (!invoicePickerCache.length) {
+                    tbody.html('<tr><td colspan="10" class="text-muted">Tidak ada nota hutang yang belum terbayar untuk supplier ini.</td></tr>');
+                    updateInvoicePickCount();
+                    return;
+                }
+
+                tbody.html(invoicePickerCache.map(row => {
+                    const loaded = loadedIds.includes(String(row.id));
+                    return `
+                        <tr class="${loaded ? 'table-secondary' : ''}">
+                            <td>
+                                <input type="checkbox" class="form-check-input invoice-pick-check" value="${escapeAttr(row.id)}" ${loaded ? 'disabled' : ''}>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">${escapeAttr(row.nomor_invoice)}</div>
+                                ${loaded ? '<span class="badge bg-secondary">Sudah di detail</span>' : ''}
+                            </td>
+                            <td>${escapeAttr(row.tgl_penerimaan)}</td>
+                            <td>${escapeAttr(row.tgl_tempo)}</td>
+                            <td>${escapeAttr(row.metode_bayar)}</td>
+                            <td>${escapeAttr(row.note)}</td>
+                            <td class="text-end">${formatNumber(row.nilai_invoice)}</td>
+                            <td class="text-end">${formatNumber(row.sudah_dibayar)}</td>
+                            <td class="text-end fw-semibold">${formatNumber(row.sisa)}</td>
+                            <td>${escapeAttr(row.status_bayar)}</td>
+                        </tr>
+                    `;
+                }).join(''));
+                updateInvoicePickCount();
+            }
+
+            function searchInvoicePicker() {
+                const tbody = $('#invoicePickTable tbody');
+                tbody.html('<tr><td colspan="10" class="text-muted">Memuat invoice...</td></tr>');
+                $('#invoicePickSelectAll').prop('checked', false);
+
+                return $.get("{{ route("cashbank.transactions.$routeScope.invoices") }}", {
+                    supplier_id: $('#supplierId').val(),
+                    supplier_code: $('#supplierCodePreview').val().trim(),
+                    q: $('#invoicePickKeyword').val().trim(),
+                    picker: 1
+                }).done(function (rows) {
+                    renderInvoicePicker(rows);
+                }).fail(xhr => {
+                    tbody.html('<tr><td colspan="10" class="text-danger">Gagal memuat invoice.</td></tr>');
+                    Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error');
+                });
+            }
+
             function bindInvoiceSearch(input) {
                 if (jenis !== 'pembayaran_hutang') return;
 
@@ -1141,37 +1290,59 @@
                 }
 
                 resolveTypedSupplierCode(true).done(function () {
-                    $.get("{{ route("cashbank.transactions.$routeScope.invoices") }}", {
-                        supplier_id: $('#supplierId').val(),
-                        supplier_code: $('#supplierCodePreview').val().trim(),
-                        q: ''
-                    }).done(function (rows) {
-                        if (!rows.length) {
-                            Swal.fire('Info', 'Tidak ada nota hutang yang belum terbayar untuk supplier ini.', 'info');
-                            return;
-                        }
+                    const supplierName = $('#supplierSearch').val().trim();
+                    $('#invoicePickSupplierLabel').text(
+                        'Invoice hutang ' + [supplierCode, supplierName].filter(Boolean).join(' - ')
+                    );
+                    $('#invoicePickKeyword').val('');
+                    $('#invoicePickModal').modal('show');
+                    searchInvoicePicker();
+                });
+            });
 
-                        rows.forEach(row => {
-                            const emptyRow = $('#detailTable tbody tr').filter(function () {
-                                return !$(this).find('.nomor-invoice').val()
-                                    && !$(this).find('.invoice-search').val()
-                                    && parseMoney($(this).find('.jumlah-bayar-display').val()) <= 0;
-                            }).first();
-                            const targetRow = emptyRow.length ? emptyRow : null;
-                            const data = {
-                                ...row,
-                                coa_id: $('#mainCoa').val(),
-                                sisa: row.sisa
-                            };
+            $('#btnInvoicePickSearch').on('click', searchInvoicePicker);
+            $('#invoicePickKeyword').on('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchInvoicePicker();
+                }
+            });
+            $('#invoicePickSelectAll').on('change', function () {
+                const checked = $(this).prop('checked');
+                $('#invoicePickTable tbody .invoice-pick-check:not(:disabled)').prop('checked', checked);
+                updateInvoicePickCount();
+            });
+            $('#invoicePickTable').on('change', '.invoice-pick-check', updateInvoicePickCount);
+            $('#btnApplySelectedInvoices').on('click', function () {
+                const selectedIds = $('#invoicePickTable tbody .invoice-pick-check:checked').map(function () {
+                    return String($(this).val());
+                }).get();
 
-                            if (targetRow) {
-                                fillInvoice(targetRow, data);
-                            } else {
-                                addDetailRow(data);
-                            }
-                            recalc();
-                        });
-                    }).fail(xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'));
+                if (!selectedIds.length) {
+                    Swal.fire('Perhatian', 'Pilih minimal satu invoice yang akan dimasukkan ke detail.', 'warning');
+                    return;
+                }
+
+                let added = 0;
+                selectedIds.forEach(id => {
+                    const row = invoicePickerCache.find(item => String(item.id) === String(id));
+                    if (row && applyInvoiceToDetail(row)) {
+                        added += 1;
+                    }
+                });
+
+                $('#invoicePickModal').modal('hide');
+
+                if (!added) {
+                    Swal.fire('Info', 'Invoice yang dipilih sudah ada di detail transaksi.', 'info');
+                    return;
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: added + ' invoice dimasukkan ke detail',
+                    timer: 1200,
+                    showConfirmButton: false
                 });
             });
 
