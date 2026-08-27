@@ -1287,6 +1287,7 @@
                         rememberSavedTransaction(response);
                         Swal.fire({ icon: 'success', title: response.message, timer: 1500, showConfirmButton: false })
                             .then(() => resetFormForNextTransaction($('#documentCode').val()));
+                        btnPrint = $('#btnPrint').prop('disabled', false);
                     },
                     error: xhr => Swal.fire('Error', xhr.responseJSON?.message || xhr.responseText, 'error'),
                     complete: () => $('#btnSave').prop('disabled', false)
