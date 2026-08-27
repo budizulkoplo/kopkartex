@@ -503,6 +503,11 @@ class CashBankTransactionController extends Controller
             ->select(
                 'penerimaan.idpenerimaan',
                 'penerimaan.nomor_invoice',
+                'penerimaan.tgl_penerimaan',
+                'penerimaan.tgl_tempo',
+                'penerimaan.metode_bayar',
+                'penerimaan.status_bayar',
+                'penerimaan.note',
                 'penerimaan.idsupplier',
                 'penerimaan.kode_supplier',
                 'penerimaan.nama_supplier',
@@ -518,23 +523,42 @@ class CashBankTransactionController extends Controller
         }
 
         if ($q !== '') {
-            $query->where('penerimaan.nomor_invoice', 'like', "%{$q}%");
+            $query->where(function ($invoiceQuery) use ($q): void {
+                $invoiceQuery->where('penerimaan.nomor_invoice', 'like', "%{$q}%")
+                    ->orWhere('penerimaan.note', 'like', "%{$q}%");
+            });
         }
 
+        $limit = $request->boolean('picker') ? 200 : 20;
+
         return $query->orderBy('penerimaan.tgl_penerimaan', 'desc')
-            ->limit(20)
+            ->limit($limit)
             ->get()
-            ->map(fn ($row) => [
-                'id' => $row->idpenerimaan,
-                'text' => $row->nomor_invoice,
-                'nomor_invoice' => $row->nomor_invoice,
-                'supplier_id' => $row->idsupplier,
-                'kode_supplier' => $row->kode_supplier,
-                'nama_supplier' => $row->nama_supplier,
-                'nilai_invoice' => (float) $row->grandtotal,
-                'sudah_dibayar' => (float) $row->sudah_dibayar,
-                'sisa' => (float) $row->sisa,
-            ]);
+            ->map(function ($row) {
+                $tglPenerimaan = $row->tgl_penerimaan
+                    ? Carbon::parse($row->tgl_penerimaan)->format('d/m/Y')
+                    : '';
+                $tglTempo = $row->tgl_tempo
+                    ? Carbon::parse($row->tgl_tempo)->format('d/m/Y')
+                    : '';
+
+                return [
+                    'id' => $row->idpenerimaan,
+                    'text' => $row->nomor_invoice,
+                    'nomor_invoice' => $row->nomor_invoice,
+                    'tgl_penerimaan' => $tglPenerimaan,
+                    'tgl_tempo' => $tglTempo,
+                    'metode_bayar' => $row->metode_bayar,
+                    'status_bayar' => $row->status_bayar,
+                    'note' => $row->note,
+                    'supplier_id' => $row->idsupplier,
+                    'kode_supplier' => $row->kode_supplier,
+                    'nama_supplier' => $row->nama_supplier,
+                    'nilai_invoice' => (float) $row->grandtotal,
+                    'sudah_dibayar' => (float) $row->sudah_dibayar,
+                    'sisa' => (float) $row->sisa,
+                ];
+            });
     }
 
     public function logs(Request $request)
