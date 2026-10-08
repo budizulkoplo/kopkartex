@@ -140,7 +140,7 @@ class PenjualanController extends Controller
                 ->where('penjualan_cicilan.status', '=', 'hutang');
         })
         ->where(function ($q) use ($query) {
-            $q->where('users.nomor_anggota', 'LIKE', "%{$query}%")
+            $q->where('users.nomor_anggota', 'LIKE', "{$query}%")
             ->orWhere('users.name', 'LIKE', "%{$query}%");
         })
         ->select(
